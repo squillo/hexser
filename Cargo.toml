@@ -1,0 +1,36 @@
+[package]
+name = "hex"
+version = "0.3.0"
+edition = "2024"
+authors = ["N Lang Team"]
+description = "Zero-boilerplate hexagonal architecture with graph-based introspection"
+license = "MIT OR Apache-2.0"
+keywords = ["hexagonal", "architecture", "ports", "adapters", "ddd"]
+categories = ["development-tools", "data-structures"]
+
+[workspace]
+members = [".", "hex_macros"]
+
+[dependencies]
+inventory = "0.3"
+hex_macros = { version = "0.3.0", path = "./hex_macros", optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+
+[features]
+default = ["macros"]
+macros = ["hex_macros"]
+visualization = ["serde", "serde_json"]
+full = ["macros", "visualization"]
+
+[workspace.dependencies]
+syn = { version = "2.0", features = ["full", "extra-traits"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+darling = "0.20"
+
+[package.metadata.docs.rs]
+all-features = true
