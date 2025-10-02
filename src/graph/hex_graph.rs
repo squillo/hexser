@@ -138,6 +138,12 @@ impl HexGraph {
         self.inner.edges.len()
     }
 
+        /// Export architecture context for AI agent consumption
+        #[cfg(feature = "ai")]
+        pub fn to_ai_context(&self) -> crate::result::hex_result::HexResult<crate::ai::AIContext> {
+            crate::ai::ContextBuilder::new(self).build()
+        }
+
     /// Get a node by its ID.
     pub fn get_node(&self, id: &crate::graph::node_id::NodeId) -> Option<&crate::graph::hex_node::HexNode> {
         self.inner.nodes.get(id)

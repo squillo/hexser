@@ -66,6 +66,12 @@ pub mod showcase;
 pub mod graph;
 pub mod registry;
 
+#[cfg(feature = "ai")]
+pub mod ai;
+
+#[cfg(feature = "container")]
+pub mod container;
+
 // Re-export commonly used items at crate root for convenience
 pub use crate::error::hex_error::HexError;
 pub use crate::result::hex_result::HexResult;
@@ -208,4 +214,10 @@ pub mod prelude {
         ComponentEntry,
         NodeInfo,
     };
+
+    #[cfg(feature = "ai")]
+    pub use crate::ai::{AIContext, ContextBuilder};
+
+    #[cfg(feature = "container")]
+    pub use crate::container::{Container, Provider, Scope};
 }
