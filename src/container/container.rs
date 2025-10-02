@@ -68,11 +68,12 @@ impl Container {
             ).with_next_step("Use different service name or remove existing registration"));
         }
 
+        let boxed_provider: Box<dyn crate::container::provider::Provider<T>> = Box::new(provider);
         services.insert(
             name,
             ServiceEntry {
                 scope,
-                factory: std::sync::Arc::new(provider),
+                factory: std::sync::Arc::new(boxed_provider),
                 singleton_cache: std::sync::RwLock::new(None),
             },
         );
