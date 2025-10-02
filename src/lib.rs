@@ -62,8 +62,8 @@ pub mod application;
 pub mod infrastructure;
 pub mod error;
 pub mod result;
-pub mod graph;
 pub mod showcase;
+pub mod graph;
 pub mod registry;
 
 // Re-export commonly used items at crate root for convenience

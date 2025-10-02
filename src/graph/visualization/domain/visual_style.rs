@@ -26,6 +26,7 @@ impl VisualStyle {
             crate::graph::layer::Layer::Adapter => String::from("lightyellow"),
             crate::graph::layer::Layer::Application => String::from("lightcoral"),
             crate::graph::layer::Layer::Infrastructure => String::from("lightgray"),
+            crate::graph::layer::Layer::Unknown => String::from("red"),
         }
     }
 }

@@ -18,6 +18,7 @@ pub mod hex_edge;
 pub mod metadata;
 pub mod hex_graph;
 pub mod builder;
+pub mod visualization;
 
 pub use layer::Layer;
 pub use role::Role;

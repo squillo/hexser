@@ -15,9 +15,17 @@
 //!
 //! Revision History
 //! - 2025-10-02T12:00:00Z @AI: Initial showcase module with Describable and Inspectable.
+//! Showcase module for developer experience traits.
+//!
+//! Provides traits that demonstrate the power and ergonomics
+//! of hexagonal architecture introspection.
+//!
+//! Revision History
+//! - 2025-10-02T17:00:00Z @AI: Initial showcase module creation.
 
 pub mod describable;
 pub mod inspectable;
+pub mod visualizable;
 
 pub use describable::{Describable, PrettyPrint, ArcGraphExt};
 pub use inspectable::Inspectable;

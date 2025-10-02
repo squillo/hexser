@@ -65,11 +65,10 @@ impl crate::graph::visualization::ports::format_exporter::FormatExporter for Jso
             links: d3_links,
         };
 
-        serde_json::to_string_pretty(&d3_graph).map_err(|e| {
-            crate::error::hex_error::HexError::domain(
-                "E_HEX_VIZ_001",
-                format!("JSON serialization failed: {}", e),
-            )
+
+        serde_json::to_string_pretty(&d3_graph).map_err(move |e| {
+          let msg = format!("JSON serialization failed: {}", e);
+            crate::error::hex_error::HexError::adapter("E_HEX_VIZ_001", msg.as_str())
         })
     }
 
@@ -79,5 +78,38 @@ impl crate::graph::visualization::ports::format_exporter::FormatExporter for Jso
 
     fn file_extension(&self) -> &str {
         "json"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::graph::visualization::ports::format_exporter::FormatExporter;
+  use super::*;
+
+    #[test]
+    fn test_json_export() {
+        let graph = crate::graph::builder::GraphBuilder::new()
+            .add_node(crate::graph::hex_node::HexNode::new(
+                crate::graph::node_id::NodeId::from_name("Test"),
+                crate::graph::layer::Layer::Domain,
+                crate::graph::role::Role::Entity,
+                "Test",
+                "test",
+            ))
+            .build();
+
+        let visual = crate::graph::visualization::domain::visual_graph::VisualGraph::from_hex_graph(
+            &graph,
+            crate::graph::visualization::domain::visual_style::VisualStyle::default(),
+        );
+
+        let exporter = JsonExporter::new();
+        let result = exporter.export(&visual);
+
+        assert!(result.is_ok());
+        let json = result.unwrap();
+        assert!(json.contains("nodes"));
+        assert!(json.contains("links"));
+        assert!(json.contains("Test"));
     }
 }

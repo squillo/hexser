@@ -17,3 +17,4 @@ With just **3 lines of code**, you'll have a working hexagonal architecture comp
 ```bash
 cargo new hello-hex
 cd hello-hex
+```

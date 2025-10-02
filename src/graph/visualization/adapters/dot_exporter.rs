@@ -58,7 +58,8 @@ impl crate::graph::visualization::ports::format_exporter::FormatExporter for Dot
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use crate::graph::visualization::ports::format_exporter::FormatExporter;
+  use super::*;
 
     #[test]
     fn test_dot_export() {

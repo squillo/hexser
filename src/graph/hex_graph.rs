@@ -143,6 +143,26 @@ impl HexGraph {
         self.inner.nodes.get(id)
     }
 
+    /// Print human-readable summary of graph
+    pub fn pretty_print(&self) {
+        println!("Hexagonal Architecture Graph:");
+        println!("  Nodes: {}", self.node_count());
+        println!("  Edges: {}", self.edge_count());
+        println!("\nBy Layer:");
+        for layer in [
+            crate::graph::layer::Layer::Domain,
+            crate::graph::layer::Layer::Port,
+            crate::graph::layer::Layer::Adapter,
+            crate::graph::layer::Layer::Application,
+            crate::graph::layer::Layer::Infrastructure,
+        ] {
+            let count = self.nodes_by_layer(layer).len();
+            if count > 0 {
+                println!("  {:?}: {}", layer, count);
+            }
+        }
+    }
+
     /// Get all nodes in the graph.
     pub fn nodes(&self) -> impl Iterator<Item = &crate::graph::hex_node::HexNode> {
         self.inner.nodes.values()

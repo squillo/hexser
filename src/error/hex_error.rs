@@ -53,6 +53,14 @@ pub enum HexError {
         suggestions: Vec<String>,
     },
 
+        /// IO error (file system operations)
+        Io {
+            code: String,
+            message: String,
+            next_steps: Vec<String>,
+            suggestions: Vec<String>,
+        },
+
     /// Validation errors for input data.
     Validation {
         message: String,
@@ -88,6 +96,16 @@ impl HexError {
         Self::Port {
             code: String::from(code),
             message: String::from(message),
+            next_steps: Vec::new(),
+            suggestions: Vec::new(),
+        }
+    }
+
+    /// Create IO error
+    pub fn io(code: &str, message: String) -> Self {
+        Self::Io {
+            code: String::from(code),
+            message,
             next_steps: Vec::new(),
             suggestions: Vec::new(),
         }
@@ -242,6 +260,9 @@ impl std::fmt::Display for HexError {
             Self::Conflict { message, .. } => {
                 write!(f, "Conflict: {}", message)
             }
+            HexError::Io { code, message, .. } => {
+                write!(f, "[{}] IO Error: {}", code, message)
+            }
         }
     }
 }
@@ -337,5 +358,13 @@ mod tests {
         } else {
             panic!("Expected Conflict error");
         }
+    }
+
+    #[test]
+    fn test_io_error() {
+        let error = HexError::io("E_HEX_IO_001", String::from("File not found"));
+        let display = format!("{}", error);
+        assert!(display.contains("E_HEX_IO_001"));
+        assert!(display.contains("File not found"));
     }
 }

@@ -95,6 +95,55 @@ impl Inspectable for crate::graph::hex_graph::HexGraph {
 mod tests {
     use super::*;
 
+
+/// Information about a component's layer
+#[derive(Debug, Clone, PartialEq)]
+pub struct LayerInfo {
+    pub layer: crate::graph::layer::Layer,
+    pub role: crate::graph::role::Role,
+    pub allowed_dependencies: Vec<crate::graph::layer::Layer>,
+}
+
+impl crate::graph::hex_graph::HexGraph {
+    /// Get dependencies for a node
+    pub fn get_dependencies(
+        &self,
+        id: &crate::graph::node_id::NodeId,
+    ) -> Vec<&crate::graph::hex_node::HexNode> {
+        self.edges_from(id)
+            .into_iter()
+            .filter_map(|edge| self.get_node(&edge.target))
+            .collect()
+    }
+
+    /// Get dependents for a node
+    pub fn get_dependents(
+        &self,
+        id: &crate::graph::node_id::NodeId,
+    ) -> Vec<&crate::graph::hex_node::HexNode> {
+        self.edges_to(id)
+            .into_iter()
+            .filter_map(|edge| self.get_node(&edge.source))
+            .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_layer_info() {
+        let info = LayerInfo {
+            layer: crate::graph::layer::Layer::Domain,
+            role: crate::graph::role::Role::Entity,
+            allowed_dependencies: vec![],
+        };
+
+        assert_eq!(info.layer, crate::graph::layer::Layer::Domain);
+        assert!(info.allowed_dependencies.is_empty());
+    }
+}
     #[test]
     fn test_node_inspectable() {
         let node = crate::graph::hex_node::HexNode::new(

@@ -27,6 +27,7 @@ impl VisualGraph {
 
         let edges = graph
             .edges()
+            .into_iter()
             .map(|edge| crate::graph::visualization::domain::visual_edge::VisualEdge::from_hex_edge(edge))
             .collect();
 

@@ -56,7 +56,8 @@ impl crate::graph::visualization::ports::format_exporter::FormatExporter for Mer
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use crate::graph::visualization::ports::format_exporter::FormatExporter;
+  use super::*;
 
     #[test]
     fn test_mermaid_export() {
