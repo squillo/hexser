@@ -17,17 +17,21 @@ hex_macros = { version = "0.3.0", path = "./hex_macros", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
 chrono = { version = "0.4.42", optional = true }
+tokio = {  version = "1.47.1", optional = true, features = ["sync", "macros", "rt-multi-thread", "time"] }
+async-trait = {version = "0.1.89", optional = true }
 
 [dev-dependencies]
 pretty_assertions = "1.4"
+tokio = { version = "1.47.1", features = ["sync", "macros", "rt-multi-thread", "time"] }
 
 [features]
 default = ["macros"]
 macros = ["hex_macros"]
 ai = ["chrono"]
+async = ["tokio", "async-trait"]
 visualization = ["serde", "serde_json"]
-container = []
-full = ["ai", "macros", "visualization", "container"]
+container = ["tokio", "async-trait"]
+full = ["ai", "async", "macros", "visualization", "container"]
 
 [workspace.dependencies]
 syn = { version = "2.0", features = ["full", "extra-traits"] }

@@ -7,7 +7,8 @@
 //! Run with: cargo run --example container_example --features container
 
 #[cfg(feature = "container")]
-fn main() -> hex::HexResult<()> {
+#[tokio::main]
+async fn main() -> hex::HexResult<()> {
     println!("=== Dependency Injection Container Example ===\n");
 
     let container = hex::container::Container::new();
@@ -21,7 +22,7 @@ fn main() -> hex::HexResult<()> {
         "config",
         config_provider,
         hex::container::Scope::Singleton,
-    )?;
+    ).await?;
     println!("   ✓ Config service registered (Singleton)");
 
     let email_provider = EmailProvider {
@@ -31,30 +32,30 @@ fn main() -> hex::HexResult<()> {
         "email",
         email_provider,
         hex::container::Scope::Transient,
-    )?;
+    ).await?;
     println!("   ✓ Email service registered (Transient)");
 
     println!("\n2. Resolving services...");
 
-    let config = container.resolve::<ConfigService>("config")?;
+    let config = container.resolve::<ConfigService>("config").await?;
     println!("   ✓ Config resolved: API Key = {}", config.api_key);
 
-    let email1 = container.resolve::<EmailService>("email")?;
-    let email2 = container.resolve::<EmailService>("email")?;
+    let email1 = container.resolve::<EmailService>("email").await?;
+    let email2 = container.resolve::<EmailService>("email").await?;
     println!("   ✓ Email service resolved twice (Transient scope)");
     println!("     - Instance 1: {}", email1.host);
     println!("     - Instance 2: {}", email2.host);
 
     println!("\n3. Container info:");
-    println!("   Total services registered: {}", container.service_count());
-    println!("   Contains 'config': {}", container.contains("config"));
-    println!("   Contains 'email': {}", container.contains("email"));
+    println!("   Total services registered: {}", container.service_count().await);
+    println!("   Contains 'config': {}", container.contains("config").await);
+    println!("   Contains 'email': {}", container.contains("email").await);
 
     println!("\n4. Cloning container (shares registrations)...");
     let container2 = container.clone();
-    println!("   ✓ Cloned container service count: {}", container2.service_count());
+    println!("   ✓ Cloned container service count: {}", container2.service_count().await);
 
-    let config2 = container2.resolve::<ConfigService>("config")?;
+    let config2 = container2.resolve::<ConfigService>("config").await?;
     println!("   ✓ Resolved from cloned container: {}", config2.api_key);
 
     println!("\n✅ Container example completed!");
