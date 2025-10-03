@@ -1,6 +1,6 @@
 # Hexer - Zero-Boilerplate Hexagonal Architecture
 
-[![Crates.io](https://img.shields.io/crates/v/hexer.svg)](https://crates.io/crates/hex)
+[![Crates.io](https://img.shields.io/crates/v/hexer.svg)](https://crates.io/crates/hexer)
 [![Documentation](https://docs.rs/hex/badge.svg)](https://docs.rs/hex)
 [![License](https://img.shields.io/crates/l/hex.svg)](https://github.com/yourorg/hex)
 
@@ -10,7 +10,7 @@ The `hexer` crate provides reusable generic types and traits for implementing He
 
 ---
 
-## 🎯 Why hex?
+## 🎯 Why hexer?
 
 Traditional hexagonal architecture requires significant boilerplate:
 - Manual registration of components
@@ -117,7 +117,7 @@ That's it! You've just built a hexagonal architecture application with:
 
 ## 📚 Complete Tutorial
 ### Part 1: Understanding Hexagonal Architecture
-Hexagonal Architecture (also known as Ports and Adapters) structures applications into concentric layers:```
+Hexagonal Architecture (also known as Ports and Adapters) structures applications into concentric layers:
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -149,6 +149,7 @@ Hexagonal Architecture (also known as Ports and Adapters) structures application
 
 
 ### Part 2: The Five Layers
+
 1. Domain Layer - Your Business Logic
 The domain layer contains your core business logic, completely independent of frameworks or infrastructure.
 Entities - Things with identity:
@@ -434,8 +435,10 @@ impl DatabaseConfig {
 ```
 
 
-Part 3: CQRS Pattern with hex
-hex supports Command Query Responsibility Segregation (CQRS) out of the box.
+### Part 3: CQRS Pattern with hex
+
+hexer supports Command Query Responsibility Segregation (CQRS) out of the box.
+
 Write Side (Directives):
 
 ```rust
@@ -495,8 +498,10 @@ impl FindUserByEmailHandler {
 ```
 
 
-Part 4: Testing Your Hexagonal Application
+### Part 4: Testing Your Hexagonal Application
+
 Hexagonal architecture makes testing trivial - just mock the ports!
+
 Unit Testing Domain Logic:
 
 ```rust
@@ -568,8 +573,10 @@ fn test_create_user_handler() {
 ```
 
 
-Part 5: Error Handling
-hex provides rich, actionable error messages following best practices.
+### Part 5: Error Handling
+
+hexer provides rich, actionable error messages following best practices.
+
 Using HexError:
 
 ```rust
@@ -747,8 +754,9 @@ impl CreateTodoHandler {
 }
 ```
 
+---
 
-🎓 Advanced Patterns
+## 🎓 Advanced Patterns
 Event Sourcing
 
 ```rust
