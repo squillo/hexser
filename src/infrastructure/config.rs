@@ -16,7 +16,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::infrastructure::Config;
+/// use hexer::infrastructure::Config;
 ///
 /// struct DatabaseConfig {
 ///     connection_string: String,

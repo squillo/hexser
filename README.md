@@ -1,22 +1,12 @@
-# hex - Zero-Boilerplate Hexagonal Architecture
+# hexer - Zero-Boilerplate Hexagonal Architecture
 
-[![Crates.io](https://img.shields.io/crates/v/hex.svg)](https://crates.io/crates/hex)
+[![Crates.io](https://img.shields.io/crates/v/hexer.svg)](https://crates.io/crates/hex)
 [![Documentation](https://docs.rs/hex/badge.svg)](https://docs.rs/hex)
 [![License](https://img.shields.io/crates/l/hex.svg)](https://github.com/yourorg/hex)
 
 **Zero-boilerplate hexagonal architecture with graph-based introspection for Rust.**
 
-The `hex` crate provides reusable generic types and traits for implementing Hexagonal Architecture (Ports and Adapters pattern) with automatic graph construction, intent inference, and architectural validation. Write business logic, let `hex` handle the architecture.
-
-# hex - Zero-Boilerplate Hexagonal Architecture
-
-[![Crates.io](https://img.shields.io/crates/v/hex.svg)](https://crates.io/crates/hex)
-[![Documentation](https://docs.rs/hex/badge.svg)](https://docs.rs/hex)
-[![License](https://img.shields.io/crates/l/hex.svg)](https://github.com/yourorg/hex)
-
-**Zero-boilerplate hexagonal architecture with graph-based introspection for Rust.**
-
-The `hex` crate provides reusable generic types and traits for implementing Hexagonal Architecture (Ports and Adapters pattern) with automatic graph construction, intent inference, and architectural validation. **Write business logic, let `hex` handle the architecture.**
+The `hexer` crate provides reusable generic types and traits for implementing Hexagonal Architecture (Ports and Adapters pattern) with automatic graph construction, intent inference, and architectural validation. **Write business logic, let `hex` handle the architecture.**
 
 ---
 
@@ -45,36 +35,33 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hex = "0.1.0"
+hex = { version = "0.1.0", features = ["macros"] }
 ```
 
-### Your First Hexagonal Application
+Your First Hexagonal Application
 
 ```rust
-use hex::prelude::*;
+use hexer::prelude::*;
 
 // 1. Define your domain entity
+#[derive(HexEntity)]
 struct User {
     id: String,
     email: String,
     name: String,
 }
 
-impl Entity for User {
-    type Id = String;
-}
-
 // 2. Define a port (interface)
+#[derive(HexPort)]
 trait UserRepository: Repository<User> {
     fn find_by_email(&self, email: &str) -> HexResult<Option<User>>;
 }
 
 // 3. Implement an adapter
+#[derive(HexAdapter)]
 struct InMemoryUserRepository {
     users: Vec<User>,
 }
-
-impl Adapter for InMemoryUserRepository {}
 
 impl Repository<User> for InMemoryUserRepository {
     fn find_by_id(&self, id: &String) -> HexResult<Option<User>> {
@@ -127,15 +114,10 @@ That's it! You've just built a hexagonal architecture application with:
 - Testable components
 - Swappable implementations
 
----
-
 ## 📚 Complete Tutorial
-
 ### Part 1: Understanding Hexagonal Architecture
+Hexagonal Architecture (also known as Ports and Adapters) structures applications into concentric layers:```
 
-Hexagonal Architecture (also known as Ports and Adapters) structures applications into concentric layers:
-
-```
 ┌─────────────────────────────────────────────┐
 │         Infrastructure Layer                │
 │  (Databases, APIs, External Services)       │
@@ -155,37 +137,29 @@ Hexagonal Architecture (also known as Ports and Adapters) structures application
 │  │  └─────────────────────────────────┘  │  │
 │  └───────────────────────────────────────┘  │
 └─────────────────────────────────────────────┘
-```
+
 
 **Key Principles:**
-
-1. **Dependency Rule**: Dependencies point inward (Domain has no dependencies)
-2. **Port Interfaces**: Define what the domain needs (don't dictate how)
-3. **Adapter Implementations**: Provide concrete implementations using specific tech
-4. **Testability**: Mock adapters for testing without infrastructure
-
----
+- Dependency Rule: Dependencies point inward (Domain has no dependencies)
+- Port Interfaces: Define what the domain needs (don't dictate how)
+- Adapter Implementations: Provide concrete implementations using specific tech
+- Testability: Mock adapters for testing without infrastructure
+ 
 
 ### Part 2: The Five Layers
-
-#### 1. Domain Layer - Your Business Logic
-
+1. Domain Layer - Your Business Logic
 The domain layer contains your core business logic, completely independent of frameworks or infrastructure.
-
-**Entities** - Things with identity:
+Entities - Things with identity:
 
 ```rust
-use hex::prelude::*;
+use hexer::prelude::*;
 
+#[derive(HexEntity)]
 struct Order {
     id: OrderId,
     customer_id: CustomerId,
     items: Vec<OrderItem>,
     status: OrderStatus,
-}
-
-impl Entity for Order {
-    type Id = OrderId;
 }
 
 impl Aggregate for Order {
@@ -201,67 +175,55 @@ impl Aggregate for Order {
 }
 ```
 
-**Value Objects** - Things defined by values:
+Value Objects - Things defined by values:
 
 ```rust
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, HexValueObject)]
 struct Email(String);
 
-impl ValueObject for Email {
-    fn validate(&self) -> HexResult<()> {
-        if !self.0.contains('@') {
-            return Err(HexError::validation("Email must contain @"));
-        }
-        Ok(())
+impl Email {
+  fn validate(&self) -> HexResult<()> {
+    if !self.0.contains('@') {
+      return Err(HexError::validation("Email must contain @"));
     }
+    Ok(())
+  }
 }
 ```
 
-**Domain Events** - Things that happened:
+Domain Events - Things that happened:
 
 ```rust
+#[derive(HexDomainEvent)]
 struct OrderPlaced {
     order_id: OrderId,
     customer_id: CustomerId,
     timestamp: u64,
 }
-
-impl DomainEvent for OrderPlaced {
-    fn event_type(&self) -> &str {
-        "OrderPlaced"
-    }
-    
-    fn aggregate_id(&self) -> String {
-        self.order_id.to_string()
-    }
-}
 ```
 
-**Domain Services** - Operations spanning multiple entities:
-
+Domain Services - Operations spanning multiple entities:
 ```rust
+#[derive(HexDomainService)]
 struct PricingService;
 
-impl DomainService for PricingService {}
-
 impl PricingService {
-    fn calculate_order_total(&self, order: &Order) -> Money {
-        order.items.iter()
-            .map(|item| item.price * item.quantity)
-            .sum()
-    }
+  fn calculate_order_total(&self, order: &Order) -> Money {
+    order.items
+      .iter()
+      .map(|item| item.price * item.quantity)
+      .sum()
+  }
 }
 ```
 
----
-
-#### 2. Ports Layer - Your Interfaces
-
+ 
+2. Ports Layer - Your Interfaces
 Ports define the contracts between your domain and the outside world.
-
-**Repositories** - Persistence abstraction:
+Repositories - Persistence abstraction:
 
 ```rust
+#[derive(HexPort)]
 trait OrderRepository: Repository<Order> {
     fn find_by_customer(&self, customer_id: &CustomerId) 
         -> HexResult<Vec<Order>>;
@@ -270,24 +232,26 @@ trait OrderRepository: Repository<Order> {
 }
 ```
 
-**Use Cases** - Business operations:
+Use Cases - Business operations:
 
 ```rust
+#[derive(HexPort)]
 trait PlaceOrder: UseCase<PlaceOrderInput, PlaceOrderOutput> {}
 
 struct PlaceOrderInput {
-    customer_id: CustomerId,
-    items: Vec<OrderItem>,
+  customer_id: CustomerId,
+  items: Vec<OrderItem>,
 }
 
 struct PlaceOrderOutput {
-    order_id: OrderId,
+  order_id: OrderId,
 }
 ```
 
-**Queries** - Read operations (CQRS):
+Queries - Read operations (CQRS):
 
 ```rust
+#[derive(HexPort)]
 trait OrderHistory: Query<OrderHistoryParams, Vec<OrderView>> {}
 
 struct OrderHistoryParams {
@@ -303,27 +267,24 @@ struct OrderView {
 }
 ```
 
----
 
-#### 3. Adapters Layer - Your Implementations
+3. Adapters Layer - Your Implementations
+   Adapters implement ports using specific technologies. 
 
-Adapters implement ports using specific technologies.
-
-**Database Adapter**:
+Database Adapter:
 
 ```rust
+#[derive(HexAdapter)]
 struct PostgresOrderRepository {
-    pool: PgPool,
+  pool: PgPool,
 }
 
-impl Adapter for PostgresOrderRepository {}
-
 impl Repository<Order> for PostgresOrderRepository {
-    fn find_by_id(&self, id: &OrderId) -> HexResult<Option<Order>> {
-        // SQL query implementation
-        todo!()
-    }
-    
+fn find_by_id(&self, id: &OrderId) -> HexResult<Option<Order>> {
+// SQL query implementation
+todo!()
+}
+
     fn save(&mut self, order: Order) -> HexResult<()> {
         // SQL insert/update implementation
         todo!()
@@ -333,28 +294,27 @@ impl Repository<Order> for PostgresOrderRepository {
 }
 
 impl OrderRepository for PostgresOrderRepository {
-    fn find_by_customer(&self, customer_id: &CustomerId) 
-        -> HexResult<Vec<Order>> {
-        // Custom query implementation
-        todo!()
-    }
-    
-    fn find_pending(&self) -> HexResult<Vec<Order>> {
-        // Custom query implementation
-        todo!()
-    }
+  fn find_by_customer(&self, customer_id: &CustomerId)
+  -> HexResult<Vec<Order>> {
+    // Custom query implementation
+    todo!()
+  }
+
+  fn find_pending(&self) -> HexResult<Vec<Order>> {
+      // Custom query implementation
+      todo!()
+  }
 }
 ```
 
-**API Adapter**:
+API Adapter:
 
 ```rust
+#[derive(HexAdapter)]
 struct RestPaymentGateway {
     client: reqwest::Client,
     api_key: String,
 }
-
-impl Adapter for RestPaymentGateway {}
 
 impl PaymentPort for RestPaymentGateway {
     fn charge(&self, amount: Money, card: &Card) -> HexResult<PaymentResult> {
@@ -364,38 +324,37 @@ impl PaymentPort for RestPaymentGateway {
 }
 ```
 
-**Mapper** - Data transformation:
+Mapper - Data transformation:
 
 ```rust
+#[derive(HexAdapter)]
 struct OrderMapper;
 
 impl Mapper<Order, DbOrderRow> for OrderMapper {
-    fn map(&self, order: Order) -> HexResult<DbOrderRow> {
-        Ok(DbOrderRow {
-            id: order.id.to_string(),
-            customer_id: order.customer_id.to_string(),
-            items_json: serde_json::to_string(&order.items)?,
-            status: order.status.to_string(),
-        })
-    }
+  fn map(&self, order: Order) -> HexResult<DbOrderRow> {
+    Ok(DbOrderRow {
+      id: order.id.to_string(),
+      customer_id: order.customer_id.to_string(),
+      items_json: serde_json::to_string(&order.items)?,
+      status: order.status.to_string(),
+    })
+  }
 }
 ```
 
----
-
-#### 4. Application Layer - Your Orchestration
-
+ 
+4. Application Layer - Your Orchestration
 The application layer coordinates domain logic and ports.
-
-**Directive** (Write Operation):
+Directive (Write Operation):
 
 ```rust
+#[derive(HexDirective)]
 struct PlaceOrderDirective {
     customer_id: CustomerId,
     items: Vec<OrderItem>,
 }
 
-impl Directive for PlaceOrderDirective {
+impl PlaceOrderDirective {
     fn validate(&self) -> HexResult<()> {
         if self.items.is_empty() {
             return Err(HexError::validation("Items cannot be empty"));
@@ -405,19 +364,19 @@ impl Directive for PlaceOrderDirective {
 }
 ```
 
-**Directive Handler**:
-
+Directive Handler:
 ```rust
+#[derive(HexDirectiveHandler)]
 struct PlaceOrderHandler {
-    order_repo: Box<dyn OrderRepository>,
-    payment_port: Box<dyn PaymentPort>,
+  order_repo: Box<dyn OrderRepository>,
+  payment_port: Box<dyn PaymentPort>,
 }
 
-impl DirectiveHandler<PlaceOrderDirective> for PlaceOrderHandler {
-    fn handle(&self, directive: PlaceOrderDirective) -> HexResult<()> {
-        // Validate
-        directive.validate()?;
-        
+impl PlaceOrderHandler {
+fn handle(&self, directive: PlaceOrderDirective) -> HexResult<()> {
+// Validate
+directive.validate()?;
+
         // Create domain object
         let order = Order::new(directive.customer_id, directive.items)?;
         
@@ -435,15 +394,15 @@ impl DirectiveHandler<PlaceOrderDirective> for PlaceOrderHandler {
 }
 ```
 
-**Query Handler**:
+Query Handler:
 
 ```rust
+#[derive(HexQueryHandler)]
 struct OrderHistoryHandler {
     query_repo: Box<dyn OrderQueryRepository>,
 }
 
-impl QueryHandler<OrderHistoryParams, Vec<OrderView>> 
-    for OrderHistoryHandler {
+impl OrderHistoryHandler {
     fn handle(&self, params: OrderHistoryParams) 
         -> HexResult<Vec<OrderView>> {
         self.query_repo.get_order_history(
@@ -455,55 +414,50 @@ impl QueryHandler<OrderHistoryParams, Vec<OrderView>>
 }
 ```
 
----
 
-#### 5. Infrastructure Layer - Your Technology
-
-Infrastructure provides the concrete technology implementations.
-
+5. Infrastructure Layer - Your Technology
+   Infrastructure provides the concrete technology implementations.
 ```rust
-struct DatabaseConfig {
-    connection_string: String,
-    pool_size: u32,
-}
-
-impl Config for DatabaseConfig {}
+ #[derive(HexConfig)]
+ struct DatabaseConfig {
+   connection_string: String,
+   pool_size: u32,
+ }
 
 impl DatabaseConfig {
-    fn create_pool(&self) -> PgPool {
-        // Create database connection pool
-        todo!()
-    }
+  fn create_pool(&self) -> PgPool {
+    // Create database connection pool
+    todo!()
+  }
 }
 ```
 
----
-
-### Part 3: CQRS Pattern with hex
-
+ 
+Part 3: CQRS Pattern with hex
 hex supports Command Query Responsibility Segregation (CQRS) out of the box.
-
-**Write Side (Directives)**:
+Write Side (Directives):
 
 ```rust
 // Directive represents intent to change state
+#[derive(HexDirective)]
 struct UpdateUserEmail {
     user_id: UserId,
     new_email: Email,
 }
 
-impl Directive for UpdateUserEmail {
+impl UpdateUserEmail {
     fn validate(&self) -> HexResult<()> {
         self.new_email.validate()
     }
 }
 
 // Handler executes the directive
+#[derive(HexDirectiveHandler)]
 struct UpdateUserEmailHandler {
     repo: Box<dyn UserRepository>,
 }
 
-impl DirectiveHandler<UpdateUserEmail> for UpdateUserEmailHandler {
+impl UpdateUserEmailHandler {
     fn handle(&self, directive: UpdateUserEmail) -> HexResult<()> {
         let mut user = self.repo.find_by_id(&directive.user_id)?
             .ok_or_else(|| HexError::not_found("User", &directive.user_id))?;
@@ -516,35 +470,33 @@ impl DirectiveHandler<UpdateUserEmail> for UpdateUserEmailHandler {
 }
 ```
 
-**Read Side (Queries)**:
+Read Side (Queries):
 
 ```rust
 // Query represents read operation
+#[derive(HexQuery)]
 struct FindUserByEmail {
-    email: String,
+  email: String,
 }
 
 // Handler executes the query
+#[derive(HexQueryHandler)]
 struct FindUserByEmailHandler {
-    query_repo: Box<dyn UserQueryRepository>,
+  query_repo: Box<dyn UserQueryRepository>,
 }
 
-impl QueryHandler<FindUserByEmail, Option<UserView>> 
-    for FindUserByEmailHandler {
-    fn handle(&self, query: FindUserByEmail) 
-        -> HexResult<Option<UserView>> {
-        self.query_repo.find_by_email(&query.email)
-    }
+impl FindUserByEmailHandler {
+  fn handle(&self, query: FindUserByEmail)
+  -> HexResult<Option<UserView>> {
+    self.query_repo.find_by_email(&query.email)
+  }
 }
 ```
 
----
-
-### Part 4: Testing Your Hexagonal Application
-
+ 
+Part 4: Testing Your Hexagonal Application
 Hexagonal architecture makes testing trivial - just mock the ports!
-
-**Unit Testing Domain Logic**:
+Unit Testing Domain Logic:
 
 ```rust
 #[cfg(test)]
@@ -574,54 +526,50 @@ mod tests {
 }
 ```
 
-**Testing with Mock Adapters**:
+Testing with Mock Adapters:
 
 ```rust
+#[derive(HexAdapter)]
 struct MockUserRepository {
-    users: std::collections::HashMap<UserId, User>,
+  users: std::collections::HashMap<UserId, User>,
 }
 
-impl Adapter for MockUserRepository {}
-
 impl Repository<User> for MockUserRepository {
-    fn find_by_id(&self, id: &UserId) -> HexResult<Option<User>> {
-        Ok(self.users.get(id).cloned())
-    }
+  fn find_by_id(&self, id: &UserId) -> HexResult<Option<User>> {
+    Ok(self.users.get(id).cloned())
+  }
+
+  fn save(&mut self, user: User) -> HexResult<()> {
+      self.users.insert(user.id.clone(), user);
+      Ok(())
+  }
     
-    fn save(&mut self, user: User) -> HexResult<()> {
-        self.users.insert(user.id.clone(), user);
-        Ok(())
-    }
-    
-    // ... other methods
+  // ... other methods
 }
 
 #[test]
 fn test_create_user_handler() {
-    let mut repo = MockUserRepository {
-        users: std::collections::HashMap::new(),
-    };
-    
-    let handler = CreateUserHandler {
-        repo: Box::new(repo),
-    };
-    
-    let directive = CreateUserDirective {
-        email: "test@example.com".to_string(),
-        name: "Test User".to_string(),
-    };
-    
-    assert!(handler.handle(directive).is_ok());
+  let mut repo = MockUserRepository {
+    users: std::collections::HashMap::new(),
+  };
+
+  let handler = CreateUserHandler {
+      repo: Box::new(repo),
+  };
+  
+  let directive = CreateUserDirective {
+      email: "test@example.com".to_string(),
+      name: "Test User".to_string(),
+  };
+  
+  assert!(handler.handle(directive).is_ok());
 }
 ```
 
----
-
-### Part 5: Error Handling
-
+ 
+Part 5: Error Handling
 hex provides rich, actionable error messages following best practices.
-
-**Using HexError**:
+Using HexError:
 
 ```rust
 fn validate_order(order: &Order) -> HexResult<()> {
@@ -643,18 +591,18 @@ fn validate_order(order: &Order) -> HexResult<()> {
 }
 ```
 
-**Error Display**:
+Error Display:
 
 ```
 Error: E_HEX_001 - Order cannot be empty
 Next Steps:
-  - Add at least one item to the order
-Suggestions:
-  - order.add_item(item)
-  - order.items.push(item)
+- Add at least one item to the order
+  Suggestions:
+- order.add_item(item)
+- order.items.push(item)
 ```
 
-**Error Variants**:
+Error Variants:
 
 ```rust
 // Domain errors - business rule violations
@@ -673,107 +621,101 @@ HexError::Port { ... }
 HexError::Adapter { ... }
 ```
 
----
 
-### Part 6: Real-World Example - TODO Application
-
+Part 6: Real-World Example - TODO Application
 Let's build a complete TODO application using hexagonal architecture.
-
-**Domain Layer**:
+Domain Layer:
 
 ```rust
-use hex::prelude::*;
+use hexer::prelude::*;
 
-#[derive(Clone)]
+#[derive(Clone, HexEntity)]
 struct Todo {
-    id: TodoId,
-    title: String,
-    description: String,
-    completed: bool,
-}
-
-impl Entity for Todo {
-    type Id = TodoId;
+  id: TodoId,
+  title: String,
+  description: String,
+  completed: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct TodoId(String);
 
 impl TodoId {
-    fn new() -> Self {
-        Self(uuid::Uuid::new_v4().to_string())
-    }
+  fn new() -> Self {
+    Self(uuid::Uuid::new_v4().to_string())
+  }
 }
 ```
 
-**Ports Layer**:
+Ports Layer:
 
 ```rust
+#[derive(HexPort)]
 trait TodoRepository: Repository<Todo> {
     fn find_active(&self) -> HexResult<Vec<Todo>>;
     fn find_completed(&self) -> HexResult<Vec<Todo>>;
 }
 ```
 
-**Adapters Layer**:
+Adapters Layer:
 
 ```rust
+#[derive(HexAdapter)]
 struct InMemoryTodoRepository {
-    todos: std::sync::Mutex<Vec<Todo>>,
+  todos: std::sync::Mutex<Vec<Todo>>,
 }
 
-impl Adapter for InMemoryTodoRepository {}
-
 impl Repository<Todo> for InMemoryTodoRepository {
-    fn find_by_id(&self, id: &TodoId) -> HexResult<Option<Todo>> {
-        let todos = self.todos.lock().unwrap();
-        Ok(todos.iter().find(|t| &t.id == id).cloned())
-    }
-    
-    fn save(&mut self, todo: Todo) -> HexResult<()> {
-        let mut todos = self.todos.lock().unwrap();
-        if let Some(existing) = todos.iter_mut().find(|t| t.id == todo.id) {
-            *existing = todo;
-        } else {
-            todos.push(todo);
-        }
-        Ok(())
-    }
-    
-    fn delete(&mut self, id: &TodoId) -> HexResult<()> {
-        let mut todos = self.todos.lock().unwrap();
-        todos.retain(|t| &t.id != id);
-        Ok(())
-    }
-    
-    fn find_all(&self) -> HexResult<Vec<Todo>> {
-        let todos = self.todos.lock().unwrap();
-        Ok(todos.clone())
-    }
+  fn find_by_id(&self, id: &TodoId) -> HexResult<Option<Todo>> {
+    let todos = self.todos.lock().unwrap();
+    Ok(todos.iter().find(|t| &t.id == id).cloned())
+  }
+
+  fn save(&mut self, todo: Todo) -> HexResult<()> {
+      let mut todos = self.todos.lock().unwrap();
+      if let Some(existing) = todos.iter_mut().find(|t| t.id == todo.id) {
+          *existing = todo;
+      } else {
+          todos.push(todo);
+      }
+      Ok(())
+  }
+  
+  fn delete(&mut self, id: &TodoId) -> HexResult<()> {
+      let mut todos = self.todos.lock().unwrap();
+      todos.retain(|t| &t.id != id);
+      Ok(())
+  }
+  
+  fn find_all(&self) -> HexResult<Vec<Todo>> {
+      let todos = self.todos.lock().unwrap();
+      Ok(todos.clone())
+  }
 }
 
 impl TodoRepository for InMemoryTodoRepository {
-    fn find_active(&self) -> HexResult<Vec<Todo>> {
-        let todos = self.todos.lock().unwrap();
-        Ok(todos.iter().filter(|t| !t.completed).cloned().collect())
-    }
-    
-    fn find_completed(&self) -> HexResult<Vec<Todo>> {
-        let todos = self.todos.lock().unwrap();
-        Ok(todos.iter().filter(|t| t.completed).cloned().collect())
-    }
+  fn find_active(&self) -> HexResult<Vec<Todo>> {
+    let todos = self.todos.lock().unwrap();
+    Ok(todos.iter().filter(|t| !t.completed).cloned().collect())
+  }
+
+  fn find_completed(&self) -> HexResult<Vec<Todo>> {
+    let todos = self.todos.lock().unwrap();
+    Ok(todos.iter().filter(|t| t.completed).cloned().collect())
+  }
 }
 ```
 
-**Application Layer**:
+Application Layer:
 
 ```rust
+#[derive(HexDirective)]
 struct CreateTodoDirective {
     title: String,
     description: String,
 }
 
-impl Directive for CreateTodoDirective {
+impl CreateTodoDirective {
     fn validate(&self) -> HexResult<()> {
         if self.title.is_empty() {
             return Err(HexError::validation("Title cannot be empty"));
@@ -782,11 +724,12 @@ impl Directive for CreateTodoDirective {
     }
 }
 
+#[derive(HexDirectiveHandler)]
 struct CreateTodoHandler {
     repo: Box<dyn TodoRepository>,
 }
 
-impl DirectiveHandler<CreateTodoDirective> for CreateTodoHandler {
+impl CreateTodoHandler {
     fn handle(&self, directive: CreateTodoDirective) -> HexResult<()> {
         directive.validate()?;
         
@@ -803,48 +746,47 @@ impl DirectiveHandler<CreateTodoDirective> for CreateTodoHandler {
 }
 ```
 
----
 
-## 🎓 Advanced Patterns
-
-### Event Sourcing
+🎓 Advanced Patterns
+Event Sourcing
 
 ```rust
+#[derive(HexAggregate)]
 struct OrderAggregate {
-    id: OrderId,
-    uncommitted_events: Vec<Box<dyn DomainEvent>>,
+  id: OrderId,
+  uncommitted_events: Vec<Box<dyn DomainEvent>>,
 }
 
 impl OrderAggregate {
-    fn place_order(&mut self, items: Vec<OrderItem>) -> HexResult<()> {
-        // Validate
-        if items.is_empty() {
-            return Err(HexError::domain("E_HEX_001", "Order must have items"));
-        }
-        
-        // Create event
-        let event = OrderPlaced {
-            order_id: self.id.clone(),
-            items,
-            timestamp: current_timestamp(),
-        };
-        
-        // Apply event
-        self.apply_event(&event);
-        
-        // Record event
-        self.uncommitted_events.push(Box::new(event));
-        
-        Ok(())
+  fn place_order(&mut self, items: Vec<OrderItem>) -> HexResult<()> {
+    // Validate
+    if items.is_empty() {
+      return Err(HexError::domain("E_HEX_001", "Order must have items"));
     }
+
+    // Create event
+    let event = OrderPlaced {
+        order_id: self.id.clone(),
+        items,
+        timestamp: current_timestamp(),
+    };
     
-    fn apply_event(&mut self, event: &dyn DomainEvent) {
-        // Update state based on event
-    }
+    // Apply event
+    self.apply_event(&event);
+    
+    // Record event
+    self.uncommitted_events.push(Box::new(event));
+    
+    Ok(())
+  }
+  
+  fn apply_event(&mut self, event: &dyn DomainEvent) {
+      // Update state based on event
+  }
 }
 ```
 
-### Dependency Injection
+Dependency Injection
 
 ```rust
 struct ApplicationContext {
@@ -872,7 +814,6 @@ impl ApplicationContext {
 }
 ```
 
----
 
 ## 📊 Knowledge Graph
 
@@ -908,101 +849,56 @@ hex/
 │   └── HexError         - Actionable errors
 │
 └── graph/               [Introspection - Phase 2+]
-    ├── Layer            - Architectural layers
-    ├── Role             - Component roles
-    ├── Relationship     - Component connections
-    └── NodeId           - Unique identification
+├── Layer            - Architectural layers
+├── Role             - Component roles
+├── Relationship     - Component connections
+└── NodeId           - Unique identification
 ```
-
----
-
-## 🔮 Future Phases (Coming Soon)
-
-### Phase 2: Graph Core
-- Immutable, thread-safe graph structure
-- Automatic component tracking
-- Relationship detection
-
-### Phase 3: Derive Macros
-- `#[derive(HexDomain)]` - Auto-implement domain traits
-- `#[derive(HexPort)]` - Auto-register ports
-- `#[derive(HexAdapter)]` - Auto-detect implementations
-- True zero-boilerplate DX
-
-### Phase 4: Query API
-- Fluent graph queries
-- Dependency analysis
-- Architecture validation
-
-### Phase 5+: Advanced Features
-- Intent inference engine
-- Architectural pattern detection
-- Visualization (DOT, Mermaid, HTML)
-- Persistent graph storage
-- Observability with tracing
-
----
-
+ 
 ## 💡 Design Philosophy
-
-1. **"Language of the Language"**: Use Rust's type system to express architecture
-2. **Zero Boilerplate**: Derive everything, configure nothing
-3. **Compile-Time Guarantees**: Catch errors before runtime
-4. **Rich Errors**: Every error is helpful and actionable
-5. **Self-Documenting**: Graph reveals architecture automatically
-6. **Testability First**: Mock anything, test everything
-
----
-
+"Language of the Language": Use Rust's type system to express architecture
+Zero Boilerplate: Derive everything, configure nothing
+Compile-Time Guarantees: Catch errors before runtime
+Rich Errors: Every error is helpful and actionable
+Self-Documenting: Graph reveals architecture automatically
+Testability First: Mock anything, test everything
+ 
 ## 🤝 Contributing
-
 We welcome contributions! This crate follows strict coding standards:
-
-- **One item per file**: Each file contains one logical item
-- **No imports**: Fully qualified paths (except std prelude)
-- **Documentation**: Every item has `//!` and `///` docs
-- **In-file tests**: Tests live with the code they test
-- **No unsafe**: Safe Rust only
-- **Rust 2024**: Latest edition
-
-See `CONTRIBUTING.md` for details.
-
----
-
+One item per file: Each file contains one logical item
+No imports: Fully qualified paths (except std prelude)
+Documentation: Every item has //! and /// docs
+In-file tests: Tests live with the code they test
+No unsafe: Safe Rust only
+Rust 2024: Latest edition
+See CONTRIBUTING.md for details.
+ 
 ## 📄 License
-
 Licensed under either of:
-
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
-- MIT license ([LICENSE-MIT](LICENSE-MIT))
-
+Apache License, Version 2.0 (LICENSE-APACHE)
+MIT license (LICENSE-MIT)
 at your option.
-
----
-
+ 
 ## 🙏 Acknowledgments
-
 Inspired by:
-- **Domain-Driven Design** by Eric Evans
-- **Hexagonal Architecture** by Alistair Cockburn
-- **Clean Architecture** by Robert C. Martin
-- Rust's **type system** and **error handling**
-- The **Rust community**'s commitment to excellence
-
----
-
+CEQRS by Scott Wyatt
+N Lang by Scott Wyatt
+Domain-Driven Design by Eric Evans
+Hexagonal Architecture by Alistair Cockburn
+Clean Architecture by Robert C. Martin
+Rust's type system and error handling
+The Rust community's commitment to excellence
+ 
 ## 📚 Additional Resources
-
-- [Hexagonal Architecture Explained](https://alistair.cockburn.us/hexagonal-architecture/)
-- [Domain-Driven Design](https://domainlanguage.com/ddd/)
-- [CQRS Pattern](https://martinfowler.com/bliki/CQRS.html)
-- [Ports and Adapters](https://herbertograca.com/2017/09/14/ports-adapters-architecture/)
-
----
-
+Hexagonal Architecture Explained
+Domain-Driven Design
+CQRS Pattern
+Ports and Adapters
+ 
 ## 🎯 Examples & Tutorials
+The hex crate includes comprehensive examples and tutorials to help you learn hexagonal architecture.
+Running Examples
 
-The `hex` crate includes comprehensive examples and tutorials to help you learn hexagonal architecture.
-
-### Running Examples
-
+```bash
+cargo run --example simple_todo
+```

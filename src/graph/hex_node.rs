@@ -16,7 +16,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::graph::{HexNode, NodeId, Layer, Role};
+/// use hexer::graph::{HexNode, NodeId, Layer, Role};
 ///
 /// let node = HexNode::new(
 ///     NodeId::from_name("MyEntity"),

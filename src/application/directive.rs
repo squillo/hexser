@@ -17,8 +17,8 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::application::Directive;
-/// use hex::HexResult;
+/// use hexer::application::Directive;
+/// use hexer::HexResult;
 ///
 /// struct CreateUserDirective {
 ///     email: String,
@@ -30,7 +30,7 @@
 ///         if self.email.contains('@') {
 ///             Ok(())
 ///         } else {
-///             Err(hex::HexError::validation("Invalid email"))
+///             Err(hexer::HexError::validation("Invalid email"))
 ///         }
 ///     }
 /// }

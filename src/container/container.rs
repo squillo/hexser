@@ -37,7 +37,7 @@ impl Container {
     ///
     /// # Example
     /// ```
-    /// # use hex::container::Container;
+    /// # use hexer::container::Container;
     /// let container = Container::new();
     /// ```
     pub fn new() -> Self {

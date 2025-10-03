@@ -13,3 +13,4 @@ pub mod entity;
 pub mod repository;
 pub mod directive;
 pub mod query;
+pub mod aggregate;

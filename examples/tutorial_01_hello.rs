@@ -5,7 +5,7 @@
 //!
 //! Run with: cargo run --example tutorial_01_hello
 
-use hex::prelude::*;
+use hexer::prelude::*;
 
 #[derive(HexDomain, Entity)]
 struct TodoMore {

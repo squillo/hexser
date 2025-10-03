@@ -2,7 +2,7 @@
 //!
 //! Learn Command Query Responsibility Segregation with directives and queries.
 
-use hex::prelude::*;
+use hexer::prelude::*;
 
 #[derive(HexDomain, Entity, Clone)]
 struct Order {

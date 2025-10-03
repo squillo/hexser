@@ -23,8 +23,8 @@ impl<'a> ContextBuilder<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hex::graph::builder::GraphBuilder;
-    /// # use hex::ai::ContextBuilder;
+    /// # use hexer::graph::builder::GraphBuilder;
+    /// # use hexer::ai::ContextBuilder;
     /// let graph = GraphBuilder::new().build();
     /// let builder = ContextBuilder::new(&graph);
     /// ```

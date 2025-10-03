@@ -21,8 +21,8 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::application::{Directive, DirectiveHandler};
-/// use hex::HexResult;
+/// use hexer::application::{Directive, DirectiveHandler};
+/// use hexer::HexResult;
 ///
 /// struct CreateUserDirective {
 ///     email: String,

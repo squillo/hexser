@@ -1512,7 +1512,7 @@ Attachments Kind: Visible
 Attachments Source: CodeAtCaretRetriever / ChatAttachmentWithFilePathWrapper
 Attachments Text:
 ```rust
-impl hex::domain::Entity for Todo {
+impl hexer::domain::Entity for Todo {
     type Id = String;
 }
 
@@ -1529,9 +1529,9 @@ impl InMemoryTodoRepository {
     }
 }
 
-impl hex::adapters::Adapter for InMemoryTodoRepository {}
+impl hexer::adapters::Adapter for InMemoryTodoRepository {}
 
-impl hex::ports::Repository<Todo> for InMemoryTodoRepository {
+impl hexer::ports::Repository<Todo> for InMemoryTodoRepository {
 ```
 
 

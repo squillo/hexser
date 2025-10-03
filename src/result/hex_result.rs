@@ -15,7 +15,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::HexResult;
+/// use hexer::HexResult;
 ///
 /// fn do_something() -> HexResult<String> {
 ///     Ok(String::from("success"))

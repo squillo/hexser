@@ -5,7 +5,7 @@
 //!
 //! Run with: `cargo run --example tutorial_01_entity`
 
-fn main() -> hex::HexResult<()> {
+fn main() -> hexer::HexResult<()> {
     println!("=== Tutorial 01: Your First Entity ===\n");
 
     // Step 1: Define a domain entity
@@ -19,7 +19,7 @@ fn main() -> hex::HexResult<()> {
 
     // Step 2: Implement the Entity trait
     // This gives your type hexagonal architecture superpowers!
-    impl hex::domain::Entity for User {
+    impl hexer::domain::Entity for User {
         type Id = String;  // Define what uniquely identifies this entity
     }
 

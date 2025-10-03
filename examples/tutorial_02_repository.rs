@@ -5,7 +5,7 @@
 //!
 //! Run with: `cargo run --example tutorial_02_repository`
 
-fn main() -> hex::HexResult<()> {
+fn main() -> hexer::HexResult<()> {
     println!("=== Tutorial 02: Repository Port ===\n");
 
     // From Tutorial 01: Our domain entity
@@ -16,15 +16,15 @@ fn main() -> hex::HexResult<()> {
         name: String,
     }
 
-    impl hex::domain::Entity for User {
+    impl hexer::domain::Entity for User {
         type Id = String;
     }
 
     // NEW: Define a Port (interface) for persistence
     // Ports define WHAT we need, not HOW to do it
-    trait UserRepository: hex::ports::Repository<User> {
-        fn find_by_email(&self, email: &str) -> hex::HexResult<Option<User>>;
-        fn count(&self) -> hex::HexResult<usize>;
+    trait UserRepository: hexer::ports::Repository<User> {
+        fn find_by_email(&self, email: &str) -> hexer::HexResult<Option<User>>;
+        fn count(&self) -> hexer::HexResult<usize>;
     }
 
     println!("✅ Defined UserRepository port");

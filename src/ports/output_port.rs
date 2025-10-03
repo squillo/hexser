@@ -21,8 +21,8 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::ports::OutputPort;
-/// use hex::HexResult;
+/// use hexer::ports::OutputPort;
+/// use hexer::HexResult;
 ///
 /// struct EmailRequest {
 ///     to: String,

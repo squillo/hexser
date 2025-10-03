@@ -5,7 +5,7 @@
 //!
 //! Run with: cargo run --example tutorial_04_application
 
-use hex::prelude::*;
+use hexer::prelude::*;
 
 // Domain Layer
 #[derive(HexDomain, Entity, Clone)]

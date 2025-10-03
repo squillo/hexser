@@ -5,44 +5,44 @@
 //!
 //! Run with: cargo run --example visualization_tutorial
 
-fn main() -> hex::HexResult<()> {
-    use hex::showcase::visualizable::Visualizable;
+fn main() -> hexer::HexResult<()> {
+    use hexer::showcase::visualizable::Visualizable;
     println!("Architecture Visualization Tutorial\n");
     println!("{}", "=".repeat(60));
 
     // Build sample architecture
-    let graph = hex::graph::builder::GraphBuilder::new()
+    let graph = hexer::graph::builder::GraphBuilder::new()
         .with_description("E-commerce System")
-        .add_node(hex::graph::hex_node::HexNode::new(
-            hex::graph::node_id::NodeId::from_name("Product"),
-            hex::graph::layer::Layer::Domain,
-            hex::graph::role::Role::Entity,
+        .add_node(hexer::graph::hex_node::HexNode::new(
+            hexer::graph::node_id::NodeId::from_name("Product"),
+            hexer::graph::layer::Layer::Domain,
+            hexer::graph::role::Role::Entity,
             "Product",
             "domain::product",
         ))
-        .add_node(hex::graph::hex_node::HexNode::new(
-            hex::graph::node_id::NodeId::from_name("ProductRepository"),
-            hex::graph::layer::Layer::Port,
-            hex::graph::role::Role::Repository,
+        .add_node(hexer::graph::hex_node::HexNode::new(
+            hexer::graph::node_id::NodeId::from_name("ProductRepository"),
+            hexer::graph::layer::Layer::Port,
+            hexer::graph::role::Role::Repository,
             "ProductRepository",
             "ports::product_repository",
         ))
-        .add_node(hex::graph::hex_node::HexNode::new(
-            hex::graph::node_id::NodeId::from_name("PostgresProductRepository"),
-            hex::graph::layer::Layer::Adapter,
-            hex::graph::role::Role::Adapter,
+        .add_node(hexer::graph::hex_node::HexNode::new(
+            hexer::graph::node_id::NodeId::from_name("PostgresProductRepository"),
+            hexer::graph::layer::Layer::Adapter,
+            hexer::graph::role::Role::Adapter,
             "PostgresProductRepository",
             "adapters::postgres_product_repository",
         ))
-        .add_edge(hex::graph::hex_edge::HexEdge::new(
-            hex::graph::node_id::NodeId::from_name("ProductRepository"),
-            hex::graph::node_id::NodeId::from_name("Product"),
-            hex::graph::relationship::Relationship::Depends,
+        .add_edge(hexer::graph::hex_edge::HexEdge::new(
+            hexer::graph::node_id::NodeId::from_name("ProductRepository"),
+            hexer::graph::node_id::NodeId::from_name("Product"),
+            hexer::graph::relationship::Relationship::Depends,
         ))
-        .add_edge(hex::graph::hex_edge::HexEdge::new(
-            hex::graph::node_id::NodeId::from_name("PostgresProductRepository"),
-            hex::graph::node_id::NodeId::from_name("ProductRepository"),
-            hex::graph::relationship::Relationship::Implements,
+        .add_edge(hexer::graph::hex_edge::HexEdge::new(
+            hexer::graph::node_id::NodeId::from_name("PostgresProductRepository"),
+            hexer::graph::node_id::NodeId::from_name("ProductRepository"),
+            hexer::graph::relationship::Relationship::Implements,
         ))
         .build();
 

@@ -16,8 +16,8 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::domain::ValueObject;
-/// use hex::HexResult;
+/// use hexer::domain::ValueObject;
+/// use hexer::HexResult;
 ///
 /// #[derive(Clone, PartialEq, Eq)]
 /// struct Email(String);
@@ -27,7 +27,7 @@
 ///         if self.0.contains('@') {
 ///             Ok(())
 ///         } else {
-///             Err(hex::HexError::validation("Invalid email format"))
+///             Err(hexer::HexError::validation("Invalid email format"))
 ///         }
 ///     }
 /// }

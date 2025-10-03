@@ -3,22 +3,26 @@
 //! These tests validate that all components of the hexagonal architecture
 //! work together correctly. They test the flow from domain through ports
 //! and adapters, ensuring proper separation of concerns and functionality.
+//!
+//! Revision History
+//! - 2025-10-02T21:45:00Z @AI: Enhance HexAggregate macro test to use hex(invariants) attribute for custom validation.
+//! - 2025-10-02T21:30:00Z @AI: Fix conflicting Aggregate implementations, remove derive from custom invariant test.
 
 #[cfg(test)]
 mod domain_integration {
-  use hex::{Aggregate, ValueObject};
+  use hexer::{Aggregate, ValueObject};
 
   /// Test Entity and ValueObject integration.
     #[test]
     fn test_entity_with_value_object() {
         struct Email(String);
 
-        impl hex::domain::ValueObject for Email {
-            fn validate(&self) -> hex::HexResult<()> {
+        impl hexer::domain::ValueObject for Email {
+            fn validate(&self) -> hexer::HexResult<()> {
                 if self.0.contains('@') {
                     Ok(())
                 } else {
-                    Err(hex::HexError::validation("Email must contain @"))
+                    Err(hexer::HexError::validation("Email must contain @"))
                 }
             }
         }
@@ -28,7 +32,7 @@ mod domain_integration {
             email: Email,
         }
 
-        impl hex::domain::Entity for User {
+        impl hexer::domain::Entity for User {
             type Id = String;
         }
 
@@ -40,26 +44,27 @@ mod domain_integration {
             email,
         };
 
-        let _id: <User as hex::domain::Entity>::Id = user.id;
+        let _id: <User as hexer::domain::Entity>::Id = user.id;
     }
 
-    /// Test Aggregate with invariants.
+    /// Test HexAggregate macro with custom invariants via attribute.
     #[test]
     fn test_aggregate_invariants() {
+        #[derive(hex_macros::HexAggregate)]
         struct Order {
             id: String,
             items: Vec<String>,
         }
 
-        impl hex::domain::Entity for Order {
+        impl hexer::domain::Entity for Order {
             type Id = String;
         }
 
-        impl hex::domain::Aggregate for Order {
-            fn check_invariants(&self) -> hex::HexResult<()> {
+        impl Order {
+            fn check_invariants(&self) -> hexer::HexResult<()> {
                 if self.items.is_empty() {
-                    return Err(hex::HexError::domain(
-                        hex::error_codes::domain::EMPTY_ORDER,
+                    return Err(hexer::HexError::domain(
+                        hexer::error_codes::domain::EMPTY_ORDER,
                         "Order must have items"
                     ));
                 }
@@ -79,12 +84,33 @@ mod domain_integration {
         };
         assert!(invalid_order.check_invariants().is_err());
     }
+
+    /// Test HexAggregate derive macro with default implementation.
+    #[test]
+    fn test_hex_aggregate_derive_default() {
+        #[derive(hex_macros::HexAggregate)]
+        struct SimpleAggregate {
+            id: String,
+            value: i32,
+        }
+
+        impl hexer::domain::Entity for SimpleAggregate {
+            type Id = String;
+        }
+
+        let aggregate = SimpleAggregate {
+            id: String::from("1"),
+            value: 42,
+        };
+
+        assert!(aggregate.check_invariants().is_ok());
+    }
 }
 
 #[cfg(test)]
 mod port_adapter_integration {
-  use hex::Repository;
-  use hex::Mapper;
+  use hexer::Repository;
+  use hexer::Mapper;
 
   /// Test Repository port with adapter implementation.
     #[test]
@@ -96,7 +122,7 @@ mod port_adapter_integration {
             done: bool,
         }
 
-        impl hex::domain::Entity for Todo {
+        impl hexer::domain::Entity for Todo {
             type Id = String;
         }
 
@@ -104,24 +130,24 @@ mod port_adapter_integration {
             todos: Vec<Todo>,
         }
 
-        impl hex::adapters::Adapter for InMemoryTodoRepository {}
+        impl hexer::adapters::Adapter for InMemoryTodoRepository {}
 
-        impl hex::ports::Repository<Todo> for InMemoryTodoRepository {
-            fn find_by_id(&self, id: &String) -> hex::HexResult<Option<Todo>> {
+        impl hexer::ports::Repository<Todo> for InMemoryTodoRepository {
+            fn find_by_id(&self, id: &String) -> hexer::HexResult<Option<Todo>> {
                 Ok(self.todos.iter().find(|t| &t.id == id).cloned())
             }
 
-            fn save(&mut self, todo: Todo) -> hex::HexResult<()> {
+            fn save(&mut self, todo: Todo) -> hexer::HexResult<()> {
                 self.todos.push(todo);
                 Ok(())
             }
 
-            fn delete(&mut self, id: &String) -> hex::HexResult<()> {
+            fn delete(&mut self, id: &String) -> hexer::HexResult<()> {
                 self.todos.retain(|t| &t.id != id);
                 Ok(())
             }
 
-            fn find_all(&self) -> hex::HexResult<Vec<Todo>> {
+            fn find_all(&self) -> hexer::HexResult<Vec<Todo>> {
                 Ok(self.todos.clone())
             }
         }
@@ -156,8 +182,8 @@ mod port_adapter_integration {
 
         struct UserMapper;
 
-        impl hex::adapters::Mapper<DomainUser, DbUserRow> for UserMapper {
-            fn map(&self, from: DomainUser) -> hex::HexResult<DbUserRow> {
+        impl hexer::adapters::Mapper<DomainUser, DbUserRow> for UserMapper {
+            fn map(&self, from: DomainUser) -> hexer::HexResult<DbUserRow> {
                 Ok(DbUserRow {
                     user_id: from.id,
                     user_email: from.email,
@@ -165,8 +191,8 @@ mod port_adapter_integration {
             }
         }
 
-        impl hex::adapters::Mapper<DbUserRow, DomainUser> for UserMapper {
-            fn map(&self, from: DbUserRow) -> hex::HexResult<DomainUser> {
+        impl hexer::adapters::Mapper<DbUserRow, DomainUser> for UserMapper {
+            fn map(&self, from: DbUserRow) -> hexer::HexResult<DomainUser> {
                 Ok(DomainUser {
                     id: from.user_id,
                     email: from.user_email,
@@ -191,7 +217,7 @@ mod port_adapter_integration {
 
 #[cfg(test)]
 mod cqrs_integration {
-  use hex::{Directive, DirectiveHandler, QueryHandler};
+  use hexer::{Directive, DirectiveHandler, QueryHandler};
 
   /// Test Directive with handler.
     #[test]
@@ -200,10 +226,10 @@ mod cqrs_integration {
             title: String,
         }
 
-        impl hex::application::Directive for CreateTodoDirective {
-            fn validate(&self) -> hex::HexResult<()> {
+        impl hexer::application::Directive for CreateTodoDirective {
+            fn validate(&self) -> hexer::HexResult<()> {
                 if self.title.is_empty() {
-                    return Err(hex::HexError::validation("Title cannot be empty"));
+                    return Err(hexer::HexError::validation("Title cannot be empty"));
                 }
                 Ok(())
             }
@@ -211,8 +237,8 @@ mod cqrs_integration {
 
         struct CreateTodoHandler;
 
-        impl hex::application::DirectiveHandler<CreateTodoDirective> for CreateTodoHandler {
-            fn handle(&self, directive: CreateTodoDirective) -> hex::HexResult<()> {
+        impl hexer::application::DirectiveHandler<CreateTodoDirective> for CreateTodoHandler {
+            fn handle(&self, directive: CreateTodoDirective) -> hexer::HexResult<()> {
                 directive.validate()?;
                 // Would save to repository here
                 Ok(())
@@ -249,9 +275,9 @@ mod cqrs_integration {
             todos: Vec<TodoView>,
         }
 
-        impl hex::application::QueryHandler<FindTodoQuery, Option<TodoView>>
+        impl hexer::application::QueryHandler<FindTodoQuery, Option<TodoView>>
             for FindTodoHandler {
-            fn handle(&self, query: FindTodoQuery) -> hex::HexResult<Option<TodoView>> {
+            fn handle(&self, query: FindTodoQuery) -> hexer::HexResult<Option<TodoView>> {
                 Ok(self.todos.iter().find(|t| t.id == query.id).cloned())
             }
         }
@@ -277,8 +303,8 @@ mod error_integration {
     /// Test error builder pattern.
     #[test]
     fn test_error_builder() {
-        let err = hex::HexError::domain(
-            hex::error_codes::domain::EMPTY_ORDER,
+        let err = hexer::HexError::domain(
+            hexer::error_codes::domain::EMPTY_ORDER,
             "Order cannot be empty"
         )
         .with_next_step("Add at least one item")

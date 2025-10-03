@@ -17,7 +17,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::graph::{GraphBuilder, HexNode, HexEdge, NodeId, Layer, Role, Relationship};
+/// use hexer::graph::{GraphBuilder, HexNode, HexEdge, NodeId, Layer, Role, Relationship};
 ///
 /// let graph = GraphBuilder::new()
 ///     .with_description("My Architecture")

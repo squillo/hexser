@@ -17,7 +17,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::domain::Entity;
+/// use hexer::domain::Entity;
 ///
 /// struct User {
 ///     id: String,

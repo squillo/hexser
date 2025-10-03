@@ -17,7 +17,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::graph::{HexGraph, HexNode, NodeId, Layer, Role};
+/// use hexer::graph::{HexGraph, HexNode, NodeId, Layer, Role};
 ///
 /// let graph = HexGraph::builder()
 ///     .with_node(HexNode::new(

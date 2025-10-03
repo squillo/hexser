@@ -21,8 +21,8 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::application::QueryHandler;
-/// use hex::HexResult;
+/// use hexer::application::QueryHandler;
+/// use hexer::HexResult;
 ///
 /// struct FindUserQuery {
 ///     user_id: String,

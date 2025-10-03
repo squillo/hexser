@@ -1481,7 +1481,7 @@ Final testing pass
 Developer Experience Showcase
 Minimal Example
 // main.rs
-use hex::prelude::*;
+use hexer::prelude::*;
 
 
 #[derive(HexDomain, Entity)]
@@ -1759,7 +1759,7 @@ Alternative approaches considered
 
 7. Missing: Common Patterns Module
 Issue: Users might want common implementations (like InMemoryRepository).
-Fix Needed: Consider adding hex::common module with:
+Fix Needed: Consider adding hexer::common module with:
 InMemoryRepository<T> - Generic in-memory repo
 - No-op adapter for testing NullAdapter
 MockPort - Generic mock implementations
@@ -1778,13 +1778,13 @@ pub mod codes {
 Issue: Prelude module exists but isn't well documented in README.
 Fix Needed: Add a "Using the Prelude" section showing:
 // Instead of:
-use hex::domain::Entity;
-use hex::ports::Repository;
-use hex::HexResult;
+use hexer::domain::Entity;
+use hexer::ports::Repository;
+use hexer::HexResult;
 
 
 // Just do:
-use hex::prelude::*;
+use hexer::prelude::*;
 
 10. Missing: Benchmarks
 Issue: No performance baselines for Phase 1 (important for Phase 2 graph performance).
@@ -2049,7 +2049,7 @@ Clean API: GraphBuilder provides good ergonomics
 Problem: We don't have a compelling 5-line example showing the magic.
 What's Missing:
 // This should be in README, but ISN'T:
-use hex::prelude::*;
+use hexer::prelude::*;
 
 
 // THE MAGIC: Just implement traits, graph builds automatically (Phase 3)

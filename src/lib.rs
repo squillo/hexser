@@ -17,7 +17,7 @@
 //! # Quick Start
 //!
 //! ```rust
-//! use hex::prelude::*;
+//! use hexer::prelude::*;
 //!
 //! // Define a domain entity
 //! struct User {
@@ -142,7 +142,7 @@ pub use crate::showcase::{
 /// Import everything you need with a single use statement:
 ///
 /// ```rust
-/// use hex::prelude::*;
+/// use hexer::prelude::*;
 /// ```
 pub mod prelude {
     pub use crate::HexError;

@@ -16,7 +16,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::HexError;
+/// use hexer::HexError;
 ///
 /// fn do_something() -> Result<(), HexError> {
 ///     Err(HexError::Domain {

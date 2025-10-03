@@ -15,7 +15,7 @@
 //! # Example
 //!
 //! ```rust,ignore
-//! use hex::prelude::*;
+//! use hexer::prelude::*;
 //!
 //! #[derive(HexDomain, Entity)]
 //! struct User {
@@ -44,6 +44,11 @@ pub fn derive_hex_port(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 #[proc_macro_derive(HexAdapter, attributes(hex))]
 pub fn derive_hex_adapter(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     crate::derive::hex_adapter::derive(input)
+}
+
+#[proc_macro_derive(HexAggregate, attributes(hex))]
+pub fn derive_hex_aggregate(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    crate::derive::aggregate::derive(input)
 }
 
 #[proc_macro_derive(Entity)]

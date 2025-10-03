@@ -13,17 +13,17 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let expanded = quote::quote! {
-        impl #impl_generics hex::registry::Registrable for #name #ty_generics #where_clause {
-            fn node_info() -> hex::registry::NodeInfo {
-                hex::registry::NodeInfo {
-                    layer: hex::graph::Layer::Application,
-                    role: hex::graph::Role::Query,
+        impl #impl_generics hexer::registry::Registrable for #name #ty_generics #where_clause {
+            fn node_info() -> hexer::registry::NodeInfo {
+                hexer::registry::NodeInfo {
+                    layer: hexer::graph::Layer::Application,
+                    role: hexer::graph::Role::Query,
                     type_name: std::any::type_name::<Self>(),
                     module_path: std::module_path!(),
                 }
             }
 
-            fn dependencies() -> std::vec::Vec<hex::graph::NodeId> {
+            fn dependencies() -> std::vec::Vec<hexer::graph::NodeId> {
                 std::vec::Vec::new()
             }
         }

@@ -20,9 +20,9 @@
 /// # Example
 ///
 /// ```rust
-/// use hex::ports::Repository;
-/// use hex::domain::Entity;
-/// use hex::HexResult;
+/// use hexer::ports::Repository;
+/// use hexer::domain::Entity;
+/// use hexer::HexResult;
 ///
 /// struct User {
 ///     id: String,
