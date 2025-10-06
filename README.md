@@ -20,13 +20,13 @@ Traditional hexagonal architecture requires significant boilerplate:
 
 **hexer eliminates all of this.** Through intelligent trait design, compile-time graph construction, and rich error handling, you get:
 
-[x] **Zero Boilerplate** - Define your types, derive traits, done
-[x] **Type-Safe Architecture** - Compiler enforces layer boundaries
-[x] **Self-Documenting** - Graph visualization shows your architecture
-[x] **Intent Inference** - System understands itself through structure
-[x] **Rich Errors** - Helpful, actionable error messages
-[x] **Zero Runtime Overhead** - Everything happens at compile time
-[x] **AI Completion** - Expose your Rust architecture to AI agents
+- [x] **Zero Boilerplate** - Define your types, derive traits, done
+- [x] **Type-Safe Architecture** - Compiler enforces layer boundaries
+- [x] **Self-Documenting** - Graph visualization shows your architecture
+- [x] **Intent Inference** - System understands itself through structure
+- [x] **Rich Errors** - Helpful, actionable error messages
+- [x] **Zero Runtime Overhead** - Everything happens at compile time
+- [x] **AI Completion** - Expose your Rust architecture to AI agents
 
 ---
 
@@ -940,3 +940,41 @@ Then in code:
 ```rust
 use hex_potions::auth::{SignUpUser, InMemoryUserRepository, execute_signup};
 ```
+
+
+---
+
+## ⚙️ Static (non-dyn) DI — WASM-friendly
+
+When you want zero dynamic dispatch and the smallest possible runtime footprint (including on wasm32-unknown-unknown), use the new static DI utilities.
+
+Feature flags:
+- Enabled by default: `static-di`
+- Opt-in for dyn container (tokio-based): `container`
+
+Static DI provides two simple building blocks:
+- `StaticContainer<T>`: owns your fully built object graph
+- `hex_static! { ... }` macro: builds the graph from a block without any `dyn`
+
+Example:
+
+```rust
+use hexer::prelude::*;
+
+#[derive(Clone, Debug)]
+struct Repo;
+#[derive(Clone, Debug)]
+struct Service { repo: Repo }
+
+let app = hexer::hex_static!({
+    let repo = Repo;
+    let service = Service { repo: repo.clone() };
+    (repo, service)
+});
+
+let (repo, service) = app.into_inner();
+```
+
+WASM guidance:
+- Default features are WASM-friendly (no tokio). Keep `container` disabled for wasm.
+- Use `static-di` (default) and avoid the dyn container for maximum compatibility.

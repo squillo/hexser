@@ -67,6 +67,9 @@ pub mod graph;
 pub mod registry;
 pub mod templates;
 
+#[cfg(feature = "static-di")]
+pub mod static_di;
+
 #[cfg(feature = "ai")]
 pub mod ai;
 
@@ -221,4 +224,7 @@ pub mod prelude {
 
     #[cfg(feature = "container")]
     pub use crate::container::{Container, Provider, Scope};
+
+    #[cfg(feature = "static-di")]
+    pub use crate::static_di::{StaticContainer, StaticBuilder};
 }

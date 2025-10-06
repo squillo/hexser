@@ -25,13 +25,17 @@ pretty_assertions = "1.4"
 tokio = { version = "1.47.1", features = ["sync", "macros", "rt-multi-thread", "time"] }
 
 [features]
-default = ["macros"]
+# Enable macros and static (non-dyn) DI by default. The dyn container remains opt-in.
+default = ["macros", "static-di"]
 macros = ["hex_macros"]
 ai = ["chrono"]
 async = ["tokio", "async-trait"]
 visualization = ["serde", "serde_json"]
+# Dyn-based container (uses tokio/async-trait). Not enabled by default for WASM-friendliness.
 container = ["tokio", "async-trait"]
-full = ["ai", "async", "macros", "visualization", "container"]
+# Zero-cost, WASM-friendly static DI feature (no extra dependencies).
+static-di = []
+full = ["ai", "async", "macros", "visualization", "container", "static-di"]
 
 [workspace.dependencies]
 syn = { version = "2.0", features = ["full", "extra-traits"] }
