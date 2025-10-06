@@ -1,0 +1,27 @@
+[book]
+title = "Hexer Book"
+author = "Hexer Team"
+multilingual = false
+src = "src"
+description = "The official guide and book for the hexer crate — zero‑boilerplate hexagonal architecture for Rust."
+
+[build]
+destination = "book"
+create-missing = true
+
+[output.html]
+default-theme = "rust"
+preferred-dark-theme = "ayu"
+site-url = "/"
+additional-css = []
+additional-js = []
+copy-fonts = true
+no-section-label = false
+
+[output.html.search]
+boost-title = 2
+boost-hierarchy = 1.5
+boost-paragraph = 1
+
+[output.linkcheck]
+follow-web-links = false
