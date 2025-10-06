@@ -978,3 +978,92 @@ let (repo, service) = app.into_inner();
 WASM guidance:
 - Default features are WASM-friendly (no tokio). Keep `container` disabled for wasm.
 - Use `static-di` (default) and avoid the dyn container for maximum compatibility.
+
+
+
+---
+
+## Repository: Filter-based queries (vNext)
+
+We are migrating the repository port away from id-centric methods (find_by_id/find_all) toward a generic, filter-oriented API that better models your domain while staying storage-agnostic. The new QueryRepository trait introduces domain-owned Filter and SortKey types plus FindOptions for sorting and pagination.
+
+Highlights:
+- Define small Filter and SortKey enums/structs in your domain
+- Use find_one for unique lookups and find for lists with sorting/pagination
+- Legacy methods are still available but deprecated; prefer the new API
+
+Example:
+
+```rust
+use hexer::prelude::*;
+use hexer::ports::repository::{QueryRepository, FindOptions, Sort, Direction};
+
+#[derive(HexEntity, Clone, Debug)]
+struct User { id: String, email: String, created_at: u64 }
+
+// Domain-owned query types
+#[derive(Clone, Debug)]
+enum UserFilter {
+    ById(String),
+    ByEmail(String),
+    All,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum UserSortKey { CreatedAt, Email }
+
+#[derive(Default)]
+struct InMemoryUserRepository { users: Vec<User> }
+
+impl Repository<User> for InMemoryUserRepository {
+    fn find_by_id(&self, id: &String) -> HexResult<Option<User>> { Ok(self.users.iter().find(|u| &u.id == id).cloned()) }
+    fn save(&mut self, user: User) -> HexResult<()> { if let Some(i)=self.users.iter().position(|u| u.id==user.id){self.users[i]=user;} else { self.users.push(user);} Ok(()) }
+    fn delete(&mut self, id: &String) -> HexResult<()> { self.users.retain(|u| &u.id != id); Ok(()) }
+    fn find_all(&self) -> HexResult<Vec<User>> { Ok(self.users.clone()) }
+}
+
+impl QueryRepository<User> for InMemoryUserRepository {
+    type Filter = UserFilter;
+    type SortKey = UserSortKey;
+
+    fn find_one(&self, f: &Self::Filter) -> HexResult<Option<User>> {
+        Ok(self.users.iter().find(|u| match f { UserFilter::ById(id)=>&u.id==id, UserFilter::ByEmail(e)=>&u.email==e, UserFilter::All=>true }).cloned())
+    }
+
+    fn find(&self, f: &Self::Filter, opts: FindOptions<Self::SortKey>) -> HexResult<Vec<User>> {
+        let mut items: Vec<_> = self.users.iter().filter(|u| match f { UserFilter::ById(id)=>&u.id==id, UserFilter::ByEmail(e)=>&u.email==e, UserFilter::All=>true }).cloned().collect();
+        if let Some(sorts) = opts.sort {
+            for s in sorts.into_iter().rev() {
+                match (s.key, s.direction) {
+                    (UserSortKey::CreatedAt, Direction::Asc) => items.sort_by_key(|u| u.created_at),
+                    (UserSortKey::CreatedAt, Direction::Desc) => items.sort_by_key(|u| std::cmp::Reverse(u.created_at)),
+                    (UserSortKey::Email, Direction::Asc) => items.sort_by(|a,b| a.email.cmp(&b.email)),
+                    (UserSortKey::Email, Direction::Desc) => items.sort_by(|a,b| b.email.cmp(&a.email)),
+                }
+            }
+        }
+        let offset = opts.offset.unwrap_or(0) as usize;
+        let limit = opts.limit.map(|l| l as usize).unwrap_or_else(|| items.len().saturating_sub(offset));
+        let end = offset.saturating_add(limit).min(items.len());
+        Ok(items.into_iter().skip(offset).take(end.saturating_sub(offset)).collect())
+    }
+}
+
+fn main() -> HexResult<()> {
+    let repo = InMemoryUserRepository::default();
+    // Unique lookup
+    let _ = <InMemoryUserRepository as QueryRepository<User>>::find_one(&repo, &UserFilter::ByEmail("alice@ex.com".into()))?;
+
+    // List with pagination
+    let opts = FindOptions { sort: Some(vec![Sort { key: UserSortKey::CreatedAt, direction: Direction::Desc }]), limit: Some(25), offset: Some(0) };
+    let _page = <InMemoryUserRepository as QueryRepository<User>>::find(&repo, &UserFilter::All, opts)?;
+    Ok(())
+}
+```
+
+Migration tips:
+- find_by_id(id) -> find_one(&Filter::ById(id))
+- find_all() -> find(&Filter::All, FindOptions::default())
+- Add sorting/pagination via FindOptions { sort, limit, offset }
+
+For more details, see MIGRATION_GUIDE.md and docs/core-concepts.md.
