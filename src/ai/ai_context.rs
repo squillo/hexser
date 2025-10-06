@@ -6,6 +6,7 @@
 //!
 //! Revision History
 //! - 2025-10-02T18:00:00Z @AI: Initial AI context structure.
+//! - 2025-10-06T17:59:00Z @AI: Add to_json() serializer and tests; ensure ai feature includes serde.
 
 /// Machine-readable architecture context for AI agents
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -263,5 +264,50 @@ mod tests {
         let json = serde_json::to_string(&suggestion).unwrap();
         assert!(json.contains("missing_implementation"));
         assert!(json.contains("high"));
+    }
+}
+
+
+impl AIContext {
+    /// Serialize this AIContext to a JSON string.
+    ///
+    /// Returns a String on success, or an error message on failure.
+    /// Uses serde_json with a stable field order as defined by this struct.
+    pub fn to_json(&self) -> Result<String, String> {
+        match serde_json::to_string(self) {
+            Ok(s) => Ok(s),
+            Err(e) => Err(format!("Serialization error: {}", e)),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests_to_json {
+    #[test]
+    fn test_ai_context_to_json_method() {
+        let ctx = super::AIContext {
+            architecture: String::from("hexagonal"),
+            version: String::from("0.3.0"),
+            components: Vec::new(),
+            relationships: Vec::new(),
+            constraints: super::ConstraintSet {
+                dependency_rules: Vec::new(),
+                layer_boundaries: Vec::new(),
+                naming_conventions: Vec::new(),
+                required_patterns: Vec::new(),
+            },
+            suggestions: Vec::new(),
+            metadata: super::ContextMetadata {
+                generated_at: String::from("2025-10-06T17:59:00Z"),
+                hex_version: String::from("0.3.0"),
+                total_components: 0,
+                total_relationships: 0,
+                schema_version: String::from("1.0.0"),
+            },
+        };
+
+        let json = ctx.to_json().unwrap();
+        assert!(json.contains("\"schema_version\""));
+        assert!(json.contains("\"hexagonal\""));
     }
 }

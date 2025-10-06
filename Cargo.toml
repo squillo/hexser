@@ -28,7 +28,7 @@ tokio = { version = "1.47.1", features = ["sync", "macros", "rt-multi-thread", "
 # Enable macros and static (non-dyn) DI by default. The dyn container remains opt-in.
 default = ["macros", "static-di"]
 macros = ["hex_macros"]
-ai = ["chrono"]
+ai = ["chrono", "serde", "serde_json"]
 async = ["tokio", "async-trait"]
 visualization = ["serde", "serde_json"]
 # Dyn-based container (uses tokio/async-trait). Not enabled by default for WASM-friendliness.
@@ -36,6 +36,11 @@ container = ["tokio", "async-trait"]
 # Zero-cost, WASM-friendly static DI feature (no extra dependencies).
 static-di = []
 full = ["ai", "async", "macros", "visualization", "container", "static-di"]
+
+[[bin]]
+name = "hex-ai-export"
+path = "src/bin/hex_ai_export.rs"
+required-features = ["ai"]
 
 [workspace.dependencies]
 syn = { version = "2.0", features = ["full", "extra-traits"] }

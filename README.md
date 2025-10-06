@@ -1067,3 +1067,32 @@ Migration tips:
 - Add sorting/pagination via FindOptions { sort, limit, offset }
 
 For more details, see MIGRATION_GUIDE.md and docs/core-concepts.md.
+
+
+---
+
+## 🤖 AI Context Export (CLI)
+
+Export a machine-readable JSON describing your project's architecture for AI assistants and tooling.
+
+Requirements:
+- Enable the `ai` feature (serde/serde_json are included automatically).
+
+Commands:
+
+```sh
+# Build and run the exporter (prints JSON to stdout)
+cargo run -p hexer --features ai --bin hex-ai-export
+
+# Save to a file
+cargo run -p hexer --features ai --bin hex-ai-export --quiet > target/ai-context.json
+```
+
+What it does:
+- Builds the current `HexGraph` from the component registry
+- Generates an `AIContext` via `hexer::ai::ContextBuilder`
+- Serializes to JSON with a stable field order
+
+Notes:
+- The binary `hex-ai-export` is only built when the `ai` feature is enabled.
+- For reproducible diffs, commit `target/ai-context.json` or generate it in CI as an artifact.
