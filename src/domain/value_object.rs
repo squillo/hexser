@@ -52,10 +52,12 @@ mod tests {
             if self.0.contains('@') {
                 Result::Ok(())
             } else {
-                Result::Err(crate::error::hex_error::HexError::Validation {
-                    message: String::from("Email must contain @"),
-                    field: Some(String::from("email")),
-                })
+                    Result::Err(
+                        crate::error::hex_error::HexError::validation_field(
+                            "Email must contain @",
+                            "email"
+                        )
+                    )
             }
         }
     }

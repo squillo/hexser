@@ -1,294 +1,201 @@
 //! Main error type for the hex crate.
 //!
 //! HexError provides comprehensive error information following ERRORS_PROMPT.md
-//! guidelines. Each error variant includes error codes, descriptive messages,
-//! actionable next steps, and suggestions for remediation. Errors are designed
-//! to be empathetic, accessible, and helpful for both humans and AI agents.
+//! guidelines. Wraps layer-specific error structs with full error chaining support.
+//! All errors include error codes, descriptive messages, actionable next steps,
+//! and suggestions for remediation. Designed for both humans and AI agents.
 //!
 //! Revision History
+//! - 2025-10-06T00:00:00Z @AI: Refactor to wrap layer-specific error structs for Phase 1.
 //! - 2025-10-01T00:00:00Z @AI: Initial HexError enum with rich error information.
 
-/// Main error type for the hex crate.
+use crate::error::RichError;
+
+/// Main error type for the hex crate
 ///
-/// Provides rich error information including codes, messages, next steps,
-/// and suggestions following ERRORS_PROMPT.md guidelines.
+/// Wraps layer-specific error types with full error chaining support.
+/// Implements std::error::Error for seamless integration with Rust ecosystem.
 ///
 /// # Example
 ///
 /// ```rust
-/// use hexer::HexError;
+/// use hexer::error::domain_error::DomainError;
+/// use hexer::error::hex_error::HexError;
+/// use hexer::error::RichError;
 ///
-/// fn do_something() -> Result<(), HexError> {
-///     Err(HexError::Domain {
-///         code: String::from("E_HEX_001"),
-///         message: String::from("Invalid operation"),
-///         next_steps: vec![String::from("Check input values")],
-///         suggestions: vec![String::from("Ensure all required fields are present")],
-///     })
+/// fn validate_order() -> Result<(), HexError> {
+///     let err = DomainError::new("E_HEX_001", "Order cannot be empty")
+///         .with_next_step("Add at least one item")
+///         .with_suggestion("order.add_item(item)");
+///     Err(HexError::Domain(err))
 /// }
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum HexError {
-    /// Domain layer errors representing business rule violations.
-    Domain {
-        code: String,
-        message: String,
-        next_steps: Vec<String>,
-        suggestions: Vec<String>,
-    },
-
-    /// Port layer errors from interface communication failures.
-    Port {
-        code: String,
-        message: String,
-        next_steps: Vec<String>,
-        suggestions: Vec<String>,
-    },
-
-    /// Adapter layer errors from infrastructure failures.
-    Adapter {
-        code: String,
-        message: String,
-        next_steps: Vec<String>,
-        suggestions: Vec<String>,
-    },
-
-        /// IO error (file system operations)
-        Io {
-            code: String,
-            message: String,
-            next_steps: Vec<String>,
-            suggestions: Vec<String>,
-        },
-
-    /// Validation errors for input data.
-    Validation {
-        message: String,
-        field: Option<String>,
-    },
-
-    /// Resource not found errors.
-    NotFound {
-        resource: String,
-        id: String,
-    },
-
-    /// Conflict errors for state conflicts.
-    Conflict {
-        message: String,
-        existing_id: Option<String>,
-    },
+    /// Domain layer error
+    Domain(crate::error::domain_error::DomainError),
+    /// Port layer error
+    Port(crate::error::port_error::PortError),
+    /// Adapter layer error
+    Adapter(crate::error::adapter_error::AdapterError),
+    /// Validation error
+    Validation(crate::error::validation_error::ValidationError),
+    /// Resource not found error
+    NotFound(crate::error::not_found_error::NotFoundError),
+    /// Conflict error
+    Conflict(crate::error::conflict_error::ConflictError),
 }
 
 impl HexError {
-    /// Create a domain error with code and message.
+    /// Create domain error with code and message
     pub fn domain(code: &str, message: &str) -> Self {
-        Self::Domain {
-            code: String::from(code),
-            message: String::from(message),
-            next_steps: Vec::new(),
-            suggestions: Vec::new(),
-        }
+        Self::Domain(crate::error::domain_error::DomainError::new(code, message))
     }
 
-    /// Create a port error with code and message.
+    /// Create port error with code and message
     pub fn port(code: &str, message: &str) -> Self {
-        Self::Port {
-            code: String::from(code),
-            message: String::from(message),
-            next_steps: Vec::new(),
-            suggestions: Vec::new(),
-        }
+        Self::Port(crate::error::port_error::PortError::new(code, message))
     }
 
-    /// Create IO error
-    pub fn io(code: &str, message: String) -> Self {
-        Self::Io {
-            code: String::from(code),
-            message,
-            next_steps: Vec::new(),
-            suggestions: Vec::new(),
-        }
-    }
-
-    /// Create an adapter error with code and message.
+    /// Create adapter error with code and message
     pub fn adapter(code: &str, message: &str) -> Self {
-        Self::Adapter {
-            code: String::from(code),
-            message: String::from(message),
-            next_steps: Vec::new(),
-            suggestions: Vec::new(),
-        }
+        Self::Adapter(crate::error::adapter_error::AdapterError::new(code, message))
     }
 
-    /// Create a validation error.
+    /// Create validation error
     pub fn validation(message: &str) -> Self {
-        Self::Validation {
-            message: String::from(message),
-            field: None,
-        }
+        Self::Validation(
+            crate::error::validation_error::ValidationError::new(
+                crate::error::codes::validation::INVALID_FORMAT,
+                message
+            )
+        )
     }
 
-    /// Create a validation error for a specific field.
+    /// Create validation error for specific field
     pub fn validation_field(message: &str, field: &str) -> Self {
-        Self::Validation {
-            message: String::from(message),
-            field: Some(String::from(field)),
-        }
+        Self::Validation(
+            crate::error::validation_error::ValidationError::new(
+                crate::error::codes::validation::REQUIRED_FIELD,
+                message
+            ).with_field(field)
+        )
     }
 
-    /// Create a not found error.
+    /// Create not found error
     pub fn not_found(resource: &str, id: &str) -> Self {
-        Self::NotFound {
-            resource: String::from(resource),
-            id: String::from(id),
-        }
+        Self::NotFound(crate::error::not_found_error::NotFoundError::new(resource, id))
     }
 
-    /// Create a conflict error.
+    /// Create conflict error
     pub fn conflict(message: &str) -> Self {
-        Self::Conflict {
-            message: String::from(message),
-            existing_id: None,
+        Self::Conflict(crate::error::conflict_error::ConflictError::new(message))
+    }
+
+    /// Add next step (builder pattern)
+    pub fn with_next_step(self, step: &str) -> Self {
+        match self {
+            Self::Domain(err) => Self::Domain(err.with_next_step(step)),
+            Self::Port(err) => Self::Port(err.with_next_step(step)),
+            Self::Adapter(err) => Self::Adapter(err.with_next_step(step)),
+            other => other,
         }
     }
 
-    /// Add a next step to the error (builder pattern).
-    pub fn with_next_step(mut self, step: &str) -> Self {
-        match &mut self {
-            Self::Domain { next_steps, .. }
-            | Self::Port { next_steps, .. }
-            | Self::Adapter { next_steps, .. } => {
-                next_steps.push(String::from(step));
-            }
-            _ => {}
+    /// Add multiple next steps (builder pattern)
+    pub fn with_next_steps(self, steps: &[&str]) -> Self {
+        match self {
+            Self::Domain(err) => Self::Domain(err.with_next_steps(steps)),
+            Self::Port(err) => Self::Port(err.with_next_steps(steps)),
+            Self::Adapter(err) => Self::Adapter(err.with_next_steps(steps)),
+            other => other,
         }
-        self
     }
 
-    /// Add multiple next steps to the error (builder pattern).
-    pub fn with_next_steps(mut self, steps: &[&str]) -> Self {
-        match &mut self {
-            Self::Domain { next_steps, .. }
-            | Self::Port { next_steps, .. }
-            | Self::Adapter { next_steps, .. } => {
-                next_steps.extend(steps.iter().map(|s| String::from(*s)));
-            }
-            _ => {}
+    /// Add suggestion (builder pattern)
+    pub fn with_suggestion(self, suggestion: &str) -> Self {
+        match self {
+            Self::Domain(err) => Self::Domain(err.with_suggestion(suggestion)),
+            Self::Port(err) => Self::Port(err.with_suggestion(suggestion)),
+            Self::Adapter(err) => Self::Adapter(err.with_suggestion(suggestion)),
+            other => other,
         }
-        self
     }
 
-    /// Add a suggestion to the error (builder pattern).
-    pub fn with_suggestion(mut self, suggestion: &str) -> Self {
-        match &mut self {
-            Self::Domain { suggestions, .. }
-            | Self::Port { suggestions, .. }
-            | Self::Adapter { suggestions, .. } => {
-                suggestions.push(String::from(suggestion));
-            }
-            _ => {}
+    /// Add multiple suggestions (builder pattern)
+    pub fn with_suggestions(self, suggestions: &[&str]) -> Self {
+        match self {
+            Self::Domain(err) => Self::Domain(err.with_suggestions(suggestions)),
+            Self::Port(err) => Self::Port(err.with_suggestions(suggestions)),
+            Self::Adapter(err) => Self::Adapter(err.with_suggestions(suggestions)),
+            other => other,
         }
-        self
     }
 
-    /// Add multiple suggestions to the error (builder pattern).
-    pub fn with_suggestions(mut self, suggestions_list: &[&str]) -> Self {
-        match &mut self {
-            Self::Domain { suggestions, .. }
-            | Self::Port { suggestions, .. }
-            | Self::Adapter { suggestions, .. } => {
-                suggestions.extend(suggestions_list.iter().map(|s| String::from(*s)));
-            }
-            _ => {}
+    /// Add field to validation error (builder pattern)
+    pub fn with_field(self, field: &str) -> Self {
+        match self {
+            Self::Validation(err) => Self::Validation(err.with_field(field)),
+            other => other,
         }
-        self
     }
 
-    /// Add field information to validation error (builder pattern).
-    pub fn with_field(mut self, field: &str) -> Self {
-        if let Self::Validation { field: field_opt, .. } = &mut self {
-            *field_opt = Some(String::from(field));
+    /// Add existing ID to conflict error (builder pattern)
+    pub fn with_existing_id(self, id: &str) -> Self {
+        match self {
+            Self::Conflict(err) => Self::Conflict(err.with_existing_id(id)),
+            other => other,
         }
-        self
-    }
-
-    /// Add existing ID to conflict error (builder pattern).
-    pub fn with_existing_id(mut self, id: &str) -> Self {
-        if let Self::Conflict { existing_id, .. } = &mut self {
-            *existing_id = Some(String::from(id));
-        }
-        self
     }
 }
 
 impl std::fmt::Display for HexError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Domain { code, message, next_steps, suggestions } => {
-                write!(f, "Error: {} - {}", code, message)?;
-                if !next_steps.is_empty() {
-                    write!(f, "\nNext Steps:")?;
-                    for step in next_steps {
-                        write!(f, "\n  - {}", step)?;
-                    }
-                }
-                if !suggestions.is_empty() {
-                    write!(f, "\nSuggestions:")?;
-                    for suggestion in suggestions {
-                        write!(f, "\n  - {}", suggestion)?;
-                    }
-                }
-                Result::Ok(())
-            }
-            Self::Port { code, message, .. } => {
-                write!(f, "Port Error: {} - {}", code, message)
-            }
-            Self::Adapter { code, message, .. } => {
-                write!(f, "Adapter Error: {} - {}", code, message)
-            }
-            Self::Validation { message, field } => {
-                if let Some(field_name) = field {
-                    write!(f, "Validation Error on '{}': {}", field_name, message)
-                } else {
-                    write!(f, "Validation Error: {}", message)
-                }
-            }
-            Self::NotFound { resource, id } => {
-                write!(f, "Not Found: {} with id '{}'", resource, id)
-            }
-            Self::Conflict { message, .. } => {
-                write!(f, "Conflict: {}", message)
-            }
-            HexError::Io { code, message, .. } => {
-                write!(f, "[{}] IO Error: {}", code, message)
-            }
+            Self::Domain(err) => write!(f, "{}", err),
+            Self::Port(err) => write!(f, "{}", err),
+            Self::Adapter(err) => write!(f, "{}", err),
+            Self::Validation(err) => write!(f, "{}", err),
+            Self::NotFound(err) => write!(f, "{}", err),
+            Self::Conflict(err) => write!(f, "{}", err),
         }
     }
 }
 
-impl std::error::Error for HexError {}
+impl std::error::Error for HexError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Domain(err) => err.source(),
+            Self::Port(err) => err.source(),
+            Self::Adapter(err) => err.source(),
+            Self::Validation(err) => err.source(),
+            Self::NotFound(err) => err.source(),
+            Self::Conflict(err) => err.source(),
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use std::error::Error;
+  use super::*;
 
     #[test]
     fn test_domain_error_creation() {
         let err = HexError::domain("E_HEX_001", "Test error");
-        assert!(matches!(err, HexError::Domain { .. }));
+        assert!(matches!(err, HexError::Domain(_)));
     }
 
     #[test]
     fn test_validation_error_creation() {
         let err = HexError::validation("Invalid input");
-        assert!(matches!(err, HexError::Validation { .. }));
+        assert!(matches!(err, HexError::Validation(_)));
     }
 
     #[test]
     fn test_not_found_error_creation() {
         let err = HexError::not_found("User", "123");
-        assert!(matches!(err, HexError::NotFound { .. }));
+        assert!(matches!(err, HexError::NotFound(_)));
     }
 
     #[test]
@@ -303,9 +210,9 @@ mod tests {
         let err = HexError::domain("E_TEST", "Test error")
             .with_next_step("Do this first");
 
-        if let HexError::Domain { next_steps, .. } = err {
-            assert_eq!(next_steps.len(), 1);
-            assert_eq!(next_steps[0], "Do this first");
+        if let HexError::Domain(domain_err) = err {
+            assert_eq!(domain_err.next_steps.len(), 1);
+            assert_eq!(domain_err.next_steps[0], "Do this first");
         } else {
             panic!("Expected Domain error");
         }
@@ -316,8 +223,8 @@ mod tests {
         let err = HexError::domain("E_TEST", "Test error")
             .with_next_steps(&["Step 1", "Step 2"]);
 
-        if let HexError::Domain { next_steps, .. } = err {
-            assert_eq!(next_steps.len(), 2);
+        if let HexError::Domain(domain_err) = err {
+            assert_eq!(domain_err.next_steps.len(), 2);
         } else {
             panic!("Expected Domain error");
         }
@@ -329,8 +236,8 @@ mod tests {
             .with_suggestion("Try this")
             .with_suggestions(&["Or this", "Or that"]);
 
-        if let HexError::Domain { suggestions, .. } = err {
-            assert_eq!(suggestions.len(), 3);
+        if let HexError::Domain(domain_err) = err {
+            assert_eq!(domain_err.suggestions.len(), 3);
         } else {
             panic!("Expected Domain error");
         }
@@ -341,8 +248,8 @@ mod tests {
         let err = HexError::validation("Invalid value")
             .with_field("email");
 
-        if let HexError::Validation { field, .. } = err {
-            assert_eq!(field, Some(String::from("email")));
+        if let HexError::Validation(val_err) = err {
+            assert_eq!(val_err.field, Some(String::from("email")));
         } else {
             panic!("Expected Validation error");
         }
@@ -353,18 +260,20 @@ mod tests {
         let err = HexError::conflict("Resource exists")
             .with_existing_id("123");
 
-        if let HexError::Conflict { existing_id, .. } = err {
-            assert_eq!(existing_id, Some(String::from("123")));
+        if let HexError::Conflict(conf_err) = err {
+            assert_eq!(conf_err.existing_id, Some(String::from("123")));
         } else {
             panic!("Expected Conflict error");
         }
     }
 
     #[test]
-    fn test_io_error() {
-        let error = HexError::io("E_HEX_IO_001", String::from("File not found"));
-        let display = format!("{}", error);
-        assert!(display.contains("E_HEX_IO_001"));
-        assert!(display.contains("File not found"));
+    fn test_error_source_chaining() {
+        let inner = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let domain_err = crate::error::domain_error::DomainError::new("E_HEX_001", "Failed to load")
+            .with_source(inner);
+        let err = HexError::Domain(domain_err);
+
+        assert!(err.source().is_some());
     }
 }

@@ -64,8 +64,8 @@ mod domain_integration {
             fn check_invariants(&self) -> hexer::HexResult<()> {
                 if self.items.is_empty() {
                     return Err(hexer::HexError::domain(
-                        hexer::error_codes::domain::EMPTY_ORDER,
-                        "Order must have items"
+                      hexer::error_codes::domain::INVARIANT_EMPTY,
+                      "Order must have items"
                     ));
                 }
                 Ok(())
@@ -304,8 +304,8 @@ mod error_integration {
     #[test]
     fn test_error_builder() {
         let err = hexer::HexError::domain(
-            hexer::error_codes::domain::EMPTY_ORDER,
-            "Order cannot be empty"
+          hexer::error_codes::domain::INVARIANT_EMPTY,
+          "Order cannot be empty"
         )
         .with_next_step("Add at least one item")
         .with_suggestion("order.add_item(item)");

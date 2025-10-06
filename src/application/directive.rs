@@ -56,10 +56,12 @@ mod tests {
             if self.value > 0 {
                 Result::Ok(())
             } else {
-                Result::Err(crate::error::hex_error::HexError::Validation {
-                    message: String::from("Value must be positive"),
-                    field: Some(String::from("value")),
-                })
+                    Result::Err(
+                        crate::error::hex_error::HexError::validation_field(
+                            "Value must be positive",
+                            "value"
+                        )
+                    )
             }
         }
     }

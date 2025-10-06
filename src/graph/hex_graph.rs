@@ -107,10 +107,12 @@ impl HexGraph {
         )?;
 
         std::fs::write(path, content).map_err(|e| {
-            crate::error::hex_error::HexError::io(
-                "E_HEX_IO_001",
-                format!("Failed to write file: {}", e),
+            crate::error::hex_error::HexError::adapter(
+                crate::error::codes::io::IO_FAILURE,
+                &format!("Failed to write file: {}", e),
             )
+            .with_next_step("Check file path and permissions")
+            .with_suggestion("Verify directory exists and is writable")
         })
     }
 

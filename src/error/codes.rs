@@ -10,11 +10,11 @@
 
 /// Domain layer error codes (E_HEX_001 - E_HEX_099).
 pub mod domain {
-    /// Order must contain at least one item.
+    /// Occurs when a container must contain at least one item.
     ///
-    /// Occurs when attempting to create or save an order with no items.
-    /// Resolution: Add items to the order before saving.
-    pub const EMPTY_ORDER: &str = "E_HEX_001";
+    /// Occurs when attempting to create or save a container with no items.
+    /// Resolution: Add items to the container before saving.
+    pub const INVARIANT_EMPTY: &str = "E_HEX_001";
 
     /// Aggregate invariant violation.
     ///
@@ -113,6 +113,27 @@ pub mod resource {
     pub const CONFLICT: &str = "E_HEX_402";
 }
 
+/// IO error codes (E_HEX_500 - E_HEX_599).
+pub mod io {
+    /// File not found.
+    ///
+    /// Occurs when attempting to access non-existent file.
+    /// Resolution: Verify file path and existence.
+    pub const FILE_NOT_FOUND: &str = "E_HEX_500";
+
+    /// Permission denied.
+    ///
+    /// Occurs when lacking permissions for file operation.
+    /// Resolution: Check file permissions and user access rights.
+    pub const PERMISSION_DENIED: &str = "E_HEX_501";
+
+    /// IO operation failed.
+    ///
+    /// Occurs when general IO operation fails.
+    /// Resolution: Check system resources and retry.
+    pub const IO_FAILURE: &str = "E_HEX_502";
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,21 +141,24 @@ mod tests {
     #[test]
     fn test_error_codes_unique() {
         let codes = vec![
-            domain::EMPTY_ORDER,
-            domain::INVARIANT_VIOLATION,
-            domain::INVALID_STATE_TRANSITION,
-            port::COMMUNICATION_FAILURE,
-            port::PORT_NOT_FOUND,
-            port::PORT_TIMEOUT,
-            adapter::DB_CONNECTION_FAILURE,
-            adapter::API_FAILURE,
-            adapter::MAPPING_FAILURE,
-            validation::REQUIRED_FIELD,
-            validation::INVALID_FORMAT,
-            validation::OUT_OF_RANGE,
-            resource::NOT_FOUND,
-            resource::ALREADY_EXISTS,
-            resource::CONFLICT,
+          domain::INVARIANT_EMPTY,
+          domain::INVARIANT_VIOLATION,
+          domain::INVALID_STATE_TRANSITION,
+          port::COMMUNICATION_FAILURE,
+          port::PORT_NOT_FOUND,
+          port::PORT_TIMEOUT,
+          adapter::DB_CONNECTION_FAILURE,
+          adapter::API_FAILURE,
+          adapter::MAPPING_FAILURE,
+          validation::REQUIRED_FIELD,
+          validation::INVALID_FORMAT,
+          validation::OUT_OF_RANGE,
+          resource::NOT_FOUND,
+          resource::ALREADY_EXISTS,
+          resource::CONFLICT,
+          io::FILE_NOT_FOUND,
+          io::PERMISSION_DENIED,
+          io::IO_FAILURE,
         ];
 
         let unique_codes: std::collections::HashSet<_> = codes.iter().collect();
@@ -144,14 +168,15 @@ mod tests {
     #[test]
     fn test_error_code_format() {
         let codes = vec![
-            domain::EMPTY_ORDER,
-            port::COMMUNICATION_FAILURE,
-            adapter::DB_CONNECTION_FAILURE,
+          domain::INVARIANT_EMPTY,
+          port::COMMUNICATION_FAILURE,
+          adapter::DB_CONNECTION_FAILURE,
+          io::FILE_NOT_FOUND,
         ];
 
         for code in codes {
             assert!(code.starts_with("E_HEX_"), "Error code must start with E_HEX_");
-            assert_eq!(code.len(), 9, "Error code must be 10 characters");
+            assert_eq!(code.len(), 9, "Error code must be 9 characters");
         }
     }
 }

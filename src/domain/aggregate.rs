@@ -70,12 +70,14 @@ mod tests {
             if self.item_count > 0 {
                 Result::Ok(())
             } else {
-                Result::Err(crate::error::hex_error::HexError::Domain {
-                    code: String::from("E_HEX_001"),
-                    message: String::from("Order must have items"),
-                    next_steps: vec![String::from("Add at least one item")],
-                    suggestions: vec![String::from("order.add_item(item)")],
-                })
+                    Result::Err(
+                        crate::error::hex_error::HexError::domain(
+                            "E_HEX_001",
+                            "Order must have items"
+                        )
+                        .with_next_step("Add at least one item")
+                        .with_suggestion("order.add_item(item)")
+                    )
             }
         }
     }
