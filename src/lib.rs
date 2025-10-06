@@ -65,6 +65,7 @@ pub mod result;
 pub mod showcase;
 pub mod graph;
 pub mod registry;
+pub mod templates;
 
 #[cfg(feature = "ai")]
 pub mod ai;
