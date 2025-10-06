@@ -1096,3 +1096,24 @@ What it does:
 Notes:
 - The binary `hex-ai-export` is only built when the `ai` feature is enabled.
 - For reproducible diffs, commit `target/ai-context.json` or generate it in CI as an artifact.
+
+### 🧠 AI Agent Pack (All-in-One)
+
+Export a comprehensive, single-file JSON that bundles:
+- AIContext (machine-readable architecture)
+- Guidelines snapshot (rules enforced for agents)
+- Embedded key docs (README, ERROR_GUIDE, and local AI/guideline prompts when present)
+
+Commands:
+
+```sh
+# Print Agent Pack JSON to stdout
+cargo run -p hexer --features ai --bin hex-ai-pack
+
+# Save to a file
+cargo run -p hexer --features ai --bin hex-ai-pack --quiet > target/ai-pack.json
+```
+
+Notes:
+- Missing optional docs are skipped gracefully. The pack remains valid JSON.
+- Use this artifact as the single source of truth for external AIs and tools when proposing changes.

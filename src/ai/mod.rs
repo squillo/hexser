@@ -6,6 +6,7 @@
 //!
 //! Revision History
 //! - 2025-10-02T18:00:00Z @AI: Initial AI context export implementation.
+//! - 2025-10-06T18:14:00Z @AI: Add AgentPack module and re-exports for comprehensive AI interop.
 
 #[cfg(feature = "ai")]
 pub mod ai_context;
@@ -14,7 +15,13 @@ pub mod ai_context;
 pub mod context_builder;
 
 #[cfg(feature = "ai")]
+pub mod agent_pack;
+
+#[cfg(feature = "ai")]
 pub use self::ai_context::AIContext;
 
 #[cfg(feature = "ai")]
 pub use self::context_builder::ContextBuilder;
+
+#[cfg(feature = "ai")]
+pub use self::agent_pack::AgentPack;
