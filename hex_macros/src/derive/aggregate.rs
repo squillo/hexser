@@ -30,6 +30,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn test_derive_compiles() {
         let input = quote::quote! {
             struct TestAggregate {

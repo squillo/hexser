@@ -175,6 +175,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "hex_potions"
+version = "0.3.0"
+dependencies = [
+ "hexer",
+ "pretty_assertions",
+]
+
+[[package]]
 name = "hexer"
 version = "0.3.0"
 dependencies = [

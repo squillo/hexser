@@ -9,7 +9,7 @@ keywords = ["hexagonal", "architecture", "ports", "adapters", "ddd"]
 categories = ["development-tools", "data-structures"]
 
 [workspace]
-members = [".", "hex_macros"]
+members = [".", "hex_macros", "hex_potions"]
 
 [dependencies]
 inventory = "0.3"

@@ -1,0 +1,17 @@
+[package]
+name = "hex_potions"
+version = "0.3.0"
+edition = "2024"
+authors = ["N Lang Team"]
+description = "Potions: ready-to-mix patterns and examples for the hexer crate"
+license = "MIT OR Apache-2.0"
+keywords = ["hexagonal", "architecture", "examples", "patterns", "ddd"]
+
+[dependencies]
+hexer = { version = "0.3.0", path = ".." }
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+
+[package.metadata.docs.rs]
+all-features = true

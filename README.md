@@ -914,3 +914,29 @@ Running Examples
 ```bash
 cargo run --example simple_todo
 ```
+
+
+
+---
+
+## 🧪 Potions (copy-friendly examples)
+
+Looking for concrete, minimal examples you can paste into your app?
+Check out the Potions crate in this workspace:
+
+- Path: ./hex_potions
+- Crate: hex_potions
+- Focus: small, mixable examples (auth signup, CRUD, etc.)
+
+Add to your project via workspace path:
+
+```toml
+[dependencies]
+hex_potions = { path = "../hex_potions", version = "0.3.0" }
+```
+
+Then in code:
+
+```rust
+use hex_potions::auth::{SignUpUser, InMemoryUserRepository, execute_signup};
+```
