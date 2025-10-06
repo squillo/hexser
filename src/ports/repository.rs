@@ -8,6 +8,7 @@
 //! Revision History
 //! - 2025-10-01T00:00:00Z @AI: Initial Repository trait definition with generic entity type.
 //! - 2025-10-06T00:00:00Z @AI: Introduced filter-based generic query API (separate QueryRepository trait), sorting and pagination.
+//! - 2025-10-06T17:22:00Z @AI: Tests: add justifications; remove super import; fully qualify paths per no-use rule.
 
 /// Generic query options for fetching collections.
 #[derive(Debug, Clone)]
@@ -103,7 +104,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // Note: Per NO `use` STATEMENTS rule, tests reference items via fully qualified paths.
+    // This ensures clarity for multi-agent analysis and avoids ambiguous imports.
 
     #[derive(Clone, Debug)]
     struct TestEntity {
@@ -131,7 +133,7 @@ mod tests {
         entities: Vec<TestEntity>,
     }
 
-    impl Repository<TestEntity> for TestRepository {
+    impl crate::ports::repository::Repository<TestEntity> for TestRepository {
         fn find_by_id(&self, id: &u64) -> crate::result::hex_result::HexResult<Option<TestEntity>> {
             let found = self.entities.iter().find(|e| e.id == *id);
             Ok(found.cloned())
@@ -156,7 +158,7 @@ mod tests {
         }
     }
 
-    impl QueryRepository<TestEntity> for TestRepository {
+    impl crate::ports::repository::QueryRepository<TestEntity> for TestRepository {
         type Filter = TestFilter;
         type SortKey = TestSortKey;
 
@@ -167,7 +169,7 @@ mod tests {
         fn find(
             &self,
             filter: &Self::Filter,
-            options: FindOptions<Self::SortKey>,
+            options: crate::ports::repository::FindOptions<Self::SortKey>,
         ) -> crate::result::hex_result::HexResult<Vec<TestEntity>> {
             let mut items: Vec<_> = self
                 .entities
@@ -179,10 +181,10 @@ mod tests {
             if let Some(sorts) = options.sort {
                 for s in sorts.into_iter().rev() {
                     match (s.key, s.direction) {
-                        (TestSortKey::Id, Direction::Asc) => items.sort_by_key(|e| e.id),
-                        (TestSortKey::Id, Direction::Desc) => items.sort_by_key(|e| std::cmp::Reverse(e.id)),
-                        (TestSortKey::Name, Direction::Asc) => items.sort_by(|a,b| a.name.cmp(&b.name)),
-                        (TestSortKey::Name, Direction::Desc) => items.sort_by(|a,b| b.name.cmp(&a.name)),
+                        (TestSortKey::Id, crate::ports::repository::Direction::Asc) => items.sort_by_key(|e| e.id),
+                        (TestSortKey::Id, crate::ports::repository::Direction::Desc) => items.sort_by_key(|e| std::cmp::Reverse(e.id)),
+                        (TestSortKey::Name, crate::ports::repository::Direction::Asc) => items.sort_by(|a,b| a.name.cmp(&b.name)),
+                        (TestSortKey::Name, crate::ports::repository::Direction::Desc) => items.sort_by(|a,b| b.name.cmp(&a.name)),
                     }
                 }
             }
@@ -211,23 +213,25 @@ mod tests {
 
     #[test]
     fn test_repository_save_and_find_new_api() {
+        // Test: Validates new QueryRepository API (find_one/find with sorting & pagination) and legacy compatibility.
+        // Justification: Ensures migration path is safe; verifies filter matching, stable sorting, and paging behavior.
         let mut repo = TestRepository { entities: Vec::new() };
-        repo.save(TestEntity { id: 2, name: String::from("B") }).unwrap();
-        repo.save(TestEntity { id: 1, name: String::from("A") }).unwrap();
+        <TestRepository as crate::ports::repository::Repository<TestEntity>>::save(&mut repo, TestEntity { id: 2, name: String::from("B") }).unwrap();
+        <TestRepository as crate::ports::repository::Repository<TestEntity>>::save(&mut repo, TestEntity { id: 1, name: String::from("A") }).unwrap();
 
         // find_one by filter
-        let found = <TestRepository as QueryRepository<TestEntity>>::find_one(&repo, &TestFilter::ById(1)).unwrap();
+        let found = <TestRepository as crate::ports::repository::QueryRepository<TestEntity>>::find_one(&repo, &TestFilter::ById(1)).unwrap();
         assert!(found.is_some());
 
         // find with sort and pagination
-        let opts = FindOptions { sort: Some(vec![Sort { key: TestSortKey::Name, direction: Direction::Asc }]), limit: Some(1), offset: Some(0) };
-        let page = <TestRepository as QueryRepository<TestEntity>>::find(&repo, &TestFilter::All, opts).unwrap();
+        let opts = crate::ports::repository::FindOptions { sort: Some(vec![crate::ports::repository::Sort { key: TestSortKey::Name, direction: crate::ports::repository::Direction::Asc }]), limit: Some(1), offset: Some(0) };
+        let page = <TestRepository as crate::ports::repository::QueryRepository<TestEntity>>::find(&repo, &TestFilter::All, opts).unwrap();
         assert_eq!(page.len(), 1);
         assert_eq!(page[0].name, "A");
 
         // legacy still works
-        assert!(repo.find_by_id(&2).unwrap().is_some());
-        repo.delete(&2).unwrap();
-        assert!(repo.find_by_id(&2).unwrap().is_none());
+        assert!(<TestRepository as crate::ports::repository::Repository<TestEntity>>::find_by_id(&repo, &2).unwrap().is_some());
+        <TestRepository as crate::ports::repository::Repository<TestEntity>>::delete(&mut repo, &2).unwrap();
+        assert!(<TestRepository as crate::ports::repository::Repository<TestEntity>>::find_by_id(&repo, &2).unwrap().is_none());
     }
 }

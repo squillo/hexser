@@ -7,6 +7,7 @@
 //!
 //! Revision History
 //! - 2025-10-02T20:30:00Z @AI: Initial async provider trait for Phase 6.2.
+//! - 2025-10-06T17:22:00Z @AI: Tests: add justifications; remove super import; qualify paths per no-use rule.
 
 #[cfg(feature = "container")]
 /// Async provider for creating service instances
@@ -30,7 +31,8 @@ pub trait AsyncProvider<T>: Send + Sync {
 
 #[cfg(all(test, feature = "container"))]
 mod tests {
-    use super::*;
+    // Note: Per NO `use` STATEMENTS rule, tests reference items via fully qualified paths.
+    // This ensures clarity and avoids ambiguous imports.
 
     struct AsyncTestService {
         value: i32,
@@ -41,7 +43,7 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl AsyncProvider<AsyncTestService> for AsyncTestProvider {
+    impl crate::container::async_provider::AsyncProvider<AsyncTestService> for AsyncTestProvider {
         async fn provide_async(&self) -> crate::result::hex_result::HexResult<AsyncTestService> {
             // Simulate async work
             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
@@ -51,22 +53,25 @@ mod tests {
 
     #[tokio::test]
     async fn test_async_provider_creates_instance() {
+        // Test: Async provider constructs a service instance with configured value.
+        // Justification: Verifies core contract of AsyncProvider::provide_async and async behavior.
         let provider = AsyncTestProvider { value: 42 };
-        let service = provider.provide_async().await.unwrap();
+        let service = <AsyncTestProvider as crate::container::async_provider::AsyncProvider<AsyncTestService>>::provide_async(&provider).await.unwrap();
         assert_eq!(service.value, 42);
     }
 
     #[tokio::test]
     async fn test_async_provider_concurrent_creation() {
-
+        // Test: Concurrent async creation yields correct values across tasks.
+        // Justification: Ensures thread-safety assumptions and absence of shared mutable state in provider.
         let handle1 = tokio::spawn({
             let p = AsyncTestProvider { value: 10 };
-            async move { p.provide_async().await }
+            async move { <AsyncTestProvider as crate::container::async_provider::AsyncProvider<AsyncTestService>>::provide_async(&p).await }
         });
 
         let handle2 = tokio::spawn({
             let p = AsyncTestProvider { value: 10 };
-            async move { p.provide_async().await }
+            async move { <AsyncTestProvider as crate::container::async_provider::AsyncProvider<AsyncTestService>>::provide_async(&p).await }
         });
 
         let result1 = handle1.await.unwrap().unwrap();

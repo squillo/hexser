@@ -7,6 +7,8 @@
 //!
 //! Revision History
 //! - 2025-10-02T20:00:00Z @AI: Initial scope implementation for Phase 6.
+//! - 2025-10-06T17:11:00Z @AI: Finalize scope: remove test wildcard use; confirm container integration.
+//! - 2025-10-06T17:22:00Z @AI: Tests: add justifications for clarity and coverage rationale.
 
 /// Service lifetime scope
 ///
@@ -42,24 +44,28 @@ impl Scope {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_scope_singleton_check() {
-        assert!(Scope::Singleton.is_singleton());
-        assert!(!Scope::Singleton.is_transient());
+        // Test: Verifies Scope::Singleton helper methods.
+        // Justification: Ensures API clarity for container logic relying on these checks.
+        assert!(crate::container::scope::Scope::Singleton.is_singleton());
+        assert!(!crate::container::scope::Scope::Singleton.is_transient());
     }
 
     #[test]
     fn test_scope_transient_check() {
-        assert!(Scope::Transient.is_transient());
-        assert!(!Scope::Transient.is_singleton());
+        // Test: Verifies Scope::Transient helper methods.
+        // Justification: Ensures API clarity and prevents logic inversion bugs in consumers.
+        assert!(crate::container::scope::Scope::Transient.is_transient());
+        assert!(!crate::container::scope::Scope::Transient.is_singleton());
     }
 
     #[test]
     fn test_scope_equality() {
-        assert_eq!(Scope::Singleton, Scope::Singleton);
-        assert_eq!(Scope::Transient, Scope::Transient);
-        assert_ne!(Scope::Singleton, Scope::Transient);
+        // Test: Validates equality semantics for Scope enum.
+        // Justification: Prevents regressions affecting HashMap keys and matching logic.
+        assert_eq!(crate::container::scope::Scope::Singleton, crate::container::scope::Scope::Singleton);
+        assert_eq!(crate::container::scope::Scope::Transient, crate::container::scope::Scope::Transient);
+        assert_ne!(crate::container::scope::Scope::Singleton, crate::container::scope::Scope::Transient);
     }
 }
