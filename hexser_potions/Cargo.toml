@@ -8,10 +8,10 @@ license = "MIT OR Apache-2.0"
 keywords = ["hexagonal", "architecture", "examples", "patterns", "ddd"]
 
 [dependencies]
-hexser = { version = "0.3.0", path = ".." }
+hexser = { workspace = true }
 
 [dev-dependencies]
-pretty_assertions = "1.4"
+pretty_assertions = { workspace = true }
 
 [package.metadata.docs.rs]
 all-features = true

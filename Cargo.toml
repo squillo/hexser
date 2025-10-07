@@ -11,17 +11,17 @@ repository = "https://github.com/squillo/hexser"
 
 
 [dependencies]
-inventory = "0.3"
-hexser_macros = { version = "0.3.0", path = "hexser_macros", optional = true }
-serde = { version = "1.0", features = ["derive"], optional = true }
-serde_json = { version = "1.0", optional = true }
-chrono = { version = "0.4.42", optional = true }
-tokio = {  version = "1.47.1", optional = true, features = ["sync", "macros", "rt-multi-thread", "time"] }
-async-trait = {version = "0.1.89", optional = true }
+inventory = { workspace = true }
+hexser_macros = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+async-trait = { workspace = true, optional = true }
 
 [dev-dependencies]
-pretty_assertions = "1.4"
-tokio = { version = "1.47.1", features = ["sync", "macros", "rt-multi-thread", "time"] }
+pretty_assertions = { workspace = true }
+tokio = { workspace = true }
 
 [features]
 # Enable macros and static (non-dyn) DI by default. The dyn container remains opt-in.
