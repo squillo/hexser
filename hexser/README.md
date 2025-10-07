@@ -10,7 +10,7 @@ The `hexser` crate provides reusable generic types and traits for implementing H
 
 ---
 
-## 📚 Table of Contents
+## Table of Contents
 
 - [Why hexser?](#why-hexser)
 - [Quick Start](#quick-start)
@@ -33,7 +33,7 @@ The `hexser` crate provides reusable generic types and traits for implementing H
 
 > Tip: Press Cmd/Ctrl+F and search for “Part” to jump to tutorials.
 
-## 🎯 Why hexser?
+## Why hexser?
 
 Traditional hexagonal architecture requires significant boilerplate:
 - Manual registration of components
@@ -53,7 +53,7 @@ Traditional hexagonal architecture requires significant boilerplate:
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 Add to your `Cargo.toml`:
 
@@ -138,7 +138,7 @@ That's it! You've just built a hexagonal architecture application with:
 - Testable components
 - Swappable implementations
 
-## 📚 Complete Tutorial
+## Complete Tutorial
 ### Part 1: Understanding Hexagonal Architecture
 Hexagonal Architecture (also known as Ports and Adapters) structures applications into concentric layers:
 
@@ -569,8 +569,8 @@ impl Repository<User> for MockUserRepository {
   }
 
   fn save(&mut self, user: User) -> HexResult<()> {
-      self.users.insert(user.id.clone(), user);
-      Ok(())
+    self.users.insert(user.id.clone(), user);
+    Ok(())
   }
 
   // ... other methods
@@ -604,24 +604,24 @@ Preferred: macro + code + guidance
 
 ```rust
 fn validate_order(order: &Order) -> HexResult<()> {
-    if order.items.is_empty() {
-        return Err(
-            hexser::hex_domain_error!(
-                hexser::error::codes::domain::INVARIANT_EMPTY,
-                "Order must contain at least one item"
-            )
-            .with_next_steps(&["Add at least one item to the order"]) // actionable guidance
-            .with_suggestions(&["order.add_item(item)", "order.items.push(item)"]) // quick fixes
-            .with_more_info("https://docs.rs/hexser/latest/hexser/error/codes/domain")
-        );
-    }
-    Ok(())
+  if order.items.is_empty() {
+    return Err(
+        hexser::hex_domain_error!(
+            hexser::error::codes::domain::INVARIANT_EMPTY,
+            "Order must contain at least one item"
+        )
+        .with_next_steps(&["Add at least one item to the order"]) // actionable guidance
+        .with_suggestions(&["order.add_item(item)", "order.items.push(item)"]) // quick fixes
+        .with_more_info("https://docs.rs/hexser/latest/hexser/error/codes/domain")
+    );
+  }
+  Ok(())
 }
 ```
 
 Display output (example):
 
-```
+```text
 E_HEX_001: Order must contain at least one item
 at src/domain/order.rs:42:13
 Next steps:
@@ -633,7 +633,7 @@ Suggestions:
 
 Cookbook
 
-```rust,ignore
+```rust
 // Validation errors (field-aware)
 return Err(hexser::error::hex_error::Hexserror::validation_field(
     "Title cannot be empty",

@@ -1,19 +1,26 @@
 # N Lang Hex Workspace
 
-This repository contains the Hexser ecosystem — a pragmatic, zero‑boilerplate take on Hexagonal Architecture in Rust — plus companion crates, docs, and examples.
+Build real-world, hexagonal Rust apps without the ceremony. Hexser is a pragmatic, zero‑boilerplate take on Hexagonal Architecture with a clear Domain–Ports–Adapters flow, fast iteration, and copy‑pasteable examples.
 
-Workspace crates:
-- hexser: Core crate with traits, types, errors, graph model, and optional derive macros.
-- hexser_macros: Procedural macro crate (feature = "macros") powering derive convenience.
-- hexser_potions: Potions — a set of small, copy‑friendly examples for common app operations (formerly “blueprints”).
+Main crates (jump in):
+- [hexser](./hexser) — Core traits, types, errors, graph model, and opt‑in derive macros. Also available on crates.io: https://crates.io/crates/hexser
+- [hexser_macros](./hexser_macros) — Procedural macros (feature = "macros") to reduce repetition.
+- [hexser_potions](./hexser_potions) — “Potions”: small, mixable examples for common app operations (formerly “blueprints”).
 
-Why “Potions”? They are lightweight, mixable recipes you can pour into your app — perfect for experimenting, learning, and scaffolding.
+Why “Potions”? They are lightweight, composable recipes you can pour into your app — perfect for experimenting, learning, and scaffolding.
+
+Why teams choose Hexser:
+- Zero boilerplate: write traits for your Ports and small impls for Adapters — that’s it.
+- Query‑first repositories: lightweight domain filter/sort types keep adapters simple and testable.
+- First‑class use‑cases: model application logic as Directives (clear, explicit, testable).
+- Fast feedback: in‑memory adapters and ready‑to‑paste Potions get you shipping quickly.
+- Opt‑in macros: reduce repetition without hiding control flow; nothing “magic” at runtime.
 
 Quick start with hexser:
 
 ```toml
 [dependencies]
-hexser = { path = "./hex", version = "0.3.0", features = ["macros"] }
+hexser = { path = "./hexser", version = "0.3.0", features = ["macros"] }
 ```
 
 ```rust
@@ -45,7 +52,7 @@ Use directly from the workspace:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "./hex/hexser_potions", version = "0.3.0" }
+hexser_potions = { path = "./hexser_potions", version = "0.3.0" }
 ```
 
 Then in your code:
@@ -58,8 +65,8 @@ let user = execute_signup(&mut repo, SignUpUser { email: "a@b.com".into() })?;
 ```
 
 Documentation:
-- hexser crate README: ./hex/README.md
-- Concepts: ./hex/docs/src/core-concepts.md
-- Architecture: ./hex/docs/src/architecture.md
+- hexser crate README: ./hexser/README.md
+- hexser_potions crate README: ./hexser_potions/README.md
+- hexser_macros crate README: ./hexser_macros/README.md
 
 License: MIT or Apache‑2.0

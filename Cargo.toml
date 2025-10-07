@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "hex",
+  "hexser",
   "hexser_macros",
   "hexser_potions",
 ]
@@ -23,4 +23,4 @@ pretty_assertions = "1.4"
 
 # Workspace member crates (for path + version unification)
 hexser_macros = { version = "0.3.0", path = "hexser_macros" }
-hexser = { version = "0.3.0", path = "hex" }
+hexser = { version = "0.3.0", path = "hexser" }
