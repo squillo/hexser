@@ -7,7 +7,7 @@ description = "Zero-boilerplate hexagonal architecture with graph-based introspe
 license = "MIT OR Apache-2.0"
 keywords = ["hexagonal", "architecture", "ports", "adapters", "ddd"]
 categories = ["development-tools", "data-structures"]
-repository = "https://github.com/squillo/hexser"
+repository = "https://github.com/squillo/hexser/hex"
 
 
 [dependencies]

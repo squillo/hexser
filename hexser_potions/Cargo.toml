@@ -6,6 +6,7 @@ authors = ["N Lang Team"]
 description = "Potions: ready-to-mix patterns and examples for the hexser crate"
 license = "MIT OR Apache-2.0"
 keywords = ["hexagonal", "architecture", "examples", "patterns", "ddd"]
+repository = "https://github.com/squillo/hexser/hexser_potions"
 
 [dependencies]
 hexser = { workspace = true }

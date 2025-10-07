@@ -5,6 +5,7 @@ edition = "2024"
 authors = ["N Lang Team"]
 description = "Procedural macros for hex hexagonal architecture crate"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/squillo/hexser/hexser_macros"
 
 [lib]
 proc-macro = true
