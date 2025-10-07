@@ -88,7 +88,7 @@ pub fn execute_signup<R: UserRepository>(repo: &mut R, cmd: SignUpUser) -> HexRe
 
     if repo.find_by_email(&cmd.email)?.is_some() {
         return Err(hexser::Hexserror::domain(
-            "E_HEX_POTIONS_EMAIL_TAKEN",
+            "E_HEXSER_POTIONS_EMAIL_TAKEN",
             "Email already registered",
         ));
     }

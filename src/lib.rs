@@ -202,7 +202,7 @@ pub mod prelude {
 
     // Phase 3: Registry and derive macro support
     #[cfg(feature = "macros")]
-    pub use hex_macros::{
+    pub use hexser_macros::{
         HexDomain,
         HexPort,
         HexAdapter,

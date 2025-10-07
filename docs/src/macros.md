@@ -1,6 +1,6 @@
 # Macros
 
-Hexser provides derive macros (via the hex_macros crate) to remove boilerplate and automatically register your components for analysis.
+Hexser provides derive macros (via the hexser_macros crate) to remove boilerplate and automatically register your components for analysis.
 
 Available derives:
 

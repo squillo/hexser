@@ -66,7 +66,7 @@
 
 ### Technical Improvements
 - Inventory-based compile-time registration
-- Proc macro crate structure (`hex_macros`)
+- Proc macro crate structure (`hexser_macros`)
 - Attribute parsing infrastructure
 - Metadata extraction utilities
 - Validation with helpful error messages

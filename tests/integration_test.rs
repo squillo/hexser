@@ -50,7 +50,7 @@ mod domain_integration {
     /// Test HexAggregate macro with custom invariants via attribute.
     #[test]
     fn test_aggregate_invariants() {
-        #[derive(hex_macros::HexAggregate)]
+        #[derive(hexser_macros::HexAggregate)]
         struct Order {
             id: String,
             items: Vec<String>,
@@ -88,7 +88,7 @@ mod domain_integration {
     /// Test HexAggregate derive macro with default implementation.
     #[test]
     fn test_hex_aggregate_derive_default() {
-        #[derive(hex_macros::HexAggregate)]
+        #[derive(hexser_macros::HexAggregate)]
         struct SimpleAggregate {
             id: String,
             value: i32,

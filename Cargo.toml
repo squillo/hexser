@@ -9,12 +9,10 @@ keywords = ["hexagonal", "architecture", "ports", "adapters", "ddd"]
 categories = ["development-tools", "data-structures"]
 repository = "https://github.com/squillo/hexser"
 
-[workspace]
-members = [".", "hex_macros", "hex_potions"]
 
 [dependencies]
 inventory = "0.3"
-hex_macros = { version = "0.3.0", path = "./hex_macros", optional = true }
+hexser_macros = { version = "0.3.0", path = "hexser_macros", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
 chrono = { version = "0.4.42", optional = true }
@@ -28,7 +26,7 @@ tokio = { version = "1.47.1", features = ["sync", "macros", "rt-multi-thread", "
 [features]
 # Enable macros and static (non-dyn) DI by default. The dyn container remains opt-in.
 default = ["macros", "static-di"]
-macros = ["hex_macros"]
+macros = ["hexser_macros"]
 ai = ["chrono", "serde", "serde_json"]
 async = ["tokio", "async-trait"]
 visualization = ["serde", "serde_json"]
@@ -48,11 +46,6 @@ name = "hex-ai-pack"
 path = "src/bin/hex_ai_pack.rs"
 required-features = ["ai"]
 
-[workspace.dependencies]
-syn = { version = "2.0", features = ["full", "extra-traits"] }
-quote = "1.0"
-proc-macro2 = "1.0"
-darling = "0.20"
 
 [package.metadata.docs.rs]
 all-features = true

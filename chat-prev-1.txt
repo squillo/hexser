@@ -1041,7 +1041,7 @@ tools/hex/
 │       ├── derive_repository.rs         # #[derive(Repository)]
 │       └── auto_register.rs             # Automatic registration logic
 │
-├── hex_macros/                          # Separate proc macro crate
+├── hexser_macros/                          # Separate proc macro crate
 │   ├── Cargo.toml
 │   └── src/
 │       └── lib.rs                       # Proc macro definitions
@@ -1067,7 +1067,7 @@ categories = ["development-tools", "data-structures"]
 
 [features]
 default = ["macros"]
-macros = ["hex_macros"]             # Derive macros (core DX feature)
+macros = ["hexser_macros"]             # Derive macros (core DX feature)
 graph = []                          # Graph construction (always available)
 analysis = ["graph"]                # Analysis algorithms
 visualization = ["graph"]           # Export/render capabilities
@@ -1078,7 +1078,7 @@ full = ["macros", "graph", "analysis", "visualization", "storage", "tracing"]
 
 [dependencies]
 # Core dependencies (minimal)
-hex_macros = { version = "0.1.0", path = "./hex_macros", optional = true }
+hexser_macros = { version = "0.1.0", path = "./hexser_macros", optional = true }
 tracing = { version = "0.1", optional = true }
 
 
@@ -1088,14 +1088,14 @@ tracing-subscriber = "0.3"
 
 
 [workspace]
-members = [".", "hex_macros"]
+members = [".", "hexser_macros"]
 
 
 [package.metadata.docs.rs]
 all-features = true
-hex_macros/Cargo.toml
+hexser_macros/Cargo.toml
 [package]
-name = "hex_macros"
+name = "hexser_macros"
 version = "0.1.0"
 edition = "2024"
 
@@ -1410,7 +1410,7 @@ Basic graph construction
 Thread-safety tests
 Phase 3: Derive Macros (Week 3-4)
 Goal: Zero-boilerplate component registration
-hex_macros proc macro crate
+hexser_macros proc macro crate
 #[derive(HexDomain)]
 #[derive(HexPort)]
 #[derive(HexAdapter)]

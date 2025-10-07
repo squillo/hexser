@@ -11,7 +11,7 @@ Add to your Cargo.toml:
 hexser = { version = "0.1.0", features = ["macros"] }
 ```
 
-Enable the macros feature to use the derive macros provided by the companion crate `hex_macros`.
+Enable the macros feature to use the derive macros provided by the companion crate `hexser_macros`.
 
 ## Your first components
 

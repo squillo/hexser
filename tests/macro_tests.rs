@@ -6,7 +6,7 @@
 
 #[cfg(feature = "macros")]
 mod macro_tests {
-  use hex_macros::HexAggregate;
+  use hexser_macros::HexAggregate;
   use hexser::prelude::*;
 
     #[test]

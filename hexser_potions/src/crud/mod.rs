@@ -52,7 +52,7 @@ pub fn create<R: ItemRepository>(repo: &mut R, id: u64, name: impl Into<String>)
     let item = Item { id, name: name.into() };
     // naive uniqueness check
     if repo.find_by_id(&id)?.is_some() {
-        return Err(hexser::Hexserror::domain("E_HEX_POTIONS_ID_TAKEN", "ID already exists"));
+        return Err(hexser::Hexserror::domain("E_HEXSER_POTIONS_ID_TAKEN", "ID already exists"));
     }
     repo.save(item.clone())?;
     Ok(item)
