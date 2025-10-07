@@ -1142,6 +1142,70 @@ Migration tips:
 
 For more details, see MIGRATION_GUIDE.md and docs/core-concepts.md.
 
+### v0.4 QueryRepository Examples (5+)
+
+The following focused examples demonstrate the new query-first API using domain-owned Filter and SortKey types. These snippets avoid deprecated methods and illustrate common tasks.
+
+1) Unique lookup with find_one
+
+```rust
+// Given: domain types User, UserFilter::ByEmail(String)
+let repo = InMemoryUserRepository::default();
+let maybe_user = <InMemoryUserRepository as hexser::ports::repository::QueryRepository<User>>
+    ::find_one(&repo, &UserFilter::ByEmail(String::from("alice@example.com")))?;
+```
+
+2) Listing with multi-key sorting (Email asc, CreatedAt desc)
+
+```rust
+let opts = hexser::ports::repository::FindOptions {
+    sort: Some(vec![
+        hexser::ports::repository::Sort { key: UserSortKey::Email, direction: hexser::ports::repository::Direction::Asc },
+        hexser::ports::repository::Sort { key: UserSortKey::CreatedAt, direction: hexser::ports::repository::Direction::Desc },
+    ]),
+    limit: None,
+    offset: None,
+};
+let users = <InMemoryUserRepository as hexser::ports::repository::QueryRepository<User>>::find(
+    &repo,
+    &UserFilter::All,
+    opts,
+)?;
+```
+
+3) Pagination (page size 10, second page)
+
+```rust
+let opts = hexser::ports::repository::FindOptions { sort: None, limit: Some(10), offset: Some(10) };
+let page = <InMemoryUserRepository as hexser::ports::repository::QueryRepository<User>>::find(&repo, &UserFilter::All, opts)?;
+```
+
+4) Existence check
+
+```rust
+let exists = <InMemoryUserRepository as hexser::ports::repository::QueryRepository<User>>::exists(
+    &repo,
+    &UserFilter::ByEmail(String::from("bob@example.com")),
+)?;
+```
+
+5) Count matching entities
+
+```rust
+let total = <InMemoryUserRepository as hexser::ports::repository::QueryRepository<User>>::count(
+    &repo,
+    &UserFilter::All,
+)?;
+```
+
+6) Delete by filter (returns removed count)
+
+```rust
+let removed = <InMemoryUserRepository as hexser::ports::repository::QueryRepository<User>>::delete_where(
+    &mut repo.clone(),
+    &UserFilter::ByEmail(String::from("bob@example.com")),
+)?;
+```
 
 ---
 

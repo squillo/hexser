@@ -133,22 +133,44 @@ mod port_adapter_integration {
         impl hexser::adapters::Adapter for InMemoryTodoRepository {}
 
         impl hexser::ports::Repository<Todo> for InMemoryTodoRepository {
-            fn find_by_id(&self, id: &String) -> hexser::HexResult<Option<Todo>> {
-                Ok(self.todos.iter().find(|t| &t.id == id).cloned())
-            }
-
             fn save(&mut self, todo: Todo) -> hexser::HexResult<()> {
                 self.todos.push(todo);
                 Ok(())
             }
+        }
 
-            fn delete(&mut self, id: &String) -> hexser::HexResult<()> {
-                self.todos.retain(|t| &t.id != id);
-                Ok(())
+        #[derive(Clone)]
+        enum TodoFilter { All, ById(String) }
+        #[derive(Clone, Copy)]
+        enum TodoSortKey { Id }
+
+        impl hexser::ports::repository::QueryRepository<Todo> for InMemoryTodoRepository {
+            type Filter = TodoFilter;
+            type SortKey = TodoSortKey;
+
+            fn find_one(&self, filter: &TodoFilter) -> hexser::HexResult<Option<Todo>> {
+                let found = match filter {
+                    TodoFilter::All => self.todos.first().cloned(),
+                    TodoFilter::ById(id) => self.todos.iter().find(|t| &t.id == id).cloned(),
+                };
+                Ok(found)
             }
 
-            fn find_all(&self) -> hexser::HexResult<Vec<Todo>> {
-                Ok(self.todos.clone())
+            fn find(&self, filter: &TodoFilter, _opts: hexser::ports::repository::FindOptions<TodoSortKey>) -> hexser::HexResult<Vec<Todo>> {
+                let items: Vec<Todo> = match filter {
+                    TodoFilter::All => self.todos.clone(),
+                    TodoFilter::ById(id) => self.todos.iter().filter(|t| &t.id == id).cloned().collect(),
+                };
+                Ok(items)
+            }
+
+            fn delete_where(&mut self, filter: &TodoFilter) -> hexser::HexResult<u64> {
+                let before = self.todos.len();
+                match filter {
+                    TodoFilter::All => self.todos.clear(),
+                    TodoFilter::ById(id) => self.todos.retain(|t| &t.id != id),
+                }
+                Ok((before.saturating_sub(self.todos.len())) as u64)
             }
         }
 
@@ -161,10 +183,10 @@ mod port_adapter_integration {
         };
 
         assert!(repo.save(todo).is_ok());
-        assert!(repo.find_by_id(&String::from("1")).unwrap().is_some());
-        assert_eq!(repo.find_all().unwrap().len(), 1);
-        assert!(repo.delete(&String::from("1")).is_ok());
-        assert!(repo.find_by_id(&String::from("1")).unwrap().is_none());
+        assert!(<InMemoryTodoRepository as hexser::ports::repository::QueryRepository<Todo>>::find_one(&repo, &TodoFilter::ById(String::from("1"))).unwrap().is_some());
+        assert_eq!(<InMemoryTodoRepository as hexser::ports::repository::QueryRepository<Todo>>::find(&repo, &TodoFilter::All, hexser::ports::repository::FindOptions::default()).unwrap().len(), 1);
+        assert_eq!(<InMemoryTodoRepository as hexser::ports::repository::QueryRepository<Todo>>::delete_where(&mut repo, &TodoFilter::ById(String::from("1"))).unwrap(), 1);
+        assert!(<InMemoryTodoRepository as hexser::ports::repository::QueryRepository<Todo>>::find_one(&repo, &TodoFilter::ById(String::from("1"))).unwrap().is_none());
     }
 
     /// Test Mapper transformations.

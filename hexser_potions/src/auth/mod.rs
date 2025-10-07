@@ -8,6 +8,9 @@
 //! - A small application function to wire it together
 //!
 //! Copy, paste, and adapt as needed.
+//!
+//! Revision History
+//! - 2025-10-07T11:43:00Z @AI: Migrate to v0.4 QueryRepository API; remove id-centric methods; add filter-based querying; fix ID generation.
 
 use hexser::prelude::*;
 
@@ -34,10 +37,6 @@ pub struct InMemoryUserRepository {
 }
 
 impl Repository<User> for InMemoryUserRepository {
-    fn find_by_id(&self, id: &String) -> HexResult<Option<User>> {
-        Ok(self.users.iter().find(|u| &u.id == id).cloned())
-    }
-
     fn save(&mut self, entity: User) -> HexResult<()> {
         // overwrite if exists, else push
         if let Some(existing) = self.users.iter_mut().find(|u| u.id == entity.id) {
@@ -47,20 +46,91 @@ impl Repository<User> for InMemoryUserRepository {
         }
         Ok(())
     }
-
-    fn delete(&mut self, id: &String) -> HexResult<()> {
-        self.users.retain(|u| &u.id != id);
-        Ok(())
-    }
-
-    fn find_all(&self) -> HexResult<Vec<User>> {
-        Ok(self.users.clone())
-    }
 }
 
 impl UserRepository for InMemoryUserRepository {
     fn find_by_email(&self, email: &str) -> HexResult<Option<User>> {
         Ok(self.users.iter().find(|u| u.email == email).cloned())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum UserFilter {
+    All,
+    ByEmail(String),
+    ById(String),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum UserSortKey {
+    Email,
+    Id,
+}
+
+impl hexser::ports::repository::QueryRepository<User> for InMemoryUserRepository {
+    type Filter = UserFilter;
+    type SortKey = UserSortKey;
+
+    fn find_one(&self, filter: &UserFilter) -> HexResult<Option<User>> {
+        let found = match filter {
+            UserFilter::All => self.users.first().cloned(),
+            UserFilter::ByEmail(e) => self.users.iter().find(|u| &u.email == e).cloned(),
+            UserFilter::ById(id) => self.users.iter().find(|u| &u.id == id).cloned(),
+        };
+        Ok(found)
+    }
+
+    fn find(&self, filter: &UserFilter, opts: hexser::ports::repository::FindOptions<UserSortKey>) -> HexResult<Vec<User>> {
+        let mut items: Vec<User> = match filter {
+            UserFilter::All => self.users.clone(),
+            UserFilter::ByEmail(e) => self.users.iter().filter(|u| &u.email == e).cloned().collect(),
+            UserFilter::ById(id) => self.users.iter().filter(|u| &u.id == id).cloned().collect(),
+        };
+        if let Some(mut sorts) = opts.sort {
+            for s in sorts.drain(..).rev() {
+                items.sort_by(|a, b| {
+                    let mut ord = match s.key {
+                        UserSortKey::Email => a.email.cmp(&b.email),
+                        UserSortKey::Id => a.id.cmp(&b.id),
+                    };
+                    if let hexser::ports::repository::Direction::Desc = s.direction {
+                        ord = ord.reverse();
+                    }
+                    ord
+                });
+            }
+        }
+        if let Some(offset) = opts.offset {
+            let offset_usize: usize = std::convert::TryInto::try_into(offset).unwrap_or(usize::MAX);
+            if offset_usize < items.len() { items = items.split_off(offset_usize); } else { items.clear(); }
+        }
+        if let Some(limit) = opts.limit {
+            let limit_usize: usize = std::convert::TryInto::try_into(limit).unwrap_or(usize::MAX);
+            if items.len() > limit_usize { items.truncate(limit_usize); }
+        }
+        Ok(items)
+    }
+
+    fn exists(&self, filter: &UserFilter) -> HexResult<bool> { Ok(self.find_one(filter)?.is_some()) }
+
+    fn count(&self, filter: &UserFilter) -> HexResult<u64> {
+        let n = match filter {
+            UserFilter::All => self.users.len(),
+            UserFilter::ByEmail(e) => self.users.iter().filter(|u| &u.email == e).count(),
+            UserFilter::ById(id) => self.users.iter().filter(|u| &u.id == id).count(),
+        };
+        Ok(n as u64)
+    }
+
+    fn delete_where(&mut self, filter: &UserFilter) -> HexResult<u64> {
+        let before = self.users.len();
+        match filter {
+            UserFilter::All => { self.users.clear(); },
+            UserFilter::ByEmail(e) => { self.users.retain(|u| &u.email != e); },
+            UserFilter::ById(id) => { self.users.retain(|u| &u.id != id); },
+        }
+        let removed = before.saturating_sub(self.users.len());
+        Ok(removed as u64)
     }
 }
 
@@ -83,7 +153,10 @@ impl Directive for SignUpUser {
 /// - Validates the directive
 /// - Ensures email is unique
 /// - Creates and persists a new user
-pub fn execute_signup<R: UserRepository>(repo: &mut R, cmd: SignUpUser) -> HexResult<User> {
+pub fn execute_signup<R>(repo: &mut R, cmd: SignUpUser) -> HexResult<User>
+where
+    R: UserRepository + hexser::ports::repository::QueryRepository<User, Filter = UserFilter>,
+{
     cmd.validate()?;
 
     if repo.find_by_email(&cmd.email)?.is_some() {
@@ -93,11 +166,12 @@ pub fn execute_signup<R: UserRepository>(repo: &mut R, cmd: SignUpUser) -> HexRe
         ));
     }
 
-    // naive ID generation without dependencies
-    let next_id = {
-        let count = repo.find_all()?.len() + 1;
-        format!("user-{}", count)
-    };
+    // naive ID generation without dependencies: count existing users via QueryRepository
+    let count = <R as hexser::ports::repository::QueryRepository<User>>::count(
+        &*repo,
+        &UserFilter::All,
+    )?;
+    let next_id = std::format!("user-{}", count + 1);
 
     let user = User {
         id: next_id,

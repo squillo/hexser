@@ -4,6 +4,9 @@
 //! and coordinates port interactions through directives and queries.
 //!
 //! Run with: cargo run --example tutorial_04_application
+//!
+//! Revision History
+//! - 2025-10-07T11:55:00Z @AI: Align with v0.4 Repository by removing id-centric methods; no behavior change otherwise.
 
 use hexser::prelude::*;
 
@@ -33,22 +36,9 @@ impl InMemoryTodoRepository {
 }
 
 impl Repository<Todo> for InMemoryTodoRepository {
-    fn find_by_id(&self, id: &String) -> HexResult<Option<Todo>> {
-        Ok(self.todos.iter().find(|t| &t.id == id).cloned())
-    }
-
     fn save(&mut self, todo: Todo) -> HexResult<()> {
         self.todos.push(todo);
         Ok(())
-    }
-
-    fn delete(&mut self, id: &String) -> HexResult<()> {
-        self.todos.retain(|t| &t.id != id);
-        Ok(())
-    }
-
-    fn find_all(&self) -> HexResult<Vec<Todo>> {
-        Ok(self.todos.clone())
     }
 }
 

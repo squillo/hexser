@@ -5,6 +5,9 @@
 //! operations (directives) from read operations (queries).
 //!
 //! Run with: `cargo run --example cqrs_pattern`
+//!
+//! Revision History
+//! - 2025-10-07T13:02:00Z @AI: Migrate to v0.4 Repository by removing id-centric methods; no behavior change.
 
 use hexser::{Directive, DirectiveHandler, QueryHandler};
 
@@ -142,22 +145,9 @@ impl InMemoryUserRepository {
 impl hexser::adapters::Adapter for InMemoryUserRepository {}
 
 impl hexser::ports::Repository<User> for InMemoryUserRepository {
-    fn find_by_id(&self, id: &String) -> hexser::HexResult<Option<User>> {
-        Ok(self.users.iter().find(|u| &u.id == id).cloned())
-    }
-
     fn save(&mut self, user: User) -> hexser::HexResult<()> {
         self.users.push(user);
         Ok(())
-    }
-
-    fn delete(&mut self, id: &String) -> hexser::HexResult<()> {
-        self.users.retain(|u| &u.id != id);
-        Ok(())
-    }
-
-    fn find_all(&self) -> hexser::HexResult<Vec<User>> {
-        Ok(self.users.clone())
     }
 }
 

@@ -9,6 +9,8 @@
 //! - 2025-10-01T00:00:00Z @AI: Initial Repository trait definition with generic entity type.
 //! - 2025-10-06T00:00:00Z @AI: Introduced filter-based generic query API (separate QueryRepository trait), sorting and pagination.
 //! - 2025-10-06T17:22:00Z @AI: Tests: add justifications; remove super import; fully qualify paths per no-use rule.
+//! - 2025-10-07T10:00:00Z @AI: Decouple QueryRepository from ID-centric Repository to enable generic, filter-first repositories.
+//! - 2025-10-07T10:59:00Z @AI: Remove deprecated id-centric methods; focus Repository on save only; update tests for v0.4.
 
 /// Generic query options for fetching collections.
 #[derive(Debug, Clone)]
@@ -36,10 +38,12 @@ pub struct Sort<K> {
     pub direction: Direction,
 }
 
-/// Trait for repository ports that abstract persistence operations.
+/// Trait for repository ports that abstract persistence save operations (v0.4+).
 ///
-/// Repositories provide access to entities as if they were in-memory collections,
-/// hiding the complexity of the underlying storage mechanism.
+/// Starting in v0.4, id-centric methods were removed in favor of the generic,
+/// filter-based `QueryRepository` API. This trait now focuses solely on the
+/// write-side persistence concern of saving aggregates. For read operations and
+/// deletions by criteria, implement `QueryRepository` on the same adapter.
 ///
 /// # Type Parameters
 ///
@@ -48,24 +52,12 @@ pub trait Repository<T>
 where
     T: crate::domain::entity::Entity,
 {
-    /// Find an entity by its unique identifier.
-    #[deprecated(note = "use QueryRepository::find_one with a domain Filter instead")]
-    fn find_by_id(&self, id: &T::Id) -> crate::result::hex_result::HexResult<Option<T>>;
-
     /// Save an entity to the repository.
     fn save(&mut self, entity: T) -> crate::result::hex_result::HexResult<()>;
-
-    /// Delete an entity by its identifier.
-    #[deprecated(note = "prefer filter-based deletion in adapters; id-based delete kept for compatibility")]
-    fn delete(&mut self, id: &T::Id) -> crate::result::hex_result::HexResult<()>;
-
-    /// Find all entities in the repository.
-    #[deprecated(note = "use QueryRepository::find with domain Filter and FindOptions instead")]
-    fn find_all(&self) -> crate::result::hex_result::HexResult<Vec<T>>;
 }
 
 /// Generic query-capable repository port for expressive, domain-owned filters.
-pub trait QueryRepository<T>: Repository<T>
+pub trait QueryRepository<T>
 where
     T: crate::domain::entity::Entity,
 {
@@ -134,11 +126,6 @@ mod tests {
     }
 
     impl crate::ports::repository::Repository<TestEntity> for TestRepository {
-        fn find_by_id(&self, id: &u64) -> crate::result::hex_result::HexResult<Option<TestEntity>> {
-            let found = self.entities.iter().find(|e| e.id == *id);
-            Ok(found.cloned())
-        }
-
         fn save(&mut self, entity: TestEntity) -> crate::result::hex_result::HexResult<()> {
             if let Some(i) = self.entities.iter().position(|e| e.id == entity.id) {
                 self.entities[i] = entity;
@@ -146,15 +133,6 @@ mod tests {
                 self.entities.push(entity);
             }
             Ok(())
-        }
-
-        fn delete(&mut self, id: &u64) -> crate::result::hex_result::HexResult<()> {
-            self.entities.retain(|e| e.id != *id);
-            Ok(())
-        }
-
-        fn find_all(&self) -> crate::result::hex_result::HexResult<Vec<TestEntity>> {
-            Ok(self.entities.clone())
         }
     }
 
@@ -229,9 +207,10 @@ mod tests {
         assert_eq!(page.len(), 1);
         assert_eq!(page[0].name, "A");
 
-        // legacy still works
-        assert!(<TestRepository as crate::ports::repository::Repository<TestEntity>>::find_by_id(&repo, &2).unwrap().is_some());
-        <TestRepository as crate::ports::repository::Repository<TestEntity>>::delete(&mut repo, &2).unwrap();
-        assert!(<TestRepository as crate::ports::repository::Repository<TestEntity>>::find_by_id(&repo, &2).unwrap().is_none());
+        // delete by filter and re-check via QueryRepository
+        let removed = <TestRepository as crate::ports::repository::QueryRepository<TestEntity>>::delete_where(&mut repo, &TestFilter::ById(2)).unwrap();
+        assert_eq!(removed, 1);
+        let none = <TestRepository as crate::ports::repository::QueryRepository<TestEntity>>::find_one(&repo, &TestFilter::ById(2)).unwrap();
+        assert!(none.is_none());
     }
 }

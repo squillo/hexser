@@ -1,13 +1,21 @@
-# N Lang Hex Workspace
+# Hexser Workspace
 
-Build real-world, hexagonal Rust apps without the ceremony. Hexser is a pragmatic, zero‑boilerplate take on Hexagonal Architecture with a clear Domain–Ports–Adapters flow, fast iteration, and copy‑pasteable examples.
+__From the founders:__ Hi all, thank you for checking out Hexser.
+
+We are the authors of [N Lang](https://squillo.io/nlang) and we strong believe that Rust's and N Lang's robust type systems and meaningful designs are the future of software engineering.  We wrote this library to allow people to create incredible applications in Rust quickly while also giving them best-in-class generative code support and good design.
+
+"Good Design is Good Business" - Thomas J. Watson Jr., the former CEO of IBM.
+
+Hexser allows you to build incrediblly small and incrediblly large Rust apps that fit perfectly into the [Squillo](https://squillo.io) ecosystem but also for professional teams. We are proud to Open Sourcing this library under MIT or Apache and can't wait to see how you use it. Enjoy!
+
+---
+
+Build real-world, hexagonal Rust apps without the ceremony. Hexser is a pragmatic, zero‑boilerplate take on Hexagonal Architecture with a clear Domain–Ports–Adapters flow, fast iteration, automatically graphed inference, and copy‑pasteable examples.
 
 Main crates (jump in):
 - [hexser](./hexser) — Core traits, types, errors, graph model, and opt‑in derive macros. Also available on crates.io: https://crates.io/crates/hexser
 - [hexser_macros](./hexser_macros) — Procedural macros (feature = "macros") to reduce repetition.
 - [hexser_potions](./hexser_potions) — “Potions”: small, mixable examples for common app operations (formerly “blueprints”).
-
-Why “Potions”? They are lightweight, composable recipes you can pour into your app — perfect for experimenting, learning, and scaffolding.
 
 Why teams choose Hexser:
 - Zero boilerplate: write traits for your Ports and small impls for Adapters — that’s it.
@@ -15,6 +23,8 @@ Why teams choose Hexser:
 - First‑class use‑cases: model application logic as Directives (clear, explicit, testable).
 - Fast feedback: in‑memory adapters and ready‑to‑paste Potions get you shipping quickly.
 - Opt‑in macros: reduce repetition without hiding control flow; nothing “magic” at runtime.
+
+Why “Potions”? They are lightweight, composable recipes you can pour into your app — perfect for experimenting, learning, and scaffolding.
 
 Quick start with hexser:
 
