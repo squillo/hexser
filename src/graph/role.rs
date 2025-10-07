@@ -17,7 +17,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::graph::Role;
+/// use hexser::graph::Role;
 ///
 /// let role = Role::Entity;
 /// assert!(matches!(role, Role::Entity));

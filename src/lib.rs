@@ -17,7 +17,7 @@
 //! # Quick Start
 //!
 //! ```rust
-//! use hexer::prelude::*;
+//! use hexser::prelude::*;
 //!
 //! // Define a domain entity
 //! struct User {
@@ -77,7 +77,7 @@ pub mod ai;
 pub mod container;
 
 // Re-export commonly used items at crate root for convenience
-pub use crate::error::hex_error::HexError;
+pub use crate::error::hex_error::Hexserror;
 pub use crate::result::hex_result::HexResult;
 
 // Re-export all domain traits
@@ -146,10 +146,10 @@ pub use crate::showcase::{
 /// Import everything you need with a single use statement:
 ///
 /// ```rust
-/// use hexer::prelude::*;
+/// use hexser::prelude::*;
 /// ```
 pub mod prelude {
-    pub use crate::HexError;
+    pub use crate::Hexserror;
     pub use crate::HexResult;
 
     pub use crate::domain::{

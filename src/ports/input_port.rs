@@ -21,8 +21,8 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::ports::InputPort;
-/// use hexer::HexResult;
+/// use hexser::ports::InputPort;
+/// use hexser::HexResult;
 ///
 /// struct CreateUserInput {
 ///     email: String,

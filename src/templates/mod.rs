@@ -1,4 +1,4 @@
-//! Template framework for quickly scaffolding hexer components.
+//! Template framework for quickly scaffolding hexser components.
 //!
 //! This module provides lightweight helpers and macros to implement
 //! Registrable for your components without relying on derive macros.
@@ -8,13 +8,13 @@
 //! # Quick examples
 //!
 //! ```rust
-//! use hexer::prelude::*;
-//! use hexer::hex_register_domain;
+//! use hexser::prelude::*;
+//! use hexser::hex_register_domain;
 //!
 //! struct MyEntity { id: u64 }
 //!
 //! // Implement Registrable for a domain Entity using a template macro
-//! hexer::hex_register_domain!(MyEntity, Role::Entity);
+//! hexser::hex_register_domain!(MyEntity, Role::Entity);
 //!
 //! // Now you can obtain node info for graph registration
 //! let info = <MyEntity as Registrable>::node_info();
@@ -23,13 +23,13 @@
 //! ```
 //!
 //! ```rust
-//! use hexer::prelude::*;
-//! use hexer::hex_register_adapter;
+//! use hexser::prelude::*;
+//! use hexser::hex_register_adapter;
 //!
 //! struct PgUserRepo;
 //!
 //! // Register as an Adapter implementing a Repository
-//! hexer::hex_register_adapter!(PgUserRepo, Role::Adapter);
+//! hexser::hex_register_adapter!(PgUserRepo, Role::Adapter);
 //! ```
 //!
 //! These helpers are intended as templates: copy, adapt, and extend as needed.

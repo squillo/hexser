@@ -17,7 +17,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::graph::{GraphBuilder, HexNode, HexEdge, NodeId, Layer, Role, Relationship};
+/// use hexser::graph::{GraphBuilder, HexNode, HexEdge, NodeId, Layer, Role, Relationship};
 ///
 /// let graph = GraphBuilder::new()
 ///     .with_description("My Architecture")
@@ -118,7 +118,7 @@ impl GraphBuilder {
 
         for edge in &self.edges {
             if !node_ids.contains(edge.source()) {
-                return Err(crate::error::hex_error::HexError::domain(
+                return Err(crate::error::hex_error::Hexserror::domain(
                     "E_HEX_GRAPH_001",
                     "Edge references non-existent source node"
                 )
@@ -126,7 +126,7 @@ impl GraphBuilder {
             }
 
             if !node_ids.contains(edge.target()) {
-                return Err(crate::error::hex_error::HexError::domain(
+                return Err(crate::error::hex_error::Hexserror::domain(
                     "E_HEX_GRAPH_002",
                     "Edge references non-existent target node"
                 )

@@ -17,8 +17,8 @@ pub fn hex_domain_error_impl(input: proc_macro::TokenStream) -> proc_macro::Toke
             let message = &tuple.elems[1];
 
             quote::quote! {
-                hexer::error::hex_error::HexError::domain(#code, #message)
-                    .with_location(hexer::error::source_location::SourceLocation::new(
+                hexser::error::hex_error::Hexserror::domain(#code, #message)
+                    .with_location(hexser::error::source_location::SourceLocation::new(
                         file!(),
                         line!(),
                         column!()
@@ -46,8 +46,8 @@ pub fn hex_port_error_impl(input: proc_macro::TokenStream) -> proc_macro::TokenS
             let message = &tuple.elems[1];
 
             quote::quote! {
-                hexer::error::hex_error::HexError::port(#code, #message)
-                    .with_location(hexer::error::source_location::SourceLocation::new(
+                hexser::error::hex_error::Hexserror::port(#code, #message)
+                    .with_location(hexser::error::source_location::SourceLocation::new(
                         file!(),
                         line!(),
                         column!()
@@ -75,8 +75,8 @@ pub fn hex_adapter_error_impl(input: proc_macro::TokenStream) -> proc_macro::Tok
             let message = &tuple.elems[1];
 
             quote::quote! {
-                hexer::error::hex_error::HexError::adapter(#code, #message)
-                    .with_location(hexer::error::source_location::SourceLocation::new(
+                hexser::error::hex_error::Hexserror::adapter(#code, #message)
+                    .with_location(hexser::error::source_location::SourceLocation::new(
                         file!(),
                         line!(),
                         column!()

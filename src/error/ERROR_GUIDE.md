@@ -1,6 +1,6 @@
-# Hexer Error System Guide
+# Hexser Error System Guide
 
-Complete guide to using the Hexer error handling system for building robust, maintainable applications with rich, actionable error information.
+Complete guide to using the Hexser error handling system for building robust, maintainable applications with rich, actionable error information.
 
 ## Table of Contents
 
@@ -21,19 +21,19 @@ Complete guide to using the Hexer error handling system for building robust, mai
 Creating rich, actionable errors is straightforward using the builder pattern:
 
 ```rust
-use hexer::error::{HexError, codes};
+use hexser::error::{Hexserror, codes};
 
 // Domain error with next steps
-let err = HexError::domain(codes::domain::INVARIANT_VIOLATION, "Order must contain items")
+let err = Hexserror::domain(codes::domain::INVARIANT_VIOLATION, "Order must contain items")
     .with_next_step("Add at least one item to the order")
     .with_suggestion("order.add_item(item)");
 
 // Validation error with field context
-let err = HexError::validation_field("Email format is invalid", "email")
+let err = Hexserror::validation_field("Email format is invalid", "email")
     .with_suggestion("Use format: user@example.com");
 
 // Not found error
-let err = HexError::not_found("User", "user-123");
+let err = Hexserror::not_found("User", "user-123");
 
 ```
 
@@ -50,14 +50,14 @@ Source: src/domain/order.rs:45:12
 
 ## Error Types
 
-The Hexer error system provides specialized error types for different architectural layers and failure scenarios.
+The Hexser error system provides specialized error types for different architectural layers and failure scenarios.
 
-HexError (Main Error Type)
+Hexserror (Main Error Type)
 
-HexError is the primary error enum that wraps all layer-specific errors:
+Hexserror is the primary error enum that wraps all layer-specific errors:
 
 ```rust
-pub enum HexError {
+pub enum Hexserror {
   Domain(DomainError),
   Port(PortError),
   Adapter(AdapterError),
@@ -74,9 +74,9 @@ pub enum HexError {
 Represents business rule violations and invariant failures in the domain layer:
 
 ```rust
-use hexer::error::{HexError, codes};
+use hexser::error::{Hexserror, codes};
 
-let err = HexError::domain(
+let err = Hexserror::domain(
     codes::domain::INVARIANT_VIOLATION,
     "Account balance cannot be negative"
 )
@@ -93,7 +93,7 @@ Common Use Cases:
 - Represents failures in port interfaces between domain and adapters:
 
 ```rust
-use hexer::error::port_error;
+use hexser::error::port_error;
 
 let err = port_error::communication_failure("Database connection lost");
 let err = port_error::port_timeout("UserRepository");
@@ -108,7 +108,7 @@ Common Use Cases:
 Represents infrastructure and external service failures:
 
 ```rust
-use hexer::error::adapter_error;
+use hexser::error::adapter_error;
 
 let err = adapter_error::connection_failed("PostgreSQL", "Connection refused");
 let err = adapter_error::api_failure("Payment API returned 503");
@@ -125,12 +125,12 @@ Common Use Cases:
 Represents input validation failures with field-specific context:
 
 ```rust
-use hexer::error::{HexError, codes};
+use hexser::error::{Hexserror, codes};
 
-let err = HexError::validation("Required field missing")
+let err = Hexserror::validation("Required field missing")
 .with_field("username");
 
-let err = HexError::validation_field("Must be at least 8 characters", "password")
+let err = Hexserror::validation_field("Must be at least 8 characters", "password")
 .with_suggestion("Use a longer password");
 ```
 
@@ -144,10 +144,10 @@ Common Use Cases:
 Represents missing resource errors:
 
 ```rust
-use hexer::error::HexError;
+use hexser::error::Hexserror;
 
-let err = HexError::not_found("Order", "order-123");
-let err = HexError::not_found("User", "user@example.com");
+let err = Hexserror::not_found("Order", "order-123");
+let err = Hexserror::not_found("User", "user@example.com");
 ```
 
 Common Use Cases:
@@ -159,9 +159,9 @@ Common Use Cases:
 Represents resource state conflicts:
 
 ```rust
-use hexer::error::HexError;
+use hexser::error::Hexserror;
 
-let err = HexError::conflict("Email already registered")
+let err = Hexserror::conflict("Email already registered")
 .with_existing_id("user-456")
 .with_next_step("Use a different email or recover existing account");
 ```
@@ -176,9 +176,9 @@ Common Use Cases:
 All layer errors support the builder pattern for incrementally adding context:
 
 ```rust
-use hexer::error::{HexError, codes};
+use hexser::error::{Hexserror, codes};
 
-let err = HexError::domain(codes::domain::INVARIANT_VIOLATION, "Invalid order state")
+let err = Hexserror::domain(codes::domain::INVARIANT_VIOLATION, "Invalid order state")
     .with_next_step("Verify order is in draft state")
     .with_next_steps(&["Check order.status", "Ensure no items are shipped"])
     .with_suggestion("Call order.cancel() before modifying items")
@@ -189,7 +189,7 @@ let err = HexError::domain(codes::domain::INVARIANT_VIOLATION, "Invalid order st
 The error system provides helper functions for common error scenarios:
 
 ```rust
-use hexer::error::{domain_error, port_error, adapter_error};
+use hexser::error::{domain_error, port_error, adapter_error};
 
 // Domain helpers
 let err = domain_error::invariant_violation("Order must have items");
@@ -212,10 +212,10 @@ let err = adapter_error::io_failure("Cannot read configuration file");
 Add source location information for precise error tracking:
 
 ```rust
-use hexer::error::{HexError, source_location::SourceLocation};
+use hexser::error::{Hexserror, source_location::SourceLocation};
 
 let location = SourceLocation::new("src/domain/order.rs", 45, 12);
-let err = HexError::domain("E_HEX_001", "Invalid state")
+let err = Hexserror::domain("E_HEX_001", "Invalid state")
     .with_location(location);
 ```
 
@@ -223,9 +223,9 @@ Documentation Links
 Link errors to documentation for detailed remediation:
 
 ```rust
-use hexer::error::{HexError, RichError};
+use hexser::error::{Hexserror, RichError};
 
-let err = HexError::domain("E_HEX_002", "Invariant violation")
+let err = Hexserror::domain("E_HEX_002", "Invariant violation")
 .with_more_info("https://docs.example.com/errors/E_HEX_002");
 ```
 
@@ -237,10 +237,10 @@ Adding Source Errors
 Use with_source() to chain underlying errors:
 
 ```rust
-use hexer::error::{HexError, adapter_error};
+use hexser::error::{Hexserror, adapter_error};
 use std::io;
 
-fn load_config() -> Result<Config, HexError> {
+fn load_config() -> Result<Config, Hexserror> {
     let content = std::fs::read_to_string("config.toml")
         .map_err(|io_err| {
             adapter_error::io_failure("Failed to read config file")
@@ -255,10 +255,10 @@ Multi-Layer Error Propagation
 Chain errors across architectural layers:
 
 ```rust
-use hexer::error::{HexError, domain_error, adapter_error};
+use hexser::error::{Hexserror, domain_error, adapter_error};
 
 // Adapter layer
-fn fetch_user_data(id: &str) -> Result<UserData, HexError> {
+fn fetch_user_data(id: &str) -> Result<UserData, Hexserror> {
   let response = api_client.get(id)
     .map_err(|api_err| {
     adapter_error::api_failure("User service unavailable")
@@ -269,7 +269,7 @@ fn fetch_user_data(id: &str) -> Result<UserData, HexError> {
 }
 
 // Domain layer
-fn load_user(id: &str) -> Result<User, HexError> {
+fn load_user(id: &str) -> Result<User, Hexserror> {
   let data = fetch_user_data(id)
   .map_err(|fetch_err| {
     domain_error::invariant_violation("Cannot load user")
@@ -320,7 +320,7 @@ Bad:
 ```rust
 // Don't use generic error for domain violations
 if order.items.is_empty() {
-    return Err(HexError::validation("Order is empty")); // Wrong layer!
+    return Err(Hexserror::validation("Order is empty")); // Wrong layer!
 }
 ```
 
@@ -330,7 +330,7 @@ if order.items.is_empty() {
 Good:
 
 ```rust
-   HexError::validation_field("Password too short", "password")
+   Hexserror::validation_field("Password too short", "password")
    .with_next_step("Use a password with at least 8 characters")
    .with_suggestion("Try: MyP@ssw0rd2024")
 ```
@@ -338,7 +338,7 @@ Good:
 Bad:
 
 ```rust
-HexError::validation("Invalid password") // No actionable guidance
+Hexserror::validation("Invalid password") // No actionable guidance
 ```
 
 3. Add Context at Each Layer
@@ -370,7 +370,7 @@ port_error::port_timeout("PaymentService")
 Bad:
 
 ```rust
-HexError::Port(PortError::new(codes::port::PORT_TIMEOUT, "Port timed out"))
+Hexserror::Port(PortError::new(codes::port::PORT_TIMEOUT, "Port timed out"))
 .with_next_step("Increase timeout or check port responsiveness")
 ```
 
@@ -378,13 +378,13 @@ HexError::Port(PortError::new(codes::port::PORT_TIMEOUT, "Port timed out"))
 Validate input at system boundaries before processing:
 
 ```rust
-pub fn create_user(req: CreateUserRequest) -> Result<User, HexError> {
+pub fn create_user(req: CreateUserRequest) -> Result<User, Hexserror> {
     // Validate early
     if req.email.is_empty() {
-        return Err(HexError::validation_field("Email is required", "email"));
+        return Err(Hexserror::validation_field("Email is required", "email"));
     }
     if !is_valid_email(&req.email) {
-        return Err(HexError::validation_field("Invalid email format", "email")
+        return Err(Hexserror::validation_field("Invalid email format", "email")
             .with_suggestion("Use format: user@example.com"));
     }
     
@@ -405,7 +405,7 @@ pub fn create_user(req: CreateUserRequest) -> Result<User, HexError> {
 
    assert!(result.is_err());
    let err = result.unwrap_err();
-   assert!(matches!(err, HexError::Domain(_)));
+   assert!(matches!(err, Hexserror::Domain(_)));
    assert!(err.to_string().contains("E_HEX_001"));
    }
 ```
@@ -465,7 +465,7 @@ pub fn create_user(req: CreateUserRequest) -> Result<User, HexError> {
 ### Example 1: Domain Validation
 
 ```rust
-use hexer::error::{HexError, codes};
+use hexser::error::{Hexserror, codes};
 
 pub struct Order {
     items: Vec<OrderItem>,
@@ -473,11 +473,11 @@ pub struct Order {
 }
 
 impl Order {
-    pub fn submit(&self) -> Result<(), HexError> {
+    pub fn submit(&self) -> Result<(), Hexserror> {
         // Validate invariants
         if self.items.is_empty() {
             return Err(
-                HexError::domain(codes::domain::INVARIANT_EMPTY, "Order must contain items")
+                Hexserror::domain(codes::domain::INVARIANT_EMPTY, "Order must contain items")
                     .with_next_step("Add at least one item to the order")
                     .with_suggestion("order.add_item(item)")
             );
@@ -485,7 +485,7 @@ impl Order {
         
         if self.status != OrderStatus::Draft {
             return Err(
-                HexError::domain(
+                Hexserror::domain(
                     codes::domain::INVALID_STATE_TRANSITION,
                     "Can only submit orders in Draft status"
                 )
@@ -502,14 +502,14 @@ impl Order {
 ### Example 2: Adapter Error with Chaining
 
 ```rust
-use hexer::error::{HexError, adapter_error};
+use hexser::error::{Hexserror, adapter_error};
 
 pub struct PostgresUserRepository {
 pool: sqlx::PgPool,
 }
 
 impl PostgresUserRepository {
-pub async fn find_by_id(&self, id: &str) -> Result<User, HexError> {
+pub async fn find_by_id(&self, id: &str) -> Result<User, Hexserror> {
 let row = sqlx::query_as::<_, UserRow>("SELECT * FROM users WHERE id = $1")
 .bind(id)
 .fetch_optional(&self.pool)
@@ -529,7 +529,7 @@ adapter_error::connection_failed("PostgreSQL", "Query execution failed")
                             .with_source(e)
                     })
             }
-            None => Err(HexError::not_found("User", id)),
+            None => Err(Hexserror::not_found("User", id)),
         }
     }
 }
@@ -538,7 +538,7 @@ adapter_error::connection_failed("PostgreSQL", "Query execution failed")
 ### Example 3: Validation with Field Context
 
 ```rust
-use hexer::error::{HexError, codes};
+use hexser::error::{Hexserror, codes};
 
 pub struct CreateUserRequest {
     pub email: String,
@@ -547,18 +547,18 @@ pub struct CreateUserRequest {
 }
 
 impl CreateUserRequest {
-    pub fn validate(&self) -> Result<(), HexError> {
+    pub fn validate(&self) -> Result<(), Hexserror> {
         // Email validation
         if self.email.is_empty() {
             return Err(
-                HexError::validation_field("Email is required", "email")
+                Hexserror::validation_field("Email is required", "email")
                     .with_next_step("Provide a valid email address")
             );
         }
         
         if !self.email.contains('@') {
             return Err(
-                HexError::validation_field("Invalid email format", "email")
+                Hexserror::validation_field("Invalid email format", "email")
                     .with_suggestion("Use format: user@example.com")
             );
         }
@@ -566,7 +566,7 @@ impl CreateUserRequest {
         // Username validation
         if self.username.len() < 3 {
             return Err(
-                HexError::validation_field("Username too short", "username")
+                Hexserror::validation_field("Username too short", "username")
                     .with_next_step("Use at least 3 characters")
                     .with_suggestion("Try: john_doe, alice_smith")
             );
@@ -575,7 +575,7 @@ impl CreateUserRequest {
         // Age validation
         if self.age < 13 {
             return Err(
-                HexError::validation_field("Must be at least 13 years old", "age")
+                Hexserror::validation_field("Must be at least 13 years old", "age")
                     .with_next_step("Provide a valid age")
             );
         }
@@ -588,11 +588,11 @@ impl CreateUserRequest {
 ### Example 4: Multi-Layer Error Propagation
 
 ```rust
-use hexer::error::{HexError, domain_error, port_error};
+use hexser::error::{Hexserror, domain_error, port_error};
 
 // Port layer
 pub trait UserRepository {
-async fn save(&self, user: &User) -> Result<(), HexError>;
+async fn save(&self, user: &User) -> Result<(), Hexserror>;
 }
 
 // Domain layer
@@ -601,14 +601,14 @@ repo: R,
 }
 
 impl<R: UserRepository> UserService<R> {
-pub async fn register_user(&self, req: CreateUserRequest) -> Result<User, HexError> {
+pub async fn register_user(&self, req: CreateUserRequest) -> Result<User, Hexserror> {
 // Validate input
 req.validate()?;
 
         // Check for duplicates
         if self.repo.exists_by_email(&req.email).await? {
             return Err(
-                HexError::conflict("User with this email already exists")
+                Hexserror::conflict("User with this email already exists")
                     .with_next_step("Use a different email or recover existing account")
                     .with_suggestion("Try the password reset flow")
             );
@@ -638,7 +638,7 @@ req.validate()?;
 ### Example 5: Error Display and Debugging
 
 ```rust
-use hexer::error::HexError;
+use hexser::error::Hexserror;
 use std::error::Error;
 
 fn handle_user_creation(req: CreateUserRequest) {
@@ -659,13 +659,13 @@ fn handle_user_creation(req: CreateUserRequest) {
             
             // Match on specific error types for custom handling
             match &err {
-                HexError::Validation(_) => {
+                Hexserror::Validation(_) => {
                     // Return 400 Bad Request
                 }
-                HexError::NotFound(_) => {
+                Hexserror::NotFound(_) => {
                     // Return 404 Not Found
                 }
-                HexError::Conflict(_) => {
+                Hexserror::Conflict(_) => {
                     // Return 409 Conflict
                 }
                 _ => {

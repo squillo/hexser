@@ -17,7 +17,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::graph::NodeId;
+/// use hexser::graph::NodeId;
 ///
 /// struct MyComponent;
 ///

@@ -178,12 +178,12 @@ dependencies = [
 name = "hex_potions"
 version = "0.3.0"
 dependencies = [
- "hexer",
+ "hexser",
  "pretty_assertions",
 ]
 
 [[package]]
-name = "hexer"
+name = "hexser"
 version = "0.3.0"
 dependencies = [
  "async-trait",

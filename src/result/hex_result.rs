@@ -1,7 +1,7 @@
 //! HexResult type alias for consistent error handling.
 //!
 //! This module provides the standard Result type used throughout the hex crate.
-//! HexResult is a type alias for Result<T, HexError>, providing consistent
+//! HexResult is a type alias for Result<T, Hexserror>, providing consistent
 //! error handling and reducing boilerplate in function signatures.
 //!
 //! Revision History
@@ -9,19 +9,19 @@
 
 /// Standard Result type for hex crate operations.
 ///
-/// This is a type alias for `Result<T, HexError>`, providing consistent
+/// This is a type alias for `Result<T, Hexserror>`, providing consistent
 /// error handling throughout the crate.
 ///
 /// # Example
 ///
 /// ```rust
-/// use hexer::HexResult;
+/// use hexser::HexResult;
 ///
 /// fn do_something() -> HexResult<String> {
 ///     Ok(String::from("success"))
 /// }
 /// ```
-pub type HexResult<T> = Result<T, crate::error::hex_error::HexError>;
+pub type HexResult<T> = Result<T, crate::error::hex_error::Hexserror>;
 
 #[cfg(test)]
 mod tests {
@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn test_hex_result_err() {
-        let result: HexResult<i32> = Result::Err(crate::error::hex_error::HexError::validation("test"));
+        let result: HexResult<i32> = Result::Err(crate::error::hex_error::Hexserror::validation("test"));
         assert!(result.is_err());
     }
 }

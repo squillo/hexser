@@ -2,7 +2,7 @@
 //!
 //! Your first hexagonal architecture component with automatic registration.
 
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 #[derive(HexDomain, Entity)]
 struct Todo {

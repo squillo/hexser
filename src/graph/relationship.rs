@@ -16,7 +16,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::graph::Relationship;
+/// use hexser::graph::Relationship;
 ///
 /// let rel = Relationship::Implements;
 /// assert!(matches!(rel, Relationship::Implements));

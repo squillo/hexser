@@ -1,9 +1,9 @@
 [book]
-title = "Hexer Book"
-author = "Hexer Team"
+title = "Hexser Book"
+author = "Hexser Team"
 multilingual = false
 src = "src"
-description = "The official guide and book for the hexer crate — zero‑boilerplate hexagonal architecture for Rust."
+description = "The official guide and book for the hexser crate — zero‑boilerplate hexagonal architecture for Rust."
 
 [build]
 destination = "book"

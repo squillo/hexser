@@ -1,6 +1,6 @@
 # Getting Started
 
-This chapter helps you add hexer to a project and build your first hexagonal component.
+This chapter helps you add hexser to a project and build your first hexagonal component.
 
 ## Installation
 
@@ -8,7 +8,7 @@ Add to your Cargo.toml:
 
 ```toml
 [dependencies]
-hexer = { version = "0.1.0", features = ["macros"] }
+hexser = { version = "0.1.0", features = ["macros"] }
 ```
 
 Enable the macros feature to use the derive macros provided by the companion crate `hex_macros`.
@@ -18,7 +18,7 @@ Enable the macros feature to use the derive macros provided by the companion cra
 The goal: mark your domain types, define ports (traits), and implement adapters.
 
 ```rust
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 #[derive(Entity, HexDomain)]
 struct User {

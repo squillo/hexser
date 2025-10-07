@@ -17,8 +17,8 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::domain::{Entity, Aggregate};
-/// use hexer::HexResult;
+/// use hexser::domain::{Entity, Aggregate};
+/// use hexser::HexResult;
 ///
 /// struct Order {
 ///     id: String,
@@ -37,7 +37,7 @@
 /// impl Aggregate for Order {
 ///     fn check_invariants(&self) -> HexResult<()> {
 ///         if self.items.is_empty() {
-///             Err(hexer::HexError::domain("E_HEX_001", "Order must have items"))
+///             Err(hexser::Hexserror::domain("E_HEX_001", "Order must have items"))
 ///         } else {
 ///             Ok(())
 ///         }
@@ -71,7 +71,7 @@ mod tests {
                 Result::Ok(())
             } else {
                     Result::Err(
-                        crate::error::hex_error::HexError::domain(
+                        crate::error::hex_error::Hexserror::domain(
                             "E_HEX_001",
                             "Order must have items"
                         )

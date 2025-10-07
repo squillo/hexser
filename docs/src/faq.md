@@ -1,6 +1,6 @@
 # FAQ
 
-- What is Hexer?
+- What is Hexser?
   - A crate that encodes Hexagonal Architecture patterns with minimal boilerplate and adds graph-based introspection.
 
 - Do I have to use all features?

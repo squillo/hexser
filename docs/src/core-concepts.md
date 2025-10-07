@@ -1,6 +1,6 @@
 # Core Concepts
 
-Hexer embraces Hexagonal Architecture and encodes it in Rust types and traits. Here are the key ideas:
+Hexser embraces Hexagonal Architecture and encodes it in Rust types and traits. Here are the key ideas:
 
 ## Layers
 
@@ -14,7 +14,7 @@ Dependencies point inward. Domain depends on nothing; everything else depends on
 
 ## Graph and Registration
 
-Hexer can register components and build an internal graph of your architecture for analysis and visualization. Each registered type provides NodeInfo including its layer, dependencies, and intent. The graph can be validated for common architectural mistakes.
+Hexser can register components and build an internal graph of your architecture for analysis and visualization. Each registered type provides NodeInfo including its layer, dependencies, and intent. The graph can be validated for common architectural mistakes.
 
 See also: ../graph-overview (future section) and the Architecture chapter.
 
@@ -42,7 +42,7 @@ Hex uses a rich error model with layers, sources, and user-facing context. Start
 
 # Core Concepts
 
-Hexer embraces Hexagonal Architecture and encodes it in Rust types and traits. Here are the key ideas:
+Hexser embraces Hexagonal Architecture and encodes it in Rust types and traits. Here are the key ideas:
 
 ## Layers
 
@@ -56,7 +56,7 @@ Dependencies point inward. Domain depends on nothing; everything else depends on
 
 ## Graph and Registration
 
-Hexer can register components and build an internal graph of your architecture for analysis and visualization. Each registered type provides NodeInfo including its layer, dependencies, and intent. The graph can be validated for common architectural mistakes.
+Hexser can register components and build an internal graph of your architecture for analysis and visualization. Each registered type provides NodeInfo including its layer, dependencies, and intent. The graph can be validated for common architectural mistakes.
 
 See also: ../graph-overview (future section) and the Architecture chapter.
 
@@ -79,7 +79,7 @@ Repositories provide a collection-like API that is storage-agnostic. Prefer the 
 
 Example usage:
 ```rust
-use hexer::ports::repository::{QueryRepository, FindOptions, Sort, Direction};
+use hexser::ports::repository::{QueryRepository, FindOptions, Sort, Direction};
 let opts = FindOptions { sort: None, limit: Some(50), offset: Some(0) };
 let _ = <YourRepo as QueryRepository<User>>::find(&repo, &UserFilter::All, opts)?;
 ```

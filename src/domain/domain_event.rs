@@ -16,7 +16,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::domain::DomainEvent;
+/// use hexser::domain::DomainEvent;
 ///
 /// struct UserRegistered {
 ///     user_id: String,

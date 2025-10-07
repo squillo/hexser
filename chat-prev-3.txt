@@ -12,9 +12,9 @@ Attachments Text:
 //!
 //! Run with: `cargo run --example cqrs_pattern`
 
-use hexer::{Directive, DirectiveHandler, QueryHandler};
+use hexser::{Directive, DirectiveHandler, QueryHandler};
 
-fn main() -> hexer::HexResult<()> {
+fn main() -> hexser::HexResult<()> {
     println!("=== CQRS Pattern Example ===\n");
 
     // Create repositories
@@ -62,7 +62,7 @@ struct User {
     name: String,
 }
 
-impl hexer::domain::Entity for User {
+impl hexser::domain::Entity for User {
     type Id = String;
 }
 
@@ -72,14 +72,14 @@ struct CreateUserDirective {
     name: String,
 }
 
-impl hexer::application::Directive for CreateUserDirective {
-    fn validate(&self) -> hexer::HexResult<()> {
+impl hexser::application::Directive for CreateUserDirective {
+    fn validate(&self) -> hexser::HexResult<()> {
         if !self.email.contains('@') {
-            return Err(hexer::HexError::validation("Invalid email format")
+            return Err(hexser::Hexserror::validation("Invalid email format")
                 .with_field("email"));
         }
         if self.name.is_empty() {
-            return Err(hexer::HexError::validation("Name cannot be empty")
+            return Err(hexser::Hexserror::validation("Name cannot be empty")
                 .with_field("name"));
         }
         Ok(())
@@ -91,9 +91,9 @@ struct CreateUserHandler {
     repository: InMemoryUserRepository,
 }
 
-impl hexer::application::DirectiveHandler<CreateUserDirective>
+impl hexser::application::DirectiveHandler<CreateUserDirective>
     for CreateUserHandler {
-    fn handle(&self, directive: CreateUserDirective) -> hexer::HexResult<()> {
+    fn handle(&self, directive: CreateUserDirective) -> hexser::HexResult<()> {
         directive.validate()?;
 
         let user = User {
@@ -127,9 +127,9 @@ struct FindUserByEmailHandler<'a> {
     repository: &'a InMemoryUserQueryRepository,
 }
 
-impl<'a> hexer::application::QueryHandler<FindUserByEmailQuery, Option<UserView>>
+impl<'a> hexser::application::QueryHandler<FindUserByEmailQuery, Option<UserView>>
     for FindUserByEmailHandler<'a> {
-    fn handle(&self, query: FindUserByEmailQuery) -> hexer::HexResult<Option<UserView>> {
+    fn handle(&self, query: FindUserByEmailQuery) -> hexser::HexResult<Option<UserView>> {
         self.repository.find_by_email(&query.email)
     }
 }
@@ -145,24 +145,24 @@ impl InMemoryUserRepository {
     }
 }
 
-impl hexer::adapters::Adapter for InMemoryUserRepository {}
+impl hexser::adapters::Adapter for InMemoryUserRepository {}
 
-impl hexer::ports::Repository<User> for InMemoryUserRepository {
-    fn find_by_id(&self, id: &String) -> hexer::HexResult<Option<User>> {
+impl hexser::ports::Repository<User> for InMemoryUserRepository {
+    fn find_by_id(&self, id: &String) -> hexser::HexResult<Option<User>> {
         Ok(self.users.iter().find(|u| &u.id == id).cloned())
     }
 
-    fn save(&mut self, user: User) -> hexer::HexResult<()> {
+    fn save(&mut self, user: User) -> hexser::HexResult<()> {
         self.users.push(user);
         Ok(())
     }
 
-    fn delete(&mut self, id: &String) -> hexer::HexResult<()> {
+    fn delete(&mut self, id: &String) -> hexser::HexResult<()> {
         self.users.retain(|u| &u.id != id);
         Ok(())
     }
 
-    fn find_all(&self) -> hexer::HexResult<Vec<User>> {
+    fn find_all(&self) -> hexser::HexResult<Vec<User>> {
         Ok(self.users.clone())
     }
 }
@@ -184,7 +184,7 @@ impl InMemoryUserQueryRepository {
         }
     }
 
-    fn find_by_email(&self, email: &str) -> hexer::HexResult<Option<UserView>> {
+    fn find_by_email(&self, email: &str) -> hexser::HexResult<Option<UserView>> {
         Ok(self.users.iter().find(|u| u.email == email).cloned())
     }
 }
@@ -324,7 +324,7 @@ hex/
 │   └── codes.rs         - Error code registry
 │
 ├── result/              Cross-cutting: Result types
-│   └── hex_result.rs    - Type alias for Result<T, HexError>
+│   └── hex_result.rs    - Type alias for Result<T, Hexserror>
 │
 ├── graph/               Feature: Architecture introspection
 │   ├── domain/          - Graph concepts (no external deps)
@@ -416,7 +416,7 @@ hex/
 
 ### Error Handling
 
-All errors use `HexError` enum with rich context:
+All errors use `Hexserror` enum with rich context:
 - Error code
 - Message
 - Next steps
@@ -509,7 +509,7 @@ Every layer follows port/adapter separation.
 ### 2. Builder Pattern
 - `GraphBuilder` - Fluent graph construction
 - `GraphQuery` - Fluent querying
-- `HexError` - Error construction with methods
+- `Hexserror` - Error construction with methods
 
 ### 3. Strategy Pattern
 - `FormatExporter` - Different export strategies
@@ -1031,7 +1031,7 @@ Attachments Kind: Visible
 Attachments Source: CodeAtCaretRetriever / ChatAttachmentWithFilePathWrapper
 Attachments Text:
 ```rust
-impl hexer::domain::Entity for Todo {
+impl hexser::domain::Entity for Todo {
     type Id = String;
 }
 
@@ -1048,9 +1048,9 @@ impl InMemoryTodoRepository {
     }
 }
 
-impl hexer::adapters::Adapter for InMemoryTodoRepository {}
+impl hexser::adapters::Adapter for InMemoryTodoRepository {}
 
-impl hexer::ports::Repository<Todo> for InMemoryTodoRepository {
+impl hexser::ports::Repository<Todo> for InMemoryTodoRepository {
 ```
 
 
@@ -1579,7 +1579,7 @@ Before answering it did these function calls:
 //! # Quick Start
 //!
 //! ```rust
-//! use hexer::prelude::*;
+//! use hexser::prelude::*;
 //!
 //! // Define a domain entity
 //! struct User {
@@ -1629,7 +1629,7 @@ pub mod graph;
 pub mod registry;
 
 // Re-export commonly used items at crate root for convenience
-pub use crate::error::hex_error::HexError;
+pub use crate::error::hex_error::Hexserror;
 pub use crate::result::hex_result::HexResult;
 
 // Re-export all domain traits
@@ -1698,10 +1698,10 @@ pub use crate::showcase::{
 /// Import everything you need with a single use statement:
 ///
 /// ```rust
-/// use hexer::prelude::*;
+/// use hexser::prelude::*;
 /// ```
 pub mod prelude {
-    pub use crate::HexError;
+    pub use crate::Hexserror;
     pub use crate::HexResult;
 
     pub use crate::domain::{
@@ -5198,8 +5198,8 @@ impl<'a> ContextBuilder<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hexer::graph::builder::GraphBuilder;
-    /// # use hexer::ai::ContextBuilder;
+    /// # use hexser::graph::builder::GraphBuilder;
+    /// # use hexser::ai::ContextBuilder;
     /// let graph = GraphBuilder::new().build();
     /// let builder = ContextBuilder::new(&graph);
     /// ```
@@ -5676,8 +5676,8 @@ impl<'a> ContextBuilder<'a> {
     ///
     /// # Example
     /// ```
-    /// # use hexer::graph::builder::GraphBuilder;
-    /// # use hexer::ai::ContextBuilder;
+    /// # use hexser::graph::builder::GraphBuilder;
+    /// # use hexser::ai::ContextBuilder;
     /// let graph = GraphBuilder::new().build();
     /// let builder = ContextBuilder::new(&graph);
     /// ```
@@ -7923,7 +7923,7 @@ hex/
 │   └── codes.rs         - Error code registry
 │
 ├── result/              Cross-cutting: Result types
-│   └── hex_result.rs    - Type alias for Result<T, HexError>
+│   └── hex_result.rs    - Type alias for Result<T, Hexserror>
 │
 ├── graph/               Feature: Architecture introspection
 │   ├── domain/          - Graph concepts (no external deps)
@@ -8015,7 +8015,7 @@ hex/
 
 ### Error Handling
 
-All errors use `HexError` enum with rich context:
+All errors use `Hexserror` enum with rich context:
 - Error code
 - Message
 - Next steps
@@ -8108,7 +8108,7 @@ Every layer follows port/adapter separation.
 ### 2. Builder Pattern
 - `GraphBuilder` - Fluent graph construction
 - `GraphQuery` - Fluent querying
-- `HexError` - Error construction with methods
+- `Hexserror` - Error construction with methods
 
 ### 3. Strategy Pattern
 - `FormatExporter` - Different export strategies
@@ -8630,7 +8630,7 @@ Attachments Kind: Visible
 Attachments Source: CodeAtCaretRetriever / ChatAttachmentWithFilePathWrapper
 Attachments Text:
 ```rust
-impl hexer::domain::Entity for Todo {
+impl hexser::domain::Entity for Todo {
     type Id = String;
 }
 
@@ -8647,9 +8647,9 @@ impl InMemoryTodoRepository {
     }
 }
 
-impl hexer::adapters::Adapter for InMemoryTodoRepository {}
+impl hexser::adapters::Adapter for InMemoryTodoRepository {}
 
-impl hexer::ports::Repository<Todo> for InMemoryTodoRepository {
+impl hexser::ports::Repository<Todo> for InMemoryTodoRepository {
 ```
 
 

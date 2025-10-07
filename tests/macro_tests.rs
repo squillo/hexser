@@ -7,7 +7,7 @@
 #[cfg(feature = "macros")]
 mod macro_tests {
   use hex_macros::HexAggregate;
-  use hexer::prelude::*;
+  use hexser::prelude::*;
 
     #[test]
     fn test_hex_aggregate_derive() {
@@ -36,7 +36,7 @@ mod macro_tests {
 
         // Should compile with Registrable trait
         let info = TestDomain::node_info();
-        assert_eq!(info.layer, hexer::graph::Layer::Domain);
+        assert_eq!(info.layer, hexser::graph::Layer::Domain);
     }
 
     #[test]
@@ -46,7 +46,7 @@ mod macro_tests {
 
         // Should compile with registration
         let info = TestAdapter::node_info();
-        assert_eq!(info.layer, hexer::graph::Layer::Adapter);
+        assert_eq!(info.layer, hexser::graph::Layer::Adapter);
     }
 
     #[test]

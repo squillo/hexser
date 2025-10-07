@@ -3,7 +3,7 @@
 //! Demonstrates implementing the `Repository<T>` trait with a simple adapter
 //! and using it from application code.
 
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Item {
@@ -52,14 +52,14 @@ pub fn create<R: ItemRepository>(repo: &mut R, id: u64, name: impl Into<String>)
     let item = Item { id, name: name.into() };
     // naive uniqueness check
     if repo.find_by_id(&id)?.is_some() {
-        return Err(hexer::HexError::domain("E_HEX_POTIONS_ID_TAKEN", "ID already exists"));
+        return Err(hexser::Hexserror::domain("E_HEX_POTIONS_ID_TAKEN", "ID already exists"));
     }
     repo.save(item.clone())?;
     Ok(item)
 }
 
 pub fn get<R: ItemRepository>(repo: &R, id: u64) -> HexResult<Item> {
-    repo.find_by_id(&id)?.ok_or_else(|| hexer::HexError::not_found("Item", &id.to_string()))
+    repo.find_by_id(&id)?.ok_or_else(|| hexser::Hexserror::not_found("Item", &id.to_string()))
 }
 
 pub fn delete<R: ItemRepository>(repo: &mut R, id: u64) -> HexResult<()> {

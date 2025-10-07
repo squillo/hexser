@@ -8,10 +8,10 @@
 
 #[cfg(feature = "container")]
 #[tokio::main]
-async fn main() -> hexer::HexResult<()> {
+async fn main() -> hexser::HexResult<()> {
     println!("=== Dependency Injection Container Example ===\n");
 
-    let container = hexer::container::Container::new();
+    let container = hexser::container::Container::new();
 
     println!("1. Registering services...");
 
@@ -21,7 +21,7 @@ async fn main() -> hexer::HexResult<()> {
     container.register(
         "config",
         config_provider,
-        hexer::container::Scope::Singleton,
+        hexser::container::Scope::Singleton,
     ).await?;
     println!("   ✓ Config service registered (Singleton)");
 
@@ -31,7 +31,7 @@ async fn main() -> hexer::HexResult<()> {
     container.register(
         "email",
         email_provider,
-        hexer::container::Scope::Transient,
+        hexser::container::Scope::Transient,
     ).await?;
     println!("   ✓ Email service registered (Transient)");
 
@@ -80,8 +80,8 @@ struct ConfigProvider {
 }
 
 #[cfg(feature = "container")]
-impl hexer::container::Provider<ConfigService> for ConfigProvider {
-    fn provide(&self) -> hexer::HexResult<ConfigService> {
+impl hexser::container::Provider<ConfigService> for ConfigProvider {
+    fn provide(&self) -> hexser::HexResult<ConfigService> {
         Ok(ConfigService {
             api_key: self.api_key.clone(),
         })
@@ -99,8 +99,8 @@ struct EmailProvider {
 }
 
 #[cfg(feature = "container")]
-impl hexer::container::Provider<EmailService> for EmailProvider {
-    fn provide(&self) -> hexer::HexResult<EmailService> {
+impl hexser::container::Provider<EmailService> for EmailProvider {
+    fn provide(&self) -> hexser::HexResult<EmailService> {
         Ok(EmailService {
             host: self.host.clone(),
         })

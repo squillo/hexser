@@ -25,7 +25,7 @@ pub trait AsyncProvider<T>: Send + Sync {
     /// New instance of the service
     ///
     /// # Errors
-    /// Returns HexError if instance creation fails
+    /// Returns Hexserror if instance creation fails
     async fn provide_async(&self) -> crate::result::hex_result::HexResult<T>;
 }
 

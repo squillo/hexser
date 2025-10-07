@@ -9,7 +9,7 @@
 //!
 //! Copy, paste, and adapt as needed.
 
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 /// Domain entity representing a user.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -74,7 +74,7 @@ impl Directive for SignUpUser {
         if self.email.contains('@') {
             Ok(())
         } else {
-            Err(hexer::HexError::validation_field("Invalid email", "email"))
+            Err(hexser::Hexserror::validation_field("Invalid email", "email"))
         }
     }
 }
@@ -87,7 +87,7 @@ pub fn execute_signup<R: UserRepository>(repo: &mut R, cmd: SignUpUser) -> HexRe
     cmd.validate()?;
 
     if repo.find_by_email(&cmd.email)?.is_some() {
-        return Err(hexer::HexError::domain(
+        return Err(hexser::Hexserror::domain(
             "E_HEX_POTIONS_EMAIL_TAKEN",
             "Email already registered",
         ));

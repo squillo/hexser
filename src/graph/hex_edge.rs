@@ -17,7 +17,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::graph::{HexEdge, NodeId, Relationship};
+/// use hexser::graph::{HexEdge, NodeId, Relationship};
 ///
 /// let edge = HexEdge::new(
 ///     NodeId::from_name("PostgresRepo"),

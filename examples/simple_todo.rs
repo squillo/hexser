@@ -6,10 +6,10 @@
 //!
 //! Run with: `cargo run --example simple_todo`
 
-use hexer::Repository;
+use hexser::Repository;
 
 // Use hex prelude for convenient imports
-fn main() -> hexer::HexResult<()> {
+fn main() -> hexser::HexResult<()> {
     println!("=== Simple TODO Application ===\n");
 
     // Create repository
@@ -58,7 +58,7 @@ struct Todo {
     completed: bool,
 }
 
-impl hexer::domain::Entity for Todo {
+impl hexser::domain::Entity for Todo {
     type Id = String;
 }
 
@@ -75,14 +75,14 @@ impl InMemoryTodoRepository {
     }
 }
 
-impl hexer::adapters::Adapter for InMemoryTodoRepository {}
+impl hexser::adapters::Adapter for InMemoryTodoRepository {}
 
-impl hexer::ports::Repository<Todo> for InMemoryTodoRepository {
-    fn find_by_id(&self, id: &String) -> hexer::HexResult<Option<Todo>> {
+impl hexser::ports::Repository<Todo> for InMemoryTodoRepository {
+    fn find_by_id(&self, id: &String) -> hexser::HexResult<Option<Todo>> {
         Ok(self.todos.iter().find(|t| &t.id == id).cloned())
     }
 
-    fn save(&mut self, todo: Todo) -> hexer::HexResult<()> {
+    fn save(&mut self, todo: Todo) -> hexser::HexResult<()> {
         if let Some(existing) = self.todos.iter_mut().find(|t| t.id == todo.id) {
             *existing = todo;
         } else {
@@ -91,12 +91,12 @@ impl hexer::ports::Repository<Todo> for InMemoryTodoRepository {
         Ok(())
     }
 
-    fn delete(&mut self, id: &String) -> hexer::HexResult<()> {
+    fn delete(&mut self, id: &String) -> hexser::HexResult<()> {
         self.todos.retain(|t| &t.id != id);
         Ok(())
     }
 
-    fn find_all(&self) -> hexer::HexResult<Vec<Todo>> {
+    fn find_all(&self) -> hexser::HexResult<Vec<Todo>> {
         Ok(self.todos.clone())
     }
 }

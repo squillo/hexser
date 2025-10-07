@@ -16,8 +16,8 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::showcase::Inspectable;
-/// use hexer::graph::{HexNode, NodeId, Layer, Role};
+/// use hexser::showcase::Inspectable;
+/// use hexser::graph::{HexNode, NodeId, Layer, Role};
 ///
 /// let node = HexNode::new(
 ///     NodeId::from_name("Test"),

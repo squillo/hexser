@@ -5,7 +5,7 @@
 //!
 //! Run with: cargo run --example tutorial_04_application
 
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 // Domain Layer
 #[derive(HexDomain, Entity, Clone)]
@@ -77,7 +77,7 @@ impl CreateTodoHandler {
 impl DirectiveHandler<CreateTodoDirective> for CreateTodoHandler {
     fn handle(&self, directive: CreateTodoDirective) -> HexResult<()> {
         if directive.title.trim().is_empty() {
-            return Err(HexError::validation("Title cannot be empty")
+            return Err(Hexserror::validation("Title cannot be empty")
                 .with_field("title"));
         }
 

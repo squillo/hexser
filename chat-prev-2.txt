@@ -805,7 +805,7 @@ hex/
 │   └── codes.rs         - Error code registry
 │
 ├── result/              Cross-cutting: Result types
-│   └── hex_result.rs    - Type alias for Result<T, HexError>
+│   └── hex_result.rs    - Type alias for Result<T, Hexserror>
 │
 ├── graph/               Feature: Architecture introspection
 │   ├── domain/          - Graph concepts (no external deps)
@@ -897,7 +897,7 @@ hex/
 
 ### Error Handling
 
-All errors use `HexError` enum with rich context:
+All errors use `Hexserror` enum with rich context:
 - Error code
 - Message
 - Next steps
@@ -990,7 +990,7 @@ Every layer follows port/adapter separation.
 ### 2. Builder Pattern
 - `GraphBuilder` - Fluent graph construction
 - `GraphQuery` - Fluent querying
-- `HexError` - Error construction with methods
+- `Hexserror` - Error construction with methods
 
 ### 3. Strategy Pattern
 - `FormatExporter` - Different export strategies
@@ -1512,7 +1512,7 @@ Attachments Kind: Visible
 Attachments Source: CodeAtCaretRetriever / ChatAttachmentWithFilePathWrapper
 Attachments Text:
 ```rust
-impl hexer::domain::Entity for Todo {
+impl hexser::domain::Entity for Todo {
     type Id = String;
 }
 
@@ -1529,9 +1529,9 @@ impl InMemoryTodoRepository {
     }
 }
 
-impl hexer::adapters::Adapter for InMemoryTodoRepository {}
+impl hexser::adapters::Adapter for InMemoryTodoRepository {}
 
-impl hexer::ports::Repository<Todo> for InMemoryTodoRepository {
+impl hexser::ports::Repository<Todo> for InMemoryTodoRepository {
 ```
 
 

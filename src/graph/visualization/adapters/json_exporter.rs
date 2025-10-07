@@ -68,7 +68,7 @@ impl crate::graph::visualization::ports::format_exporter::FormatExporter for Jso
 
         serde_json::to_string_pretty(&d3_graph).map_err(move |e| {
           let msg = format!("JSON serialization failed: {}", e);
-            crate::error::hex_error::HexError::adapter("E_HEX_VIZ_001", msg.as_str())
+            crate::error::hex_error::Hexserror::adapter("E_HEX_VIZ_001", msg.as_str())
         })
     }
 

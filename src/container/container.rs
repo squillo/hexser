@@ -37,7 +37,7 @@ impl Container {
     ///
     /// # Example
     /// ```
-    /// # use hexer::container::Container;
+    /// # use hexser::container::Container;
     /// let container = Container::new();
     /// ```
     pub fn new() -> Self {
@@ -67,7 +67,7 @@ impl Container {
         let mut services = self.inner.services.write().await;
 
         if services.contains_key(&name) {
-            return Err(crate::error::hex_error::HexError::validation(
+            return Err(crate::error::hex_error::Hexserror::validation(
                 &format!("Service {} already registered", name)
             ).with_next_step("Use different service name or remove existing registration"));
         }
@@ -99,7 +99,7 @@ impl Container {
         let services = self.inner.services.read().await;
 
         let entry = services.get(name).ok_or_else(|| {
-            crate::error::hex_error::HexError::not_found("Service", name)
+            crate::error::hex_error::Hexserror::not_found("Service", name)
         })?;
 
         match entry.scope {
@@ -110,13 +110,13 @@ impl Container {
                     return cached
                         .clone()
                         .downcast::<T>()
-                        .map_err(|_| crate::error::hex_error::HexError::adapter("E_CNT_004", "Type mismatch"));
+                        .map_err(|_| crate::error::hex_error::Hexserror::adapter("E_CNT_004", "Type mismatch"));
                 }
 
                 let provider = entry.factory.downcast_ref::<
                     Box<dyn crate::container::provider::Provider<T>>
                 >().ok_or_else(|| {
-                    crate::error::hex_error::HexError::adapter("E_CNT_005", "Provider type mismatch")
+                    crate::error::hex_error::Hexserror::adapter("E_CNT_005", "Provider type mismatch")
                 })?;
 
                 let instance = provider.provide()?;
@@ -128,7 +128,7 @@ impl Container {
                 let provider = entry.factory.downcast_ref::<
                     Box<dyn crate::container::provider::Provider<T>>
                 >().ok_or_else(|| {
-                    crate::error::hex_error::HexError::adapter("E_CNT_006", "Provider type mismatch")
+                    crate::error::hex_error::Hexserror::adapter("E_CNT_006", "Provider type mismatch")
                 })?;
 
                 let instance = provider.provide()?;
@@ -167,7 +167,7 @@ impl Container {
         let mut services = self.inner.services.write().await;
 
         if services.contains_key(&name) {
-            return Err(crate::error::hex_error::HexError::validation(
+            return Err(crate::error::hex_error::Hexserror::validation(
                 &format!("Service {} already registered", name)
             ).with_next_step("Use different service name or remove existing registration"));
         }
@@ -201,7 +201,7 @@ impl Container {
         let services = self.inner.services.read().await;
 
         let entry = services.get(name).ok_or_else(|| {
-            crate::error::hex_error::HexError::not_found("Service", name)
+            crate::error::hex_error::Hexserror::not_found("Service", name)
         })?;
 
         match entry.scope {
@@ -212,13 +212,13 @@ impl Container {
                     return cached
                         .clone()
                         .downcast::<T>()
-                        .map_err(|_| crate::error::hex_error::HexError::adapter("E_CNT_004", "Type mismatch"));
+                        .map_err(|_| crate::error::hex_error::Hexserror::adapter("E_CNT_004", "Type mismatch"));
                 }
 
                 let provider = entry.factory.downcast_ref::<
                     Box<dyn crate::container::async_provider::AsyncProvider<T>>
                 >().ok_or_else(|| {
-                    crate::error::hex_error::HexError::adapter("E_CNT_007", "Async provider type mismatch")
+                    crate::error::hex_error::Hexserror::adapter("E_CNT_007", "Async provider type mismatch")
                 })?;
 
                 let instance = provider.provide_async().await?;
@@ -230,7 +230,7 @@ impl Container {
                 let provider = entry.factory.downcast_ref::<
                     Box<dyn crate::container::async_provider::AsyncProvider<T>>
                 >().ok_or_else(|| {
-                    crate::error::hex_error::HexError::adapter("E_CNT_008", "Async provider type mismatch")
+                    crate::error::hex_error::Hexserror::adapter("E_CNT_008", "Async provider type mismatch")
                 })?;
 
                 let instance = provider.provide_async().await?;

@@ -2,7 +2,7 @@
 //!
 //! Learn Command Query Responsibility Segregation with directives and queries.
 
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 #[derive(HexDomain, Entity, Clone)]
 struct Order {
@@ -30,7 +30,7 @@ impl CreateOrderHandler {
 impl DirectiveHandler<CreateOrderDirective> for CreateOrderHandler {
     fn handle(&self, directive: CreateOrderDirective) -> HexResult<()> {
         if directive.total <= 0.0 {
-            return Err(HexError::validation("Total must be positive")
+            return Err(Hexserror::validation("Total must be positive")
                 .with_field("total"));
         }
 

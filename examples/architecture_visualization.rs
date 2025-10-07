@@ -4,7 +4,7 @@
 //!
 //! Run with: cargo run --example architecture_visualization
 
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 // Domain Layer - Core business logic
 #[derive(HexDomain, Entity)]

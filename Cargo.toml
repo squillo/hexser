@@ -1,5 +1,5 @@
 [package]
-name = "hexer"
+name = "hexser"
 version = "0.3.0"
 edition = "2024"
 authors = ["N Lang Team"]
@@ -7,6 +7,7 @@ description = "Zero-boilerplate hexagonal architecture with graph-based introspe
 license = "MIT OR Apache-2.0"
 keywords = ["hexagonal", "architecture", "ports", "adapters", "ddd"]
 categories = ["development-tools", "data-structures"]
+repository = "https://github.com/squillo/hexser"
 
 [workspace]
 members = [".", "hex_macros", "hex_potions"]

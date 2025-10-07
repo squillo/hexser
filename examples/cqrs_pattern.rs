@@ -6,9 +6,9 @@
 //!
 //! Run with: `cargo run --example cqrs_pattern`
 
-use hexer::{Directive, DirectiveHandler, QueryHandler};
+use hexser::{Directive, DirectiveHandler, QueryHandler};
 
-fn main() -> hexer::HexResult<()> {
+fn main() -> hexser::HexResult<()> {
     println!("=== CQRS Pattern Example ===\n");
 
     // Create repositories
@@ -56,7 +56,7 @@ struct User {
     name: String,
 }
 
-impl hexer::domain::Entity for User {
+impl hexser::domain::Entity for User {
     type Id = String;
 }
 
@@ -66,14 +66,14 @@ struct CreateUserDirective {
     name: String,
 }
 
-impl hexer::application::Directive for CreateUserDirective {
-    fn validate(&self) -> hexer::HexResult<()> {
+impl hexser::application::Directive for CreateUserDirective {
+    fn validate(&self) -> hexser::HexResult<()> {
         if !self.email.contains('@') {
-            return Err(hexer::HexError::validation("Invalid email format")
+            return Err(hexser::Hexserror::validation("Invalid email format")
                 .with_field("email"));
         }
         if self.name.is_empty() {
-            return Err(hexer::HexError::validation("Name cannot be empty")
+            return Err(hexser::Hexserror::validation("Name cannot be empty")
                 .with_field("name"));
         }
         Ok(())
@@ -85,9 +85,9 @@ struct CreateUserHandler {
     repository: InMemoryUserRepository,
 }
 
-impl hexer::application::DirectiveHandler<CreateUserDirective>
+impl hexser::application::DirectiveHandler<CreateUserDirective>
     for CreateUserHandler {
-    fn handle(&self, directive: CreateUserDirective) -> hexer::HexResult<()> {
+    fn handle(&self, directive: CreateUserDirective) -> hexser::HexResult<()> {
         directive.validate()?;
 
         let user = User {
@@ -121,9 +121,9 @@ struct FindUserByEmailHandler<'a> {
     repository: &'a InMemoryUserQueryRepository,
 }
 
-impl<'a> hexer::application::QueryHandler<FindUserByEmailQuery, Option<UserView>>
+impl<'a> hexser::application::QueryHandler<FindUserByEmailQuery, Option<UserView>>
     for FindUserByEmailHandler<'a> {
-    fn handle(&self, query: FindUserByEmailQuery) -> hexer::HexResult<Option<UserView>> {
+    fn handle(&self, query: FindUserByEmailQuery) -> hexser::HexResult<Option<UserView>> {
         self.repository.find_by_email(&query.email)
     }
 }
@@ -139,24 +139,24 @@ impl InMemoryUserRepository {
     }
 }
 
-impl hexer::adapters::Adapter for InMemoryUserRepository {}
+impl hexser::adapters::Adapter for InMemoryUserRepository {}
 
-impl hexer::ports::Repository<User> for InMemoryUserRepository {
-    fn find_by_id(&self, id: &String) -> hexer::HexResult<Option<User>> {
+impl hexser::ports::Repository<User> for InMemoryUserRepository {
+    fn find_by_id(&self, id: &String) -> hexser::HexResult<Option<User>> {
         Ok(self.users.iter().find(|u| &u.id == id).cloned())
     }
 
-    fn save(&mut self, user: User) -> hexer::HexResult<()> {
+    fn save(&mut self, user: User) -> hexser::HexResult<()> {
         self.users.push(user);
         Ok(())
     }
 
-    fn delete(&mut self, id: &String) -> hexer::HexResult<()> {
+    fn delete(&mut self, id: &String) -> hexser::HexResult<()> {
         self.users.retain(|u| &u.id != id);
         Ok(())
     }
 
-    fn find_all(&self) -> hexer::HexResult<Vec<User>> {
+    fn find_all(&self) -> hexser::HexResult<Vec<User>> {
         Ok(self.users.clone())
     }
 }
@@ -178,7 +178,7 @@ impl InMemoryUserQueryRepository {
         }
     }
 
-    fn find_by_email(&self, email: &str) -> hexer::HexResult<Option<UserView>> {
+    fn find_by_email(&self, email: &str) -> hexser::HexResult<Option<UserView>> {
         Ok(self.users.iter().find(|u| u.email == email).cloned())
     }
 }

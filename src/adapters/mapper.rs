@@ -21,8 +21,8 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::adapters::Mapper;
-/// use hexer::HexResult;
+/// use hexser::adapters::Mapper;
+/// use hexser::HexResult;
 ///
 /// struct DomainUser {
 ///     id: String,

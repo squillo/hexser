@@ -32,10 +32,10 @@ Learn Command Query Responsibility Segregation (CQRS) using directives (writes) 
 - Understanding of command vs query operations
 
 ## The CQRS Pattern
-In hexer, we model writes with Directives and reads with Queries. Repositories are read/write adapters; for reads, prefer the filter-based API:
+In hexser, we model writes with Directives and reads with Queries. Repositories are read/write adapters; for reads, prefer the filter-based API:
 
 ```rust
-use hexer::ports::repository::{QueryRepository, FindOptions, Sort, Direction};
+use hexser::ports::repository::{QueryRepository, FindOptions, Sort, Direction};
 
 // Suppose we already have these domain types
 struct User { id: String, email: String, created_at: u64 }
@@ -54,7 +54,7 @@ impl<R> ListUsersHandler<R>
 where
     R: QueryRepository<User>,
 {
-    fn execute(&self, q: ListUsers) -> hexer::HexResult<Vec<User>> {
+    fn execute(&self, q: ListUsers) -> hexser::HexResult<Vec<User>> {
         let opts = FindOptions { sort: Some(vec![Sort { key: UserSortKey::CreatedAt, direction: Direction::Desc }]), limit: Some(q.limit), offset: Some(q.offset) };
         <R as QueryRepository<User>>::find(&self.repo, &UserFilter::All, opts)
     }

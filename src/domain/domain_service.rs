@@ -17,8 +17,8 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::domain::DomainService;
-/// use hexer::HexResult;
+/// use hexser::domain::DomainService;
+/// use hexser::HexResult;
 ///
 /// struct TransferService;
 ///

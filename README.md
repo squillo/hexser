@@ -1,18 +1,18 @@
-# Hexer - Zero-Boilerplate Hexagonal Architecture
+# Hexser - Zero-Boilerplate Hexagonal Architecture
 
-[![Crates.io](https://img.shields.io/crates/v/hexer.svg)](https://crates.io/crates/hexer)
-[![Documentation](https://docs.rs/hexer/badge.svg)](https://docs.rs/hexer)
-[![License](https://img.shields.io/crates/l/hexer.svg)](https://github.com/squillo/hexer)
+[![Crates.io](https://img.shields.io/crates/v/hexser.svg)](https://crates.io/crates/hexser)
+[![Documentation](https://docs.rs/hexser/badge.svg)](https://docs.rs/hexser)
+[![License](https://img.shields.io/crates/l/hexser.svg)](https://github.com/squillo/hexser)
 
 **Zero-boilerplate hexagonal architecture with graph-based introspection for Rust.**
 
-The `hexer` crate provides reusable generic types and traits for implementing Hexagonal Architecture (Ports and Adapters pattern) with automatic graph construction, intent inference, and architectural validation. **Write business logic, let `hexer` handle the architecture.**
+The `hexser` crate provides reusable generic types and traits for implementing Hexagonal Architecture (Ports and Adapters pattern) with automatic graph construction, intent inference, and architectural validation. **Write business logic, let `hexser` handle the architecture.**
 
 ---
 
 ## 📚 Table of Contents
 
-- [Why hexer?](#why-hexer)
+- [Why hexser?](#why-hexser)
 - [Quick Start](#quick-start)
 - [Complete Tutorial](#complete-tutorial)
 - [CQRS Pattern with hex](#part-3-cqrs-pattern-with-hex)
@@ -33,7 +33,7 @@ The `hexer` crate provides reusable generic types and traits for implementing He
 
 > Tip: Press Cmd/Ctrl+F and search for “Part” to jump to tutorials.
 
-## 🎯 Why hexer?
+## 🎯 Why hexser?
 
 Traditional hexagonal architecture requires significant boilerplate:
 - Manual registration of components
@@ -41,7 +41,7 @@ Traditional hexagonal architecture requires significant boilerplate:
 - Repetitive trait implementations
 - Complex validation logic
 
-**hexer eliminates all of this.** Through intelligent trait design, compile-time graph construction, and rich error handling, you get:
+**hexser eliminates all of this.** Through intelligent trait design, compile-time graph construction, and rich error handling, you get:
 
 - [x] **Zero Boilerplate** - Define your types, derive traits, done
 - [x] **Type-Safe Architecture** - Compiler enforces layer boundaries
@@ -59,13 +59,13 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hexer = "0.3.0"
+hexser = "0.3.0"
 ```
 
 Your First Hexagonal Application
 
 ```rust
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 // 1. Define your domain entity
 #[derive(HexEntity)]
@@ -178,7 +178,7 @@ The domain layer contains your core business logic, completely independent of fr
 Entities - Things with identity:
 
 ```rust
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 #[derive(HexEntity)]
 struct Order {
@@ -191,8 +191,8 @@ struct Order {
 impl Aggregate for Order {
   fn check_invariants(&self) -> HexResult<()> {
     if self.items.is_empty() {
-      return Err(hexer::hex_domain_error!(
-        hexer::error::codes::domain::INVARIANT_EMPTY,
+      return Err(hexser::hex_domain_error!(
+        hexser::error::codes::domain::INVARIANT_EMPTY,
         "Order must contain at least one item"
       ).with_next_step("Add at least one item"));
     }
@@ -210,7 +210,7 @@ struct Email(String);
 impl Email {
   fn validate(&self) -> HexResult<()> {
     if !self.0.contains('@') {
-      return Err(HexError::validation("Email must contain @"));
+      return Err(Hexserror::validation("Email must contain @"));
     }
     Ok(())
   }
@@ -383,7 +383,7 @@ struct PlaceOrderDirective {
 impl PlaceOrderDirective {
   fn validate(&self) -> HexResult<()> {
     if self.items.is_empty() {
-      return Err(HexError::validation("Items cannot be empty"));
+      return Err(Hexserror::validation("Items cannot be empty"));
     }
     Ok(())
   }
@@ -460,7 +460,7 @@ impl DatabaseConfig {
 
 ### Part 3: CQRS Pattern with hex
 
-hexer supports Command Query Responsibility Segregation (CQRS) out of the box.
+hexser supports Command Query Responsibility Segregation (CQRS) out of the box.
 
 Write Side (Directives):
 
@@ -487,7 +487,7 @@ struct UpdateUserEmailHandler {
 impl UpdateUserEmailHandler {
   fn handle(&self, directive: UpdateUserEmail) -> HexResult<()> {
     let mut user = self.repo.find_by_id(&directive.user_id)?
-      .ok_or_else(|| HexError::not_found("User", &directive.user_id))?;
+      .ok_or_else(|| Hexserror::not_found("User", &directive.user_id))?;
 
     user.email = directive.new_email;
     self.repo.save(user)?;
@@ -598,7 +598,7 @@ fn test_create_user_handler() {
 
 ### Part 5: Error Handling
 
-hexer provides rich, actionable, code-first errors with automatic source location and layering support. Prefer the new macro-based constructors and error codes over manual struct construction.
+hexser provides rich, actionable, code-first errors with automatic source location and layering support. Prefer the new macro-based constructors and error codes over manual struct construction.
 
 Preferred: macro + code + guidance
 
@@ -606,13 +606,13 @@ Preferred: macro + code + guidance
 fn validate_order(order: &Order) -> HexResult<()> {
     if order.items.is_empty() {
         return Err(
-            hexer::hex_domain_error!(
-                hexer::error::codes::domain::INVARIANT_EMPTY,
+            hexser::hex_domain_error!(
+                hexser::error::codes::domain::INVARIANT_EMPTY,
                 "Order must contain at least one item"
             )
             .with_next_steps(&["Add at least one item to the order"]) // actionable guidance
             .with_suggestions(&["order.add_item(item)", "order.items.push(item)"]) // quick fixes
-            .with_more_info("https://docs.rs/hexer/latest/hexer/error/codes/domain")
+            .with_more_info("https://docs.rs/hexser/latest/hexser/error/codes/domain")
         );
     }
     Ok(())
@@ -635,26 +635,26 @@ Cookbook
 
 ```rust,ignore
 // Validation errors (field-aware)
-return Err(hexer::error::hex_error::HexError::validation_field(
+return Err(hexser::error::hex_error::Hexserror::validation_field(
     "Title cannot be empty",
     "title",
 ));
 
 // Not Found errors (resource + id)
-return Err(hexer::error::hex_error::HexError::not_found("User", "123")
+return Err(hexser::error::hex_error::Hexserror::not_found("User", "123")
     .with_next_step("Verify the ID and try again"));
 
 // Port errors (communication issues)
-let port_err = hexer::hex_port_error!(
-    hexer::error::codes::port::PORT_TIMEOUT,
+let port_err = hexser::hex_port_error!(
+    hexser::error::codes::port::PORT_TIMEOUT,
     "User service timed out"
 ).with_suggestion("Increase timeout or retry later");
 
 // Adapter errors (infra failures) with source error
 fn fetch_from_api(url: &str) -> HexResult<String> {
     let resp = std::fs::read_to_string(url)
-        .map_err(|ioe| hexer::hex_adapter_error!(
-            hexer::error::codes::adapter::IO_FAILURE, // or API_FAILURE in real HTTP
+        .map_err(|ioe| hexser::hex_adapter_error!(
+            hexser::error::codes::adapter::IO_FAILURE, // or API_FAILURE in real HTTP
             "Failed to fetch resource"
         ).with_source(ioe))?;
     Ok(resp)
@@ -667,22 +667,22 @@ fn fetch_from_api(url: &str) -> HexResult<String> {
 // Adapter layer
 fn db_get_user(id: &str) -> HexResult<User> {
     let conn = std::fs::read_to_string("/tmp/mock-db").map_err(|e|
-        hexer::hex_adapter_error!(
-            hexer::error::codes::adapter::DB_CONNECTION_FAILURE,
+        hexser::hex_adapter_error!(
+            hexser::error::codes::adapter::DB_CONNECTION_FAILURE,
             "Database unavailable"
         )
         .with_source(e)
         .with_next_steps(&["Ensure DB is running", "Check connection string"]) 
     )?;
     // ... parse and return User or NotFound
-    Err(hexer::error::hex_error::HexError::not_found("User", id))
+    Err(hexser::error::hex_error::Hexserror::not_found("User", id))
 }
 
 // Port layer wraps adapter failure with port context
 fn port_get_user(id: &str) -> HexResult<User> {
     db_get_user(id).map_err(|e|
-        hexer::hex_port_error!(
-            hexer::error::codes::port::COMMUNICATION_FAILURE,
+        hexser::hex_port_error!(
+            hexser::error::codes::port::COMMUNICATION_FAILURE,
             "UserRepository failed"
         ).with_source(e)
     )
@@ -696,8 +696,8 @@ fn ensure_user_exists(id: &str) -> HexResult<()> {
 ```
 
 Notes
-- All hexer errors implement std::error::Error and the RichError trait (code, message, next_steps, suggestions, location, more_info, source).
-- Prefer hex_domain_error!, hex_port_error!, hex_adapter_error! and constants from hexer::error::codes::*.
+- All hexser errors implement std::error::Error and the RichError trait (code, message, next_steps, suggestions, location, more_info, source).
+- Prefer hex_domain_error!, hex_port_error!, hex_adapter_error! and constants from hexser::error::codes::*.
 - Use with_source(err) to preserve underlying causes; Display shows a helpful, compact summary.
 
 
@@ -706,7 +706,7 @@ Let's build a complete TODO application using hexagonal architecture.
 Domain Layer:
 
 ```rust
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 #[derive(Clone, HexEntity)]
 struct Todo {
@@ -797,7 +797,7 @@ struct CreateTodoDirective {
 impl CreateTodoDirective {
     fn validate(&self) -> HexResult<()> {
         if self.title.is_empty() {
-            return Err(HexError::validation_field("Title cannot be empty", "title"));
+            return Err(Hexserror::validation_field("Title cannot be empty", "title"));
         }
         Ok(())
     }
@@ -841,8 +841,8 @@ impl OrderAggregate {
   fn place_order(&mut self, items: Vec<OrderItem>) -> HexResult<()> {
     // Validate
     if items.is_empty() {
-      return Err(hexer::hex_domain_error!(
-        hexer::error::codes::domain::INVARIANT_EMPTY,
+      return Err(hexser::hex_domain_error!(
+        hexser::error::codes::domain::INVARIANT_EMPTY,
         "Order must have items"
       ));
     }
@@ -901,7 +901,7 @@ impl ApplicationContext {
 ## 📊 Knowledge Graph
 
 ```
-hexer/
+hexser/
 ├── domain/              [Core Business Logic - No Dependencies]
 │   ├── Entity           - Identity-based objects
 │   ├── ValueObject      - Value-based objects
@@ -929,7 +929,7 @@ hexer/
 │   └── Config           - Infrastructure setup
 │
 ├── error/               [Rich Error Types]
-│   └── HexError         - Actionable errors
+│   └── Hexserror         - Actionable errors
 │
 └── graph/               [Introspection - Phase 2+]
     ├── Layer            - Architectural layers
@@ -1033,14 +1033,14 @@ Static DI provides two simple building blocks:
 Example:
 
 ```rust,ignore
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 #[derive(Clone, Debug)]
 struct Repo;
 #[derive(Clone, Debug)]
 struct Service { repo: Repo }
 
-let app = hexer::hex_static!({
+let app = hexser::hex_static!({
     let repo = Repo;
     let service = Service { repo: repo.clone() };
     (repo, service)
@@ -1069,8 +1069,8 @@ Highlights:
 Example:
 
 ```rust
-use hexer::prelude::*;
-use hexer::ports::repository::{QueryRepository, FindOptions, Sort, Direction};
+use hexser::prelude::*;
+use hexser::ports::repository::{QueryRepository, FindOptions, Sort, Direction};
 
 #[derive(HexEntity, Clone, Debug)]
 struct User { id: String, email: String, created_at: u64 }
@@ -1156,15 +1156,15 @@ Commands:
 
 ```sh
 # Build and run the exporter (prints JSON to stdout)
-cargo run -p hexer --features ai --bin hex-ai-export
+cargo run -p hexser --features ai --bin hex-ai-export
 
 # Save to a file
-cargo run -p hexer --features ai --bin hex-ai-export --quiet > target/ai-context.json
+cargo run -p hexser --features ai --bin hex-ai-export --quiet > target/ai-context.json
 ```
 
 What it does:
 - Builds the current `HexGraph` from the component registry
-- Generates an `AIContext` via `hexer::ai::ContextBuilder`
+- Generates an `AIContext` via `hexser::ai::ContextBuilder`
 - Serializes to JSON with a stable field order
 
 Notes:
@@ -1182,10 +1182,10 @@ Commands:
 
 ```sh
 # Print Agent Pack JSON to stdout
-cargo run -p hexer --features ai --bin hex-ai-pack
+cargo run -p hexser --features ai --bin hex-ai-pack
 
 # Save to a file
-cargo run -p hexer --features ai --bin hex-ai-pack --quiet > target/ai-pack.json
+cargo run -p hexser --features ai --bin hex-ai-pack --quiet > target/ai-pack.json
 ```
 
 Notes:

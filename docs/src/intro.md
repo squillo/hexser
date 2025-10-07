@@ -1,8 +1,8 @@
-# Hexer Book
+# Hexser Book
 
-Welcome to the Hexer Book — the official guide to building robust, maintainable Rust applications using Hexagonal Architecture (Ports and Adapters) with the `hexer` crate.
+Welcome to the Hexser Book — the official guide to building robust, maintainable Rust applications using Hexagonal Architecture (Ports and Adapters) with the `hexser` crate.
 
-Hexer gives you:
+Hexser gives you:
 - Zero-boilerplate architectural patterns powered by traits and derives
 - Graph-based introspection and validation of your architecture
 - Rich, actionable error messages

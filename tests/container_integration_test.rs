@@ -6,8 +6,8 @@
 
 #[cfg(feature = "container")]
 mod container_tests {
-    use hexer::container::{Container, Provider, Scope};
-    use hexer::HexResult;
+    use hexser::container::{Container, Provider, Scope};
+    use hexser::HexResult;
 
     struct EmailService {
         host: String,
@@ -99,8 +99,8 @@ mod container_tests {
         }
 
         #[async_trait::async_trait]
-        impl hexer::container::AsyncProvider<AsyncEmailService> for AsyncEmailProvider {
-            async fn provide_async(&self) -> hexer::HexResult<AsyncEmailService> {
+        impl hexser::container::AsyncProvider<AsyncEmailService> for AsyncEmailProvider {
+            async fn provide_async(&self) -> hexser::HexResult<AsyncEmailService> {
                 tokio::time::sleep(std::time::Duration::from_millis(10)).await;
                 Ok(AsyncEmailService {
                     host: self.host.clone(),
@@ -134,8 +134,8 @@ mod container_tests {
         }
 
         #[async_trait::async_trait]
-        impl hexer::container::AsyncProvider<ConcurrentService> for ConcurrentProvider {
-            async fn provide_async(&self) -> hexer::HexResult<ConcurrentService> {
+        impl hexser::container::AsyncProvider<ConcurrentService> for ConcurrentProvider {
+            async fn provide_async(&self) -> hexser::HexResult<ConcurrentService> {
                 tokio::time::sleep(std::time::Duration::from_millis(5)).await;
                 Ok(ConcurrentService { id: self.id })
             }

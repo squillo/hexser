@@ -1,7 +1,7 @@
-//! Hex Potions: ready-to-mix patterns and examples for the hexer crate.
+//! Hex Potions: ready-to-mix patterns and examples for the hexser crate.
 //!
 //! Potions are small, focused, and copy-friendly examples that show how to
-//! assemble common hexagonal architecture operations with `hexer`.
+//! assemble common hexagonal architecture operations with `hexser`.
 //!
 //! Goals:
 //! - Demonstrate idiomatic component shapes for common scenarios
@@ -19,4 +19,4 @@
 pub mod auth;
 pub mod crud;
 
-pub use hexer as core; // convenient alias if you want to explore in docs
+pub use hexser as core; // convenient alias if you want to explore in docs

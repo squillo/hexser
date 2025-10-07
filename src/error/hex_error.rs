@@ -1,13 +1,13 @@
 //! Main error type for the hex crate.
 //!
-//! HexError provides comprehensive error information following ERRORS_PROMPT.md
+//! Hexserror provides comprehensive error information following ERRORS_PROMPT.md
 //! guidelines. Wraps layer-specific error structs with full error chaining support.
 //! All errors include error codes, descriptive messages, actionable next steps,
 //! and suggestions for remediation. Designed for both humans and AI agents.
 //!
 //! Revision History
 //! - 2025-10-06T00:00:00Z @AI: Refactor to wrap layer-specific error structs for Phase 1.
-//! - 2025-10-01T00:00:00Z @AI: Initial HexError enum with rich error information.
+//! - 2025-10-01T00:00:00Z @AI: Initial Hexserror enum with rich error information.
 
 use crate::error::RichError;
 
@@ -19,19 +19,19 @@ use crate::error::RichError;
 /// # Example
 ///
 /// ```rust
-/// use hexer::error::domain_error::DomainError;
-/// use hexer::error::hex_error::HexError;
-/// use hexer::error::RichError;
+/// use hexser::error::domain_error::DomainError;
+/// use hexser::error::hex_error::Hexserror;
+/// use hexser::error::RichError;
 ///
-/// fn validate_order() -> Result<(), HexError> {
+/// fn validate_order() -> Result<(), Hexserror> {
 ///     let err = DomainError::new("E_HEX_001", "Order cannot be empty")
 ///         .with_next_step("Add at least one item")
 ///         .with_suggestion("order.add_item(item)");
-///     Err(HexError::Domain(err))
+///     Err(Hexserror::Domain(err))
 /// }
 /// ```
 #[derive(Debug)]
-pub enum HexError {
+pub enum Hexserror {
     /// Domain layer error
     Domain(crate::error::domain_error::DomainError),
     /// Port layer error
@@ -46,7 +46,7 @@ pub enum HexError {
     Conflict(crate::error::conflict_error::ConflictError),
 }
 
-impl HexError {
+impl Hexserror {
     /// Create domain error with code and message
     pub fn domain(code: &str, message: &str) -> Self {
         Self::Domain(crate::error::domain_error::DomainError::new(code, message))
@@ -149,7 +149,7 @@ impl HexError {
     }
 }
 
-impl std::fmt::Display for HexError {
+impl std::fmt::Display for Hexserror {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Domain(err) => write!(f, "{}", err),
@@ -162,7 +162,7 @@ impl std::fmt::Display for HexError {
     }
 }
 
-impl std::error::Error for HexError {
+impl std::error::Error for Hexserror {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::Domain(err) => err.source(),
@@ -182,35 +182,35 @@ mod tests {
 
     #[test]
     fn test_domain_error_creation() {
-        let err = HexError::domain("E_HEX_001", "Test error");
-        assert!(matches!(err, HexError::Domain(_)));
+        let err = Hexserror::domain("E_HEX_001", "Test error");
+        assert!(matches!(err, Hexserror::Domain(_)));
     }
 
     #[test]
     fn test_validation_error_creation() {
-        let err = HexError::validation("Invalid input");
-        assert!(matches!(err, HexError::Validation(_)));
+        let err = Hexserror::validation("Invalid input");
+        assert!(matches!(err, Hexserror::Validation(_)));
     }
 
     #[test]
     fn test_not_found_error_creation() {
-        let err = HexError::not_found("User", "123");
-        assert!(matches!(err, HexError::NotFound(_)));
+        let err = Hexserror::not_found("User", "123");
+        assert!(matches!(err, Hexserror::NotFound(_)));
     }
 
     #[test]
     fn test_error_display() {
-        let err = HexError::validation("Test message");
+        let err = Hexserror::validation("Test message");
         let display = format!("{}", err);
         assert!(display.contains("Test message"));
     }
 
     #[test]
     fn test_builder_next_step() {
-        let err = HexError::domain("E_TEST", "Test error")
+        let err = Hexserror::domain("E_TEST", "Test error")
             .with_next_step("Do this first");
 
-        if let HexError::Domain(domain_err) = err {
+        if let Hexserror::Domain(domain_err) = err {
             assert_eq!(domain_err.next_steps.len(), 1);
             assert_eq!(domain_err.next_steps[0], "Do this first");
         } else {
@@ -220,10 +220,10 @@ mod tests {
 
     #[test]
     fn test_builder_multiple_steps() {
-        let err = HexError::domain("E_TEST", "Test error")
+        let err = Hexserror::domain("E_TEST", "Test error")
             .with_next_steps(&["Step 1", "Step 2"]);
 
-        if let HexError::Domain(domain_err) = err {
+        if let Hexserror::Domain(domain_err) = err {
             assert_eq!(domain_err.next_steps.len(), 2);
         } else {
             panic!("Expected Domain error");
@@ -232,11 +232,11 @@ mod tests {
 
     #[test]
     fn test_builder_suggestions() {
-        let err = HexError::domain("E_TEST", "Test error")
+        let err = Hexserror::domain("E_TEST", "Test error")
             .with_suggestion("Try this")
             .with_suggestions(&["Or this", "Or that"]);
 
-        if let HexError::Domain(domain_err) = err {
+        if let Hexserror::Domain(domain_err) = err {
             assert_eq!(domain_err.suggestions.len(), 3);
         } else {
             panic!("Expected Domain error");
@@ -245,10 +245,10 @@ mod tests {
 
     #[test]
     fn test_validation_with_field() {
-        let err = HexError::validation("Invalid value")
+        let err = Hexserror::validation("Invalid value")
             .with_field("email");
 
-        if let HexError::Validation(val_err) = err {
+        if let Hexserror::Validation(val_err) = err {
             assert_eq!(val_err.field, Some(String::from("email")));
         } else {
             panic!("Expected Validation error");
@@ -257,10 +257,10 @@ mod tests {
 
     #[test]
     fn test_conflict_with_existing_id() {
-        let err = HexError::conflict("Resource exists")
+        let err = Hexserror::conflict("Resource exists")
             .with_existing_id("123");
 
-        if let HexError::Conflict(conf_err) = err {
+        if let Hexserror::Conflict(conf_err) = err {
             assert_eq!(conf_err.existing_id, Some(String::from("123")));
         } else {
             panic!("Expected Conflict error");
@@ -272,7 +272,7 @@ mod tests {
         let inner = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
         let domain_err = crate::error::domain_error::DomainError::new("E_HEX_001", "Failed to load")
             .with_source(inner);
-        let err = HexError::Domain(domain_err);
+        let err = Hexserror::Domain(domain_err);
 
         assert!(err.source().is_some());
     }

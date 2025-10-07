@@ -14,29 +14,29 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let expanded = quote::quote! {
-        impl #impl_generics hexer::application::Directive for #name #ty_generics #where_clause {
-            fn validate(&self) -> hexer::HexResult<()> {
+        impl #impl_generics hexser::application::Directive for #name #ty_generics #where_clause {
+            fn validate(&self) -> hexser::HexResult<()> {
                 Ok(())
             }
         }
 
-        impl #impl_generics hexer::registry::Registrable for #name #ty_generics #where_clause {
-            fn node_info() -> hexer::registry::NodeInfo {
-                hexer::registry::NodeInfo {
-                    layer: hexer::graph::Layer::Application,
-                    role: hexer::graph::Role::Directive,
+        impl #impl_generics hexser::registry::Registrable for #name #ty_generics #where_clause {
+            fn node_info() -> hexser::registry::NodeInfo {
+                hexser::registry::NodeInfo {
+                    layer: hexser::graph::Layer::Application,
+                    role: hexser::graph::Role::Directive,
                     type_name: std::any::type_name::<Self>(),
                     module_path: std::module_path!(),
                 }
             }
 
-            fn dependencies() -> std::vec::Vec<hexer::graph::NodeId> {
+            fn dependencies() -> std::vec::Vec<hexser::graph::NodeId> {
                 std::vec::Vec::new()
             }
         }
 
         inventory::submit! {
-            hexer::registry::ComponentEntry::new::<#name #ty_generics>()
+            hexser::registry::ComponentEntry::new::<#name #ty_generics>()
         }
     };
 

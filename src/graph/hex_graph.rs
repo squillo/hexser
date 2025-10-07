@@ -17,7 +17,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::graph::{HexGraph, HexNode, NodeId, Layer, Role};
+/// use hexser::graph::{HexGraph, HexNode, NodeId, Layer, Role};
 ///
 /// let graph = HexGraph::builder()
 ///     .with_node(HexNode::new(
@@ -107,7 +107,7 @@ impl HexGraph {
         )?;
 
         std::fs::write(path, content).map_err(|e| {
-            crate::error::hex_error::HexError::adapter(
+            crate::error::hex_error::Hexserror::adapter(
                 crate::error::codes::io::IO_FAILURE,
                 &format!("Failed to write file: {}", e),
             )

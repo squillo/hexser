@@ -14,23 +14,23 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let expanded = quote::quote! {
-        impl #impl_generics hexer::registry::Registrable for #name #ty_generics #where_clause {
-            fn node_info() -> hexer::registry::NodeInfo {
-                hexer::registry::NodeInfo {
-                    layer: hexer::graph::Layer::Port,
-                    role: hexer::graph::Role::Repository,
+        impl #impl_generics hexser::registry::Registrable for #name #ty_generics #where_clause {
+            fn node_info() -> hexser::registry::NodeInfo {
+                hexser::registry::NodeInfo {
+                    layer: hexser::graph::Layer::Port,
+                    role: hexser::graph::Role::Repository,
                     type_name: std::any::type_name::<Self>(),
                     module_path: std::module_path!(),
                 }
             }
 
-            fn dependencies() -> std::vec::Vec<hexer::graph::NodeId> {
+            fn dependencies() -> std::vec::Vec<hexser::graph::NodeId> {
                 std::vec::Vec::new()
             }
         }
 
-        hexer::inventory::submit! {
-            hexer::registry::ComponentEntry::new::<#name #ty_generics>()
+        hexser::inventory::submit! {
+            hexser::registry::ComponentEntry::new::<#name #ty_generics>()
         }
     };
 

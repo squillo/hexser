@@ -8,14 +8,14 @@
 //! Quick example:
 //!
 //! ```rust
-//! use hexer::prelude::*;
+//! use hexser::prelude::*;
 //!
 //! #[derive(Clone, Debug)]
 //! struct Repo;
 //! #[derive(Clone, Debug)]
 //! struct Service { repo: Repo }
 //!
-//! let app = hexer::hex_static!({
+//! let app = hexser::hex_static!({
 //!     let repo = Repo;
 //!     let service = Service { repo: repo.clone() };
 //!     (repo, service)

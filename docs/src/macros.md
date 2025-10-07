@@ -1,6 +1,6 @@
 # Macros
 
-Hexer provides derive macros (via the hex_macros crate) to remove boilerplate and automatically register your components for analysis.
+Hexser provides derive macros (via the hex_macros crate) to remove boilerplate and automatically register your components for analysis.
 
 Available derives:
 
@@ -16,7 +16,7 @@ Available derives:
 Example usage:
 
 ```rust
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 #[derive(Entity, HexAggregate)]
 struct Order {

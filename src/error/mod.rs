@@ -10,7 +10,7 @@
 //! Error construction macros automatically capture source location:
 //!
 //! ```rust,ignore
-//! use hexer::{hex_domain_error, error::codes};
+//! use hexser::{hex_domain_error, error::codes};
 //!
 //! let err = hex_domain_error!(
 //!     codes::domain::INVARIANT_VIOLATION,
@@ -38,6 +38,6 @@ pub mod conflict_error;
 pub mod source_location;
 pub mod codes;
 
-pub use hex_error::HexError;
+pub use hex_error::Hexserror;
 pub use rich_error::RichError;
 pub use codes as error_codes;

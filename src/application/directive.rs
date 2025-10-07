@@ -17,8 +17,8 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::application::Directive;
-/// use hexer::HexResult;
+/// use hexser::application::Directive;
+/// use hexser::HexResult;
 ///
 /// struct CreateUserDirective {
 ///     email: String,
@@ -30,7 +30,7 @@
 ///         if self.email.contains('@') {
 ///             Ok(())
 ///         } else {
-///             Err(hexer::HexError::validation("Invalid email"))
+///             Err(hexser::Hexserror::validation("Invalid email"))
 ///         }
 ///     }
 /// }
@@ -57,7 +57,7 @@ mod tests {
                 Result::Ok(())
             } else {
                     Result::Err(
-                        crate::error::hex_error::HexError::validation_field(
+                        crate::error::hex_error::Hexserror::validation_field(
                             "Value must be positive",
                             "value"
                         )

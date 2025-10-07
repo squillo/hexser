@@ -21,8 +21,8 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::ports::Query;
-/// use hexer::HexResult;
+/// use hexser::ports::Query;
+/// use hexser::HexResult;
 ///
 /// struct FindUserByEmailParams {
 ///     email: String,

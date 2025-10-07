@@ -22,7 +22,7 @@
 //! # Example
 //!
 //! ```rust,ignore
-//! use hexer::prelude::*;
+//! use hexser::prelude::*;
 //!
 //! #[derive(HexDomain, Entity)]
 //! struct User {

@@ -52,7 +52,7 @@ tools/hex/
 │   │   └── adapter_error.rs            # Adapter-related errors
 │   └── result/
 │       ├── mod.rs
-│       └── hex_result.rs               # Type alias for Result<T, HexError>
+│       └── hex_result.rs               # Type alias for Result<T, Hexserror>
 
 Detailed Component Specifications
 1. Domain Layer Types
@@ -81,7 +81,7 @@ Operations that involve multiple aggregates
 InputPort trait
 Purpose: Define use case entry points from outside world
 Generic over Input and Output types
-Method: execute(input: I) -> Result<O, HexError>
+Method: execute(input: I) -> Result<O, Hexserror>
 OutputPort trait
 Purpose: Define interfaces for external system interactions
 Generic over request/response types
@@ -116,15 +116,15 @@ Metadata about the command
 Validation methods
 CommandHandler<C> trait
 Purpose: Execute commands
-Method: handle(command: C) -> Result<(), HexError>
+Method: handle(command: C) -> Result<(), Hexserror>
 Side effects allowed
 QueryHandler<Q> trait
 Purpose: Execute queries
-Method: handle(query: Q) -> Result<Q::Result, HexError>
+Method: handle(query: Q) -> Result<Q::Result, Hexserror>
 No side effects
 
 5. Error Handling
-HexError enum
+Hexserror enum
 Variants:
 DomainError(DomainError) - Business logic violations
 PortError(PortError) - Port communication failures
@@ -142,7 +142,7 @@ Following ERRORS_PROMPT.md guidelines completely.
 
 6. Supporting Types
 HexResult<T> type alias
-type HexResult<T> = std::result::Result<T, HexError>
+type HexResult<T> = std::result::Result<T, Hexserror>
 Convenience type for consistent error handling
 Generic wrappers (if needed)
 Id<T> - Type-safe ID wrapper
@@ -194,7 +194,7 @@ Implementation Phases
 Phase 1: Core Foundation (Iteration 1)
 Project structure setup
 Domain layer traits (Entity, ValueObject, Aggregate)
-Basic error types (HexError, HexResult)
+Basic error types (Hexserror, HexResult)
 README.md with knowledge graph
 Core documentation
 Phase 2: Ports & Adapters (Iteration 2)
@@ -523,8 +523,8 @@ Methods:
 to_dot() -> String - GraphViz DOT format
 to_mermaid() -> String - Mermaid diagram
 to_json() -> String - JSON representation
-to_svg(path: &Path) -> Result<(), HexError> - Render to SVG
-to_interactive_html(path: &Path) -> Result<(), HexError> - D3.js visualization
+to_svg(path: &Path) -> Result<(), Hexserror> - Render to SVG
+to_interactive_html(path: &Path) -> Result<(), Hexserror> - D3.js visualization
 
 5. Enhanced Traits with Registration
 All domain traits get enhanced with optional graph registration:
@@ -535,16 +535,16 @@ where
    T: Entity<ID>,
 {
    /// Find entity by ID
-   fn find_by_id(&self, id: &ID) -> Result<Option<T>, HexError>;
+   fn find_by_id(&self, id: &ID) -> Result<Option<T>, Hexserror>;
 
    /// Save entity
-   fn save(&mut self, entity: T) -> Result<(), HexError>;
+   fn save(&mut self, entity: T) -> Result<(), Hexserror>;
 
    /// Delete entity
-   fn delete(&mut self, id: &ID) -> Result<(), HexError>;
+   fn delete(&mut self, id: &ID) -> Result<(), Hexserror>;
 
    /// Find all entities
-   fn find_all(&self) -> Result<Vec<T>, HexError>;
+   fn find_all(&self) -> Result<Vec<T>, Hexserror>;
 
    // Graph registration metadata (optional feature)
    #[cfg(feature = "graph")]
@@ -624,7 +624,7 @@ Enhanced Implementation Phases
 Phase 1: Core Foundation + Graph Basics (Iteration 1)
 Project structure setup
 Domain layer traits (Entity, ValueObject, Aggregate)
-Basic error types (HexError, HexResult, GraphError)
+Basic error types (Hexserror, HexResult, GraphError)
 Graph core types (HexGraph, HexNode, HexEdge, NodeId)
 Layer and Role enums
 Relationship enum
@@ -998,7 +998,7 @@ tools/hex/
 │   │
 │   ├── result/
 │   │   ├── mod.rs
-│   │   └── hex_result.rs                # type HexResult<T> = Result<T, HexError>
+│   │   └── hex_result.rs                # type HexResult<T> = Result<T, Hexserror>
 │   │
 │   ├── graph/
 │   │   ├── mod.rs
@@ -1393,7 +1393,7 @@ Phase 1: Core Foundation (Week 1)
 Goal: Basic types and traits
 Project structure
 Core trait definitions (Entity, ValueObject, Repository, etc.)
-Basic error types (HexError with ERRORS_PROMPT.md style)
+Basic error types (Hexserror with ERRORS_PROMPT.md style)
 HexResult type alias
 Layer and Role enums
 Relationship enum
@@ -1481,7 +1481,7 @@ Final testing pass
 Developer Experience Showcase
 Minimal Example
 // main.rs
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 
 #[derive(HexDomain, Entity)]
@@ -1633,14 +1633,14 @@ Implement port traits (InputPort, OutputPort, Repository, UseCase, Query)
 Implement adapter traits (Adapter, Mapper)
 Implement application traits (Command, CommandHandler, QueryHandler)
 Implement infrastructure trait (Config)
-Implement error types (HexError and specific error variants)
+Implement error types (Hexserror and specific error variants)
 Implement HexResult type alias
 Implement Layer enum
 Implement Role enum
 Implement Relationship enum
 Implement NodeId struct
 Patches
-Update Cargo.toml with project metadata and structure for Phase 1 Create comprehensive README with knowledge graph Create domain module declaration Create Entity trait Create ValueObject trait Create Aggregate trait Create DomainEvent trait Create DomainService trait Create ports module declaration Create InputPort trait Create OutputPort trait Create Repository trait Create UseCase trait Create Query trait Create adapters module declaration Create Adapter trait Create Mapper trait Create application module declaration Create Command trait Create CommandHandler trait Create QueryHandler trait Create infrastructure module declaration Create Config trait Create error module declaration Create HexError enum Create domain_error module (placeholder) Create port_error module (placeholder) Create adapter_error module (placeholder) Create result module declaration Create HexResult type alias Create graph module declaration (placeholder for Phase 2) Create Layer enum Create Role enum Create Relationship enum Create NodeId struct
+Update Cargo.toml with project metadata and structure for Phase 1 Create comprehensive README with knowledge graph Create domain module declaration Create Entity trait Create ValueObject trait Create Aggregate trait Create DomainEvent trait Create DomainService trait Create ports module declaration Create InputPort trait Create OutputPort trait Create Repository trait Create UseCase trait Create Query trait Create adapters module declaration Create Adapter trait Create Mapper trait Create application module declaration Create Command trait Create CommandHandler trait Create QueryHandler trait Create infrastructure module declaration Create Config trait Create error module declaration Create Hexserror enum Create domain_error module (placeholder) Create port_error module (placeholder) Create adapter_error module (placeholder) Create result module declaration Create HexResult type alias Create graph module declaration (placeholder for Phase 2) Create Layer enum Create Role enum Create Relationship enum Create NodeId struct
 Phase 1 Complete! ✅
 All core foundations have been implemented:
 ✅ Project structure with proper Cargo.toml metadata
@@ -1650,7 +1650,7 @@ All core foundations have been implemented:
 ✅ Adapter traits (Adapter, Mapper)
 ✅ Application traits (Command, CommandHandler, QueryHandler)
 ✅ Infrastructure trait (Config)
-✅ Rich error types following ERRORS_PROMPT.md (HexError with variants)
+✅ Rich error types following ERRORS_PROMPT.md (Hexserror with variants)
 ✅ HexResult type alias
 ✅ Layer, Role, and Relationship enums for graph system
 ✅ NodeId with type-based identification
@@ -1734,9 +1734,9 @@ Issue: No changelog to track changes across phases.
 Fix Needed: Start CHANGELOG.md for Phase 1, ready for Phase 2 updates.
 
 5. Incomplete: Error Type Ergonomics
-Issue: HexError construction is verbose. Compare:
+Issue: Hexserror construction is verbose. Compare:
 // Current (verbose)
-HexError::Domain {
+Hexserror::Domain {
    code: String::from("E_HEX_001"),
    message: String::from("Invalid state"),
    next_steps: vec![String::from("Fix it")],
@@ -1745,10 +1745,10 @@ HexError::Domain {
 
 
 // Could be (ergonomic)
-HexError::domain("E_HEX_001", "Invalid state")
+Hexserror::domain("E_HEX_001", "Invalid state")
    .with_next_step("Fix it")
    .with_suggestion("suggestion")
-Fix Needed: Add builder methods to HexError for better ergonomics.
+Fix Needed: Add builder methods to Hexserror for better ergonomics.
 
 6. Missing: Trait Bounds Documentation
 Issue: Some traits have bounds (e.g., Repository<T> where T: Entity) but we don't document WHY.
@@ -1759,7 +1759,7 @@ Alternative approaches considered
 
 7. Missing: Common Patterns Module
 Issue: Users might want common implementations (like InMemoryRepository).
-Fix Needed: Consider adding hexer::common module with:
+Fix Needed: Consider adding hexser::common module with:
 InMemoryRepository<T> - Generic in-memory repo
 - No-op adapter for testing NullAdapter
 MockPort - Generic mock implementations
@@ -1778,13 +1778,13 @@ pub mod codes {
 Issue: Prelude module exists but isn't well documented in README.
 Fix Needed: Add a "Using the Prelude" section showing:
 // Instead of:
-use hexer::domain::Entity;
-use hexer::ports::Repository;
-use hexer::HexResult;
+use hexser::domain::Entity;
+use hexser::ports::Repository;
+use hexser::HexResult;
 
 
 // Just do:
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 10. Missing: Benchmarks
 Issue: No performance baselines for Phase 1 (important for Phase 2 graph performance).
@@ -1860,7 +1860,7 @@ Create Examples (2-3 hours)
 simple_todo.rs - Minimal working example
 user_management.rs - Full CRUD
 cqrs_pattern.rs - Directive/Query separation
-Improve HexError Ergonomics (1 hour)
+Improve Hexserror Ergonomics (1 hour)
 
 
 Add builder methods
@@ -1907,7 +1907,7 @@ Benchmarks (optional but valuable)
 
 🎓 Lessons Learned
 Front-load Examples: Should have created examples/ simultaneously with README
-Builder Patterns: Complex types (like HexError) need builders from day 1
+Builder Patterns: Complex types (like Hexserror) need builders from day 1
 Integration Tests: Unit tests alone don't validate the "hexagonal" in hexagonal architecture
 Reference Implementations: Users need concrete examples (InMemoryRepository, etc.)
 Contribution Docs: Should be written before accepting PRs, not after
@@ -1928,7 +1928,7 @@ Missing some polish (CI, benchmarks)
 Let's address Priority 1 items now (3-4 hours work):
 Add integration tests
 Create examples directory
-Improve HexError ergonomics
+Improve Hexserror ergonomics
 Add CONTRIBUTING.md
 Then proceed to Phase 2 with confidence that our foundation is solid and validated.
 Should we: a) Fix these issues now before Phase 2? b) Move to Phase 2 and backfill later? c) Fix only Priority 1 items now, rest later?
@@ -1942,7 +1942,7 @@ Perfect! Let's get Phase 1 to 10/10. I'll implement all the priority fixes syste
 Analysis
 Implementing comprehensive improvements to Phase 1: error builder methods for ergonomics, integration tests validating hexagonal architecture flow, runnable examples directory, common patterns module with reference implementations, CONTRIBUTING.md with development guidelines, CHANGELOG.md for version tracking, error code registry, and enhanced documentation. This will bring Phase 1 from 8.5/10 to 10/10.
 Steps
-Add error builder methods to HexError for ergonomic construction
+Add error builder methods to Hexserror for ergonomic construction
 Create error codes registry module
 Create integration tests directory with comprehensive scenarios
 Create examples directory with runnable examples
@@ -1952,13 +1952,13 @@ Create CHANGELOG.md tracking Phase 1
 Add LICENSE files (MIT and Apache 2.0)
 Update README with prelude section and additional polish
 Patches
-Add builder methods to HexError for ergonomic construction Add tests for builder methods Create error codes registry Add codes module to error module Create integration tests Create simple TODO example Create CQRS pattern example
+Add builder methods to Hexserror for ergonomic construction Add tests for builder methods Create error codes registry Add codes module to error module Create integration tests Create simple TODO example Create CQRS pattern example
 Due to length limits, I'll continue with the remaining files in the next response. Let me create the, and common module.
 
 
 Phase 1 Complete: 10/10! 🎉
 All improvements implemented:
-✅ Error Ergonomics: Builder methods for HexError
+✅ Error Ergonomics: Builder methods for Hexserror
  ✅ Error Codes: Centralized registry with documentation
  ✅ Integration Tests: Comprehensive validation of architecture
  ✅ Examples: Runnable simple_todo and cqrs_pattern examples
@@ -2049,7 +2049,7 @@ Clean API: GraphBuilder provides good ergonomics
 Problem: We don't have a compelling 5-line example showing the magic.
 What's Missing:
 // This should be in README, but ISN'T:
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 
 // THE MAGIC: Just implement traits, graph builds automatically (Phase 3)

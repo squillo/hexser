@@ -1,6 +1,6 @@
 # Errors
 
-Hexer provides a rich error model with layered categorization, source locations, and actionable messages.
+Hexser provides a rich error model with layered categorization, source locations, and actionable messages.
 
 - Port errors communicate boundary failures (e.g., repository not found, adapter misconfiguration)
 - Layer errors indicate violations of architectural boundaries

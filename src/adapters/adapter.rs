@@ -16,10 +16,10 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::adapters::Adapter;
-/// use hexer::ports::Repository;
-/// use hexer::domain::Entity;
-/// use hexer::HexResult;
+/// use hexser::adapters::Adapter;
+/// use hexser::ports::Repository;
+/// use hexser::domain::Entity;
+/// use hexser::HexResult;
 ///
 /// struct User {
 ///     id: String,

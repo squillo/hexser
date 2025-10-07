@@ -2,7 +2,7 @@
 //!
 //! Learn to define port interfaces that separate domain from infrastructure.
 
-use hexer::prelude::*;
+use hexser::prelude::*;
 
 #[derive(HexDomain, Entity, Clone)]
 struct User {

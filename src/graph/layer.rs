@@ -16,7 +16,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hexer::graph::Layer;
+/// use hexser::graph::Layer;
 ///
 /// let layer = Layer::Domain;
 /// assert!(matches!(layer, Layer::Domain));

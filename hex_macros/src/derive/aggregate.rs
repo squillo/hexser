@@ -15,8 +15,8 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let expanded = quote::quote! {
-        impl #impl_generics hexer::domain::Aggregate for #name #ty_generics #where_clause {
-            fn check_invariants(&self) -> hexer::HexResult<()> {
+        impl #impl_generics hexser::domain::Aggregate for #name #ty_generics #where_clause {
+            fn check_invariants(&self) -> hexser::HexResult<()> {
                 Ok(())
             }
         }

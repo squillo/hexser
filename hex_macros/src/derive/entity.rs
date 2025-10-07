@@ -27,7 +27,7 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let expanded = quote::quote! {
-        impl #impl_generics hexer::domain::Entity for #name #ty_generics #where_clause {
+        impl #impl_generics hexser::domain::Entity for #name #ty_generics #where_clause {
             type Id = #id_type;
         }
     };
