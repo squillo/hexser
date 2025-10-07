@@ -1,0 +1,51 @@
+[package]
+name = "hexser"
+version = "0.3.0"
+edition = "2024"
+authors = ["N Lang Team"]
+description = "Zero-boilerplate hexagonal architecture with graph-based introspection"
+license = "MIT OR Apache-2.0"
+keywords = ["hexagonal", "architecture", "ports", "adapters", "ddd"]
+categories = ["development-tools", "data-structures"]
+repository = "https://github.com/squillo/hexser"
+
+
+[dependencies]
+inventory = { workspace = true }
+hexser_macros = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+async-trait = { workspace = true, optional = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+# Enable macros and static (non-dyn) DI by default. The dyn container remains opt-in.
+default = ["macros", "static-di"]
+macros = ["hexser_macros"]
+ai = ["chrono", "serde", "serde_json"]
+async = ["tokio", "async-trait"]
+visualization = ["serde", "serde_json"]
+# Dyn-based container (uses tokio/async-trait). Not enabled by default for WASM-friendliness.
+container = ["tokio", "async-trait"]
+# Zero-cost, WASM-friendly static DI feature (no extra dependencies).
+static-di = []
+full = ["ai", "async", "macros", "visualization", "container", "static-di"]
+
+[[bin]]
+name = "hex-ai-export"
+path = "src/bin/hex_ai_export.rs"
+required-features = ["ai"]
+
+[[bin]]
+name = "hex-ai-pack"
+path = "src/bin/hex_ai_pack.rs"
+required-features = ["ai"]
+
+
+[package.metadata.docs.rs]
+all-features = true
