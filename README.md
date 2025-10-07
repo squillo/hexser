@@ -1,14 +1,37 @@
 # Hexer - Zero-Boilerplate Hexagonal Architecture
 
 [![Crates.io](https://img.shields.io/crates/v/hexer.svg)](https://crates.io/crates/hexer)
-[![Documentation](https://docs.rs/hex/badge.svg)](https://docs.rs/hex)
-[![License](https://img.shields.io/crates/l/hex.svg)](https://github.com/yourorg/hex)
+[![Documentation](https://docs.rs/hexer/badge.svg)](https://docs.rs/hexer)
+[![License](https://img.shields.io/crates/l/hexer.svg)](https://github.com/squillo/hexer)
 
 **Zero-boilerplate hexagonal architecture with graph-based introspection for Rust.**
 
 The `hexer` crate provides reusable generic types and traits for implementing Hexagonal Architecture (Ports and Adapters pattern) with automatic graph construction, intent inference, and architectural validation. **Write business logic, let `hexer` handle the architecture.**
 
 ---
+
+## 📚 Table of Contents
+
+- [Why hexer?](#why-hexer)
+- [Quick Start](#quick-start)
+- [Complete Tutorial](#complete-tutorial)
+- [CQRS Pattern with hex](#part-3-cqrs-pattern-with-hex)
+- [Testing Your Hexagonal Application](#part-4-testing-your-hexagonal-application)
+- [Error Handling](#part-5-error-handling)
+- [Real-World Example - TODO Application](#part-6-real-world-example---todo-application)
+- [Advanced Patterns](#advanced-patterns)
+- [Knowledge Graph](#knowledge-graph)
+- [Static (non-dyn) DI — WASM-friendly](#static-non-dyn-di--wasm-friendly)
+- [Repository: Filter-based queries (vNext)](#repository-filter-based-queries-vnext)
+- [AI Context Export (CLI)](#ai-context-export-cli)
+- [Examples & Tutorials](#examples--tutorials)
+- [Potions (copy-friendly examples)](#potions-copy-friendly-examples)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
+- [Additional Resources](#additional-resources)
+
+> Tip: Press Cmd/Ctrl+F and search for “Part” to jump to tutorials.
 
 ## 🎯 Why hexer?
 
@@ -36,7 +59,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hexer = { version = "0.1.0", features = ["macros"] }
+hexer = "0.3.0"
 ```
 
 Your First Hexagonal Application
@@ -168,10 +191,10 @@ struct Order {
 impl Aggregate for Order {
   fn check_invariants(&self) -> HexResult<()> {
     if self.items.is_empty() {
-      return Err(HexError::domain(
-        "E_HEX_001",
+      return Err(hexer::hex_domain_error!(
+        hexer::error::codes::domain::INVARIANT_EMPTY,
         "Order must contain at least one item"
-      ));
+      ).with_next_step("Add at least one item"));
     }
     Ok(())
   }
@@ -283,9 +306,9 @@ struct PostgresOrderRepository {
 }
 
 impl Repository<Order> for PostgresOrderRepository {
-fn find_by_id(&self, id: &OrderId) -> HexResult<Option<Order>> {
-// SQL query implementation
-todo!()
+  fn find_by_id(&self, id: &OrderId) -> HexResult<Option<Order>> {
+  // SQL query implementation
+  todo!()
 }
 
   fn save(&mut self, order: Order) -> HexResult<()> {
@@ -464,7 +487,7 @@ struct UpdateUserEmailHandler {
 impl UpdateUserEmailHandler {
   fn handle(&self, directive: UpdateUserEmail) -> HexResult<()> {
     let mut user = self.repo.find_by_id(&directive.user_id)?
-        .ok_or_else(|| HexError::not_found("User", &directive.user_id))?;
+      .ok_or_else(|| HexError::not_found("User", &directive.user_id))?;
 
     user.email = directive.new_email;
     self.repo.save(user)?;
@@ -512,10 +535,10 @@ mod tests {
     #[test]
     fn test_order_invariants() {
         let order = Order {
-            id: OrderId::new(),
-            customer_id: CustomerId::new(),
-            items: vec![],  // Empty!
-            status: OrderStatus::Pending,
+          id: OrderId::new(),
+          customer_id: CustomerId::new(),
+          items: vec![],  // Empty!
+          status: OrderStatus::Pending,
         };
 
         assert!(order.check_invariants().is_err());
@@ -575,59 +598,107 @@ fn test_create_user_handler() {
 
 ### Part 5: Error Handling
 
-hexer provides rich, actionable error messages following best practices.
+hexer provides rich, actionable, code-first errors with automatic source location and layering support. Prefer the new macro-based constructors and error codes over manual struct construction.
 
-Using HexError:
+Preferred: macro + code + guidance
 
 ```rust
 fn validate_order(order: &Order) -> HexResult<()> {
     if order.items.is_empty() {
-        return Err(HexError::Domain {
-            code: "E_HEX_001".to_string(),
-            message: "Order cannot be empty".to_string(),
-            next_steps: vec![
-                "Add at least one item to the order".to_string(),
-            ],
-            suggestions: vec![
-                "order.add_item(item)".to_string(),
-                "order.items.push(item)".to_string(),
-            ],
-        });
+        return Err(
+            hexer::hex_domain_error!(
+                hexer::error::codes::domain::INVARIANT_EMPTY,
+                "Order must contain at least one item"
+            )
+            .with_next_steps(&["Add at least one item to the order"]) // actionable guidance
+            .with_suggestions(&["order.add_item(item)", "order.items.push(item)"]) // quick fixes
+            .with_more_info("https://docs.rs/hexer/latest/hexer/error/codes/domain")
+        );
     }
-
     Ok(())
 }
 ```
 
-Error Display:
+Display output (example):
 
 ```
-Error: E_HEX_001 - Order cannot be empty
-Next Steps:
+E_HEX_001: Order must contain at least one item
+at src/domain/order.rs:42:13
+Next steps:
 - Add at least one item to the order
-  Suggestions:
+Suggestions:
 - order.add_item(item)
 - order.items.push(item)
 ```
 
-Error Variants:
+Cookbook
+
+```rust,ignore
+// Validation errors (field-aware)
+return Err(hexer::error::hex_error::HexError::validation_field(
+    "Title cannot be empty",
+    "title",
+));
+
+// Not Found errors (resource + id)
+return Err(hexer::error::hex_error::HexError::not_found("User", "123")
+    .with_next_step("Verify the ID and try again"));
+
+// Port errors (communication issues)
+let port_err = hexer::hex_port_error!(
+    hexer::error::codes::port::PORT_TIMEOUT,
+    "User service timed out"
+).with_suggestion("Increase timeout or retry later");
+
+// Adapter errors (infra failures) with source error
+fn fetch_from_api(url: &str) -> HexResult<String> {
+    let resp = std::fs::read_to_string(url)
+        .map_err(|ioe| hexer::hex_adapter_error!(
+            hexer::error::codes::adapter::IO_FAILURE, // or API_FAILURE in real HTTP
+            "Failed to fetch resource"
+        ).with_source(ioe))?;
+    Ok(resp)
+}
+```
+
+🔥 Amazing Example: Layered mapping (Adapter → Port → Domain)
 
 ```rust
-// Domain errors - business rule violations
-HexError::domain("E_HEX_001", "Invalid state")
+// Adapter layer
+fn db_get_user(id: &str) -> HexResult<User> {
+    let conn = std::fs::read_to_string("/tmp/mock-db").map_err(|e|
+        hexer::hex_adapter_error!(
+            hexer::error::codes::adapter::DB_CONNECTION_FAILURE,
+            "Database unavailable"
+        )
+        .with_source(e)
+        .with_next_steps(&["Ensure DB is running", "Check connection string"]) 
+    )?;
+    // ... parse and return User or NotFound
+    Err(hexer::error::hex_error::HexError::not_found("User", id))
+}
 
-// Validation errors - input validation
-HexError::validation("Email must contain @")
+// Port layer wraps adapter failure with port context
+fn port_get_user(id: &str) -> HexResult<User> {
+    db_get_user(id).map_err(|e|
+        hexer::hex_port_error!(
+            hexer::error::codes::port::COMMUNICATION_FAILURE,
+            "UserRepository failed"
+        ).with_source(e)
+    )
+}
 
-// Not found errors - missing resources
-HexError::not_found("User", "123")
-
-// Port errors - communication failures
-HexError::Port { ... }
-
-// Adapter errors - infrastructure failures
-HexError::Adapter { ... }
+// Domain layer consumes rich errors
+fn ensure_user_exists(id: &str) -> HexResult<()> {
+    let _user = port_get_user(id)?; // `?` preserves full rich error stack
+    Ok(())
+}
 ```
+
+Notes
+- All hexer errors implement std::error::Error and the RichError trait (code, message, next_steps, suggestions, location, more_info, source).
+- Prefer hex_domain_error!, hex_port_error!, hex_adapter_error! and constants from hexer::error::codes::*.
+- Use with_source(err) to preserve underlying causes; Display shows a helpful, compact summary.
 
 
 Part 6: Real-World Example - TODO Application
@@ -726,7 +797,7 @@ struct CreateTodoDirective {
 impl CreateTodoDirective {
     fn validate(&self) -> HexResult<()> {
         if self.title.is_empty() {
-            return Err(HexError::validation("Title cannot be empty"));
+            return Err(HexError::validation_field("Title cannot be empty", "title"));
         }
         Ok(())
     }
@@ -770,7 +841,10 @@ impl OrderAggregate {
   fn place_order(&mut self, items: Vec<OrderItem>) -> HexResult<()> {
     // Validate
     if items.is_empty() {
-      return Err(HexError::domain("E_HEX_001", "Order must have items"));
+      return Err(hexer::hex_domain_error!(
+        hexer::error::codes::domain::INVARIANT_EMPTY,
+        "Order must have items"
+      ));
     }
 
     // Create event
@@ -958,7 +1032,7 @@ Static DI provides two simple building blocks:
 
 Example:
 
-```rust
+```rust,ignore
 use hexer::prelude::*;
 
 #[derive(Clone, Debug)]
