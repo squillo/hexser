@@ -1255,3 +1255,451 @@ cargo run -p hexser --features ai --bin hex-ai-pack --quiet > target/ai-pack.jso
 Notes:
 - Missing optional docs are skipped gracefully. The pack remains valid JSON.
 - Use this artifact as the single source of truth for external AIs and tools when proposing changes.
+
+---
+
+## 🌦 REST Adapter Example: WeatherPort
+
+Hexser includes a complete example of a REST-based adapter using `reqwest::blocking` and `serde_json`. This adapter connects to an external weather API and maps JSON responses to domain models with robust error handling.
+
+### Domain Model
+
+```rust
+// Domain: Forecast value object (in hexser::domain::forecast)
+pub struct Forecast {
+    city: String,
+    temperature_c: f64,
+    condition: String,
+    observed_at_iso: Option<String>,
+}
+```
+
+### Port Definition
+
+```rust
+// Port: WeatherPort trait (in hexser::ports::weather_port)
+pub trait WeatherPort {
+    fn get_forecast(&self, city: &str) -> HexResult<Forecast>;
+}
+```
+
+### Adapter Implementation
+
+```rust
+// Adapter: RestWeatherAdapter (self-contained in examples/weather_adapter.rs)
+pub struct RestWeatherAdapter {
+    api_base_url: String,
+    client: reqwest::blocking::Client,
+}
+
+impl RestWeatherAdapter {
+    pub fn new(api_base_url: String) -> Self {
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .expect("Failed to build reqwest client");
+        Self { api_base_url, client }
+    }
+}
+
+impl WeatherPort for RestWeatherAdapter {
+    fn get_forecast(&self, city: &str) -> HexResult<Forecast> {
+        let url = format!("{}?city={}", self.api_base_url, city);
+        
+        // HTTP call with error mapping (API_FAILURE)
+        let response = self.client.get(&url)
+            .send()
+            .map_err(|e| {
+                Hexserror::adapter(
+                    codes::adapter::API_FAILURE,
+                    "Failed to connect to weather API"
+                )
+                .with_source(e)
+                .with_next_steps(&["Verify API endpoint", "Check network"])
+            })?;
+        
+        // Deserialize JSON with error mapping (MAPPING_FAILURE)
+        let api_response: ApiWeatherResponse = serde_json::from_str(&response.text()?)
+            .map_err(|e| {
+                Hexserror::adapter(
+                    codes::adapter::MAPPING_FAILURE,
+                    "Failed to parse JSON response"
+                )
+                .with_source(e)
+            })?;
+        
+        // Map to domain model
+        Forecast::new(
+            api_response.city,
+            api_response.temp_c,
+            api_response.condition,
+            api_response.observed_at,
+        )
+    }
+}
+```
+
+This complete example is available at `examples/weather_adapter.rs`. Run with:
+```bash
+cargo run --example weather_adapter
+```
+
+---
+
+## 🔐 Integrating User Authentication Potions
+
+When integrating pre-built authentication patterns from `hexser_potions`, you must connect the Potion's defined Ports to your own concrete adapters for databases and session management.
+
+### Step 1: Define Your Ports
+
+```rust
+// Port for user persistence
+trait UserRepository: Repository<User> {
+    fn find_by_username(&self, username: &str) -> HexResult<Option<User>>;
+    fn find_by_email(&self, email: &str) -> HexResult<Option<User>>;
+}
+
+// Port for session management (new for question 4)
+trait SessionPort {
+    fn create_session(&self, user_id: &str, ttl_secs: u64) -> HexResult<String>;
+    fn validate_session(&self, token: &str) -> HexResult<Option<String>>;
+    fn revoke_session(&self, token: &str) -> HexResult<()>;
+}
+```
+
+### Step 2: Implement Database Adapter
+
+```rust
+// Concrete PostgreSQL adapter
+struct PostgresUserRepository {
+    pool: sqlx::PgPool,
+}
+
+impl Repository<User> for PostgresUserRepository {
+    fn save(&mut self, user: User) -> HexResult<()> {
+        // Execute INSERT/UPDATE via sqlx
+        sqlx::query!("INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4)",
+            user.id, user.username, user.email, user.password_hash)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| Hexserror::adapter(codes::adapter::DB_WRITE_FAILURE, "Failed to save user")
+                .with_source(e))?;
+        Ok(())
+    }
+}
+
+impl UserRepository for PostgresUserRepository {
+    fn find_by_username(&self, username: &str) -> HexResult<Option<User>> {
+        sqlx::query_as!(User, "SELECT * FROM users WHERE username = $1", username)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| Hexserror::adapter(codes::adapter::DB_READ_FAILURE, "Query failed")
+                .with_source(e))
+    }
+}
+```
+
+### Step 3: Implement Session Adapter (Redis or In-Memory)
+
+```rust
+// Redis-based session adapter
+struct RedisSessionAdapter {
+    client: redis::Client,
+}
+
+impl SessionPort for RedisSessionAdapter {
+    fn create_session(&self, user_id: &str, ttl_secs: u64) -> HexResult<String> {
+        let token = uuid::Uuid::new_v4().to_string();
+        let mut conn = self.client.get_connection()
+            .map_err(|e| Hexserror::adapter(codes::adapter::CONNECTION_FAILURE, "Redis unavailable")
+                .with_source(e))?;
+        
+        redis::cmd("SETEX")
+            .arg(format!("session:{}", token))
+            .arg(ttl_secs)
+            .arg(user_id)
+            .query(&mut conn)
+            .map_err(|e| Hexserror::adapter(codes::adapter::DB_WRITE_FAILURE, "Session write failed")
+                .with_source(e))?;
+        
+        Ok(token)
+    }
+    
+    fn validate_session(&self, token: &str) -> HexResult<Option<String>> {
+        let mut conn = self.client.get_connection()?;
+        let user_id: Option<String> = redis::cmd("GET")
+            .arg(format!("session:{}", token))
+            .query(&mut conn)
+            .map_err(|e| Hexserror::adapter(codes::adapter::DB_READ_FAILURE, "Session read failed")
+                .with_source(e))?;
+        Ok(user_id)
+    }
+    
+    fn revoke_session(&self, token: &str) -> HexResult<()> {
+        let mut conn = self.client.get_connection()?;
+        redis::cmd("DEL")
+            .arg(format!("session:{}", token))
+            .query(&mut conn)
+            .map_err(|e| Hexserror::adapter(codes::adapter::DB_WRITE_FAILURE, "Session delete failed")
+                .with_source(e))?;
+        Ok(())
+    }
+}
+```
+
+### Step 4: Wire Adapters to Application
+
+```rust
+// Application context with wired adapters
+struct AppContext {
+    user_repo: Box<dyn UserRepository>,
+    session_port: Box<dyn SessionPort>,
+}
+
+impl AppContext {
+    fn new_production(db_pool: sqlx::PgPool, redis_client: redis::Client) -> Self {
+        Self {
+            user_repo: Box::new(PostgresUserRepository { pool: db_pool }),
+            session_port: Box::new(RedisSessionAdapter { client: redis_client }),
+        }
+    }
+}
+```
+
+---
+
+## 🔄 Transactional Directives: ProcessOrder Example
+
+When a directive involves multiple repository operations that must succeed or fail atomically (e.g., decrementing stock and creating an order), use a database transaction and pass it explicitly to each repository call.
+
+### Port Definitions
+
+```rust
+// Ports accepting a transaction context
+trait ProductRepository {
+    fn decrement_stock(&self, tx: &mut PgTransaction, product_id: &str, qty: u32) -> HexResult<()>;
+}
+
+trait OrderRepository {
+    fn create_order(&self, tx: &mut PgTransaction, order: Order) -> HexResult<()>;
+}
+
+trait EventBus {
+    fn publish(&self, event: OrderCreated) -> HexResult<()>;
+}
+```
+
+### Directive Handler with Transaction
+
+```rust
+struct ProcessOrderHandler {
+    product_repo: Box<dyn ProductRepository>,
+    order_repo: Box<dyn OrderRepository>,
+    event_bus: Box<dyn EventBus>,
+    db_pool: sqlx::PgPool,
+}
+
+impl ProcessOrderHandler {
+    async fn handle(&self, directive: ProcessOrderDirective) -> HexResult<()> {
+        // Begin transaction
+        let mut tx = self.db_pool.begin()
+            .await
+            .map_err(|e| Hexserror::adapter(codes::adapter::DB_CONNECTION_FAILURE, "Failed to begin transaction")
+                .with_source(e))?;
+        
+        // 1) Decrement stock for each product (atomic within tx)
+        for item in &directive.items {
+            self.product_repo.decrement_stock(&mut tx, &item.product_id, item.quantity)
+                .await
+                .map_err(|e| {
+                    // Rollback is automatic on error via Drop
+                    Hexserror::domain(codes::domain::INVARIANT_VIOLATION, "Insufficient stock")
+                        .with_source(e)
+                })?;
+        }
+        
+        // 2) Create order record (atomic within tx)
+        let order = Order::new(directive.customer_id, directive.items)?;
+        self.order_repo.create_order(&mut tx, order.clone())
+            .await
+            .map_err(|e| {
+                Hexserror::adapter(codes::adapter::DB_WRITE_FAILURE, "Failed to create order")
+                    .with_source(e)
+            })?;
+        
+        // Commit transaction (all-or-nothing)
+        tx.commit()
+            .await
+            .map_err(|e| Hexserror::adapter(codes::adapter::DB_WRITE_FAILURE, "Transaction commit failed")
+                .with_source(e))?;
+        
+        // 3) Dispatch event (after commit)
+        let event = OrderCreated { order_id: order.id.clone(), timestamp: now() };
+        self.event_bus.publish(event)?;
+        
+        Ok(())
+    }
+}
+```
+
+### Adapter Implementation (PostgreSQL)
+
+```rust
+struct PostgresProductRepository;
+
+impl ProductRepository for PostgresProductRepository {
+    async fn decrement_stock(&self, tx: &mut PgTransaction<'_>, product_id: &str, qty: u32) -> HexResult<()> {
+        let rows_affected = sqlx::query!(
+            "UPDATE products SET stock = stock - $1 WHERE id = $2 AND stock >= $1",
+            qty as i32, product_id
+        )
+        .execute(tx)
+        .await
+        .map_err(|e| Hexserror::adapter(codes::adapter::DB_WRITE_FAILURE, "Stock update failed")
+            .with_source(e))?
+        .rows_affected();
+        
+        if rows_affected == 0 {
+            return Err(Hexserror::domain(codes::domain::INVARIANT_VIOLATION, "Insufficient stock or product not found"));
+        }
+        Ok(())
+    }
+}
+```
+
+**Key Points:**
+- Pass `&mut PgTransaction` (or equivalent) to all repository methods within the transaction.
+- Rollback is automatic via Rust's `Drop` trait if any error occurs before `commit()`.
+- Publish events only after successful commit to ensure consistency.
+
+---
+
+## 🔗 Composite Adapters: ProfileRepository Example
+
+When data must be fetched from multiple sources (e.g., SQL for core profile, NoSQL for preferences), implement a composite adapter that queries both, handles failures gracefully, and optionally caches results.
+
+### Port Definition
+
+```rust
+trait ProfileRepository {
+    fn find_by_id(&self, user_id: &str) -> HexResult<Profile>;
+}
+```
+
+### Composite Adapter Implementation
+
+```rust
+struct CompositeProfileRepository {
+    sql_db: sqlx::PgPool,
+    nosql_client: mongodb::Client,
+    cache: std::sync::Arc<std::sync::Mutex<lru::LruCache<String, Profile>>>,
+}
+
+impl CompositeProfileRepository {
+    fn new(sql_db: sqlx::PgPool, nosql_client: mongodb::Client, cache_size: usize) -> Self {
+        Self {
+            sql_db,
+            nosql_client,
+            cache: std::sync::Arc::new(std::sync::Mutex::new(lru::LruCache::new(cache_size))),
+        }
+    }
+}
+
+impl ProfileRepository for CompositeProfileRepository {
+    async fn find_by_id(&self, user_id: &str) -> HexResult<Profile> {
+        // Check cache first
+        {
+            let mut cache = self.cache.lock().unwrap();
+            if let Some(cached) = cache.get(user_id) {
+                return Ok(cached.clone());
+            }
+        }
+        
+        // 1) Fetch core profile from SQL (primary source, must succeed)
+        let core_profile: SqlProfileRow = sqlx::query_as!(
+            SqlProfileRow,
+            "SELECT id, username, email, created_at FROM users WHERE id = $1",
+            user_id
+        )
+        .fetch_one(&self.sql_db)
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => Hexserror::not_found("Profile", user_id),
+            _ => Hexserror::adapter(codes::adapter::DB_READ_FAILURE, "SQL query failed")
+                .with_source(e)
+                .with_next_step("Check database connectivity"),
+        })?;
+        
+        // 2) Enrich with preferences from NoSQL (optional, degrade gracefully)
+        let collection = self.nosql_client.database("app").collection::<bson::Document>("user_prefs");
+        let prefs_result = collection.find_one(bson::doc! { "user_id": user_id }, None).await;
+        
+        let preferences = match prefs_result {
+            Ok(Some(doc)) => {
+                // Parse preferences from document
+                Preferences::from_bson(&doc).unwrap_or_default()
+            }
+            Ok(None) => {
+                // User has no preferences document yet; use defaults
+                Preferences::default()
+            }
+            Err(e) => {
+                // NoSQL source failed; log warning and use defaults (degrade gracefully)
+                eprintln!("Warning: Failed to fetch preferences for {}: {}", user_id, e);
+                Preferences::default()
+            }
+        };
+        
+        // 3) Combine into domain model
+        let profile = Profile {
+            id: core_profile.id,
+            username: core_profile.username,
+            email: core_profile.email,
+            created_at: core_profile.created_at,
+            preferences,
+        };
+        
+        // 4) Cache result
+        {
+            let mut cache = self.cache.lock().unwrap();
+            cache.put(user_id.to_string(), profile.clone());
+        }
+        
+        Ok(profile)
+    }
+}
+```
+
+### Handling Data Inconsistencies
+
+- **Primary Source Failure:** Return `Hexserror::Adapter` or `Hexserror::NotFound` with actionable guidance.
+- **Secondary Source Failure:** Degrade gracefully by logging a warning and using defaults (e.g., `Preferences::default()`).
+- **Caching Strategy:** Use an LRU cache with TTL to reduce load; invalidate on writes.
+- **Stale Data:** Implement cache invalidation hooks or TTL-based expiry for eventually-consistent NoSQL data.
+
+### Caching Strategies
+
+1. **Read-Through Cache:** Check cache before querying databases (shown above).
+2. **Write-Through Cache:** Invalidate or update cache on writes.
+3. **TTL-Based Expiry:** Use a cache with time-to-live for each entry.
+
+```rust
+// Example: TTL-based cache wrapper
+struct TtlCache<K, V> {
+    cache: lru::LruCache<K, (V, std::time::Instant)>,
+    ttl: std::time::Duration,
+}
+
+impl<K: std::hash::Hash + Eq, V: Clone> TtlCache<K, V> {
+    fn get(&mut self, key: &K) -> Option<V> {
+        if let Some((value, inserted_at)) = self.cache.get(key) {
+            if inserted_at.elapsed() < self.ttl {
+                return Some(value.clone());
+            }
+        }
+        None
+    }
+}
+```
+
+---

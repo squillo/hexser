@@ -19,6 +19,7 @@ serde_json = "1.0"
 chrono = "0.4.42"
 tokio = { version = "1.47.1", features = ["sync", "macros", "rt-multi-thread", "time"] }
 async-trait = "0.1.89"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json"] }
 pretty_assertions = "1.4"
 
 # Workspace member crates (for path + version unification)

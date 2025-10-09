@@ -6,6 +6,7 @@
 //! mapping data between different representations.
 //!
 //! Revision History
+//! - 2025-10-08T22:54:00Z @AI: Remove rest_weather_adapter module (moved to examples).
 //! - 2025-10-01T00:00:00Z @AI: Initial Phase 1 adapters module structure.
 
 pub mod adapter;

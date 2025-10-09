@@ -3,6 +3,7 @@ AI Assistant: Code Generation & Modification Protocol
 YOU WILL NEVER ALTER THIS FILE.
 
 ---
+When you encounter a request for a specific library, framework, or crate, use Context7 MCP server.
 
 ### 1.Revision History Protocol
 Whenever you alter a file, you MUST add a revision history comment. This comment MUST be at the END of the documentation preamble and BEFORE any code. It MUST be in a valid Rust location.
@@ -36,8 +37,14 @@ The entry MUST include:
 - Words in **bold** are strong, evidence-based recommendations.
 - Words in *italics* are suggestions.
 
-**B. Long-Term Task Management (Source of Record)**
+**B. Workspace Management (Multi-Crate Projects)**
+Use the following conventions to manage your workspace:
+- Set dependencies in the workspace crate.
+- Reference dependency crates in sub-crates by their workspace e.g. `{ workspace = true }`
+
+**C. Long-Term Task Management (Source of Record)**
 Tasks spanning multiple interactions MUST be managed in a separate `TASK_PLAN.md` file to maintain state and overcome context window limitations. This file is the shared Source of Record.[1]
+
 
 When instructed to create or maintain a plan, the file MUST follow this structure:
 
@@ -66,13 +73,13 @@ status: [planning | in-progress | blocked | completed]
 - Each crate MUST have a `README.md` file containing a knowledge graph of its contents.
 - Before generating code for a multi-crate project, you MUST consult the relevant `README.md` to understand existing patterns and architecture.
 
-**C. Testing Mandate**
+**D. Testing Mandate**
 Tasks that span multiple responses MUST ensure all existing and new tests pass between each iteration.
 
-**D. State Integrity Mandate**
+**E. State Integrity Mandate**
 The code MUST be in a verifiable working state (i.e., compiles and passes all tests) at the end of each group of alterations. In a multi-step operation, this means each step should result in a stable state. Any deviation that leaves the code in a non-working state is a critical failure UNLESS it is explicitly documented as a `TODO` or `BLOCKED` item in the `TASK_PLAN.md` Source of Record.
 
-**E. Prompt Scope Sizing (H3 Resolution Analogy)**
+**F. Prompt Scope Sizing (H3 Resolution Analogy)**
 All tasks must be scoped to an appropriate "resolution" before execution. This principle is analogous to the H3 global grid system, which partitions geographies into a hierarchy of hexagonal cells of varying sizes.
 
 - **Low-Resolution Task (Anti-Pattern):** A vague, high-level objective like "Refactor the entire auth module" is a low-resolution prompt. It covers a large conceptual area but lacks the detail required for precise, verifiable execution.
@@ -83,12 +90,12 @@ All tasks must be scoped to an appropriate "resolution" before execution. This p
 *   **Example of Decomposing a Low-Resolution Task:**
 *   **Initial Prompt:** "Refactor the auth module to use the new error handling standard."
 *   **Generated High-Resolution Plan:**
-  1.  Analyze `auth/mod.rs` and its sub-modules to identify all functions that currently use `.unwrap()` or `.expect()`.
-  2.  Modify the `LoginError` enum in `auth/types.rs` to derive `thiserror::Error`.
-  3.  Refactor the `login` function in `auth/handlers/login.rs` to return a `Result<_, LoginError>` and use the `?` operator.
-  4.  Write a new unit test for the `login` function that specifically triggers and verifies an authentication error.
+1.  Analyze `auth/mod.rs` and its sub-modules to identify all functions that currently use `.unwrap()` or `.expect()`.
+2.  Modify the `LoginError` enum in `auth/types.rs` to derive `thiserror::Error`.
+3.  Refactor the `login` function in `auth/handlers/login.rs` to return a `Result<_, LoginError>` and use the `?` operator.
+4.  Write a new unit test for the `login` function that specifically triggers and verifies an authentication error.
 
-**F. Pre-computation Self-Correction**
+**G. Pre-computation Self-Correction**
 Before generating the final code or plan, you MUST perform a self-correction pass. In your reasoning process, explicitly list the key directives from this protocol (e.g., `NO use STATEMENTS`, `STATE INTEGRITY MANDATE`) and verify that your planned output adheres to each one. This verification process must be part of your internal monologue and must be completed before you output the final result.
 
 ---
@@ -293,3 +300,6 @@ mod tests {
   }
 ]
 ```
+
+### 8. Running Test Commands
+In a multi-crate project where we are working on a single crate, you MUST run the tests from inside the crate's directory and ASK before running tests from root.

@@ -6,6 +6,7 @@
 //! use cases, and queries (CQRS pattern).
 //!
 //! Revision History
+//! - 2025-10-08T22:54:00Z @AI: Remove weather_port module (moved to examples).
 //! - 2025-10-01T00:00:00Z @AI: Initial Phase 1 ports module structure.
 
 pub mod input_port;
