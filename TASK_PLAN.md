@@ -54,12 +54,12 @@ status: in-progress
   - [ ] C. Integration test: publish/subscribe flow using InMemoryEventBus.
   - [ ] D. Doc tests in ports showing CloudEvents creation without use statements.
   - [ ] E. Validation tests for required attributes and RFC3339 time format.
-- [ ] 10. Documentation and tutorials.
-  - [ ] A. docs/events.md with CloudEvents v1.0 specification alignment, end-to-end guidance, and examples.
-  - [ ] B. Document all REQUIRED and OPTIONAL CloudEvents attributes in DomainEvent struct.
-  - [ ] C. Update tutorials index to point to events doc and add "emit on write" snippet.
-  - [ ] D. Update Tutorial 04 (CQRS Basics) README with DomainEvent emission example.
-  - [ ] E. Include transport binding examples (HTTP binary/structured, Kafka binary/structured).
+- [x] 10. Documentation and tutorials.
+  - [x] A. docs/events.md with CloudEvents v1.0 specification alignment, end-to-end guidance, and examples.
+  - [x] B. Document all REQUIRED and OPTIONAL CloudEvents attributes in DomainEvent struct.
+  - [x] C. Update tutorials index to point to events doc and add "emit on write" snippet.
+  - [x] D. Update Tutorial 04 (CQRS Basics) with DomainEvent emission reference in Next steps.
+  - [x] E. Include transport binding examples (HTTP binary/structured, Kafka binary/structured).
 - [ ] 11. Execution plan for implementation PRs.
   - [ ] A. PR1: Add DomainEvent port definitions and docs/events.md (no adapters).
   - [ ] B. PR2: Add JsonEventCodec + InMemoryEventBus + comprehensive tests.

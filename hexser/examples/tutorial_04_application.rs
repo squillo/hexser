@@ -146,5 +146,6 @@ fn main() {
   println!("\nNext steps:");
   println!("  Check architecture_visualization.rs for advanced features");
   println!("  Review cqrs_pattern.rs for CQRS best practices");
-  println!("  Explore validation_example.rs for architecture checks");
+  println!("  See ../docs/events.md for CloudEvents v1.0 event publishing");
+  println!("  Learn how Directives can emit DomainEvents for event-driven CQRS");
 }

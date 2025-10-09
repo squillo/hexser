@@ -154,8 +154,12 @@ mod macro_tests {
       id: String,
     }
 
-    let e1 = QualifiedEntity { id: String::from("1") };
-    let e2 = PreludeEntity { id: String::from("2") };
+    let e1 = QualifiedEntity {
+      id: String::from("1"),
+    };
+    let e2 = PreludeEntity {
+      id: String::from("2"),
+    };
 
     // Both should have HexEntity trait implemented
     let _: <QualifiedEntity as hexser::domain::HexEntity>::Id = e1.id;

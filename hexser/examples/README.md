@@ -7,7 +7,11 @@
 
 ## Patterns
 - `cqrs_pattern.rs` - Command/Query separation
-- `event_sourcing.rs` - Event-driven architecture (TODO)
+- **CloudEvents v1.0** - Standards-compliant event publishing (see [../docs/events.md](../docs/events.md))
+  - Transport-agnostic domain events with CloudEvents envelope
+  - EventPublisher/EventSubscriber ports for hexagonal architecture
+  - InMemoryEventBus reference implementation
+  - CQRS integration: Directives emit events, Queries consume projections
 
 ## Advanced
 - `graph_example.rs` - Querying your architecture

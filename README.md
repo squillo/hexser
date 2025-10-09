@@ -45,7 +45,7 @@ Quick start with hexser:
 
 ```toml
 [dependencies]
-hexser = { path = "./hexser", version = "0.4.3", features = ["macros"] }
+hexser = { path = "./hexser", version = "0.4.4", features = ["macros"] }
 ```
 
 ```rust
@@ -68,6 +68,53 @@ trait UserRepository: QueryRepository<User> {}
 // let found = <YourRepo as QueryRepository<User>>::find_one(&repo, &UserFilter::ByEmail("a@b.com".into()))?;
 ```
 
+## CloudEvents v1.0 Support
+
+Hexser includes built-in support for CloudEvents v1.0 specification, enabling standards-compliant, transport-agnostic domain event publishing and consumption:
+
+- **Standards-compliant**: Full CloudEvents v1.0 specification compliance
+- **Transport-agnostic**: Works with HTTP, Kafka, AMQP, and other transports
+- **Hexagonal design**: Clear separation between domain events, ports, and adapters
+- **Zero dependencies**: Native implementation without external CloudEvents crate
+- **CQRS integration**: Seamless integration with Directives (write) and Queries (read)
+
+```rust
+use hexser::prelude::*;
+use hexser::ports::events::{CloudEventsEnvelope, EventPublisher};
+
+// Define domain event
+struct UserCreated {
+    user_id: String,
+    email: String,
+}
+
+impl DomainEvent for UserCreated {
+    fn event_type(&self) -> &str { "com.example.user.created" }
+    fn aggregate_id(&self) -> String { self.user_id.clone() }
+}
+
+// Wrap in CloudEvents envelope
+let event = UserCreated {
+    user_id: String::from("user-123"),
+    email: String::from("user@example.com"),
+};
+
+let envelope = CloudEventsEnvelope::from_domain_event(
+    String::from("evt-001"),
+    String::from("/services/user-service"),
+    event,
+);
+
+// Publish via any transport adapter
+// publisher.publish(&envelope)?;
+```
+
+**Documentation**: See [hexser/docs/events.md](./hexser/docs/events.md) for comprehensive guide including:
+- CloudEvents v1.0 attribute mappings (required: id, source, specversion, type)
+- Transport bindings (HTTP binary/structured, Kafka, AMQP)
+- CQRS integration patterns
+- Security and reliability considerations
+
 ## Potions Ecosystem
 
 Why “Potions”? They are lightweight, composable recipes you can pour into your app — perfect for experimenting, learning, and scaffolding.
@@ -81,7 +128,7 @@ Use directly from the workspace:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "./hexser_potions", version = "0.4.3" }
+hexser_potions = { path = "./hexser_potions", version = "0.4.4" }
 ```
 
 Then in your code:
