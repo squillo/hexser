@@ -4,7 +4,7 @@
 
 use hexser::prelude::*;
 
-#[derive(HexDomain, Entity)]
+#[derive(HexDomain, HexEntity)]
 struct Todo {
     id: String,
     title: String,
@@ -23,7 +23,7 @@ fn main() {
     println!("\n🎉 You just created your first hexagonal architecture!");
     println!("\n📚 What happened:");
     println!("  1. #[derive(HexDomain)] registered Todo in the Domain layer");
-    println!("  2. #[derive(Entity)] implemented the Entity trait");
+    println!("  2. #[derive(HexEntity)] implemented the HexEntity trait");
     println!("  3. Graph was built automatically at compile time");
     println!("  4. Zero boilerplate required!");
 

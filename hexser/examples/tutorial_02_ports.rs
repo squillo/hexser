@@ -8,7 +8,7 @@
 use hexser::prelude::*;
 
 // Domain Layer - from Tutorial 01
-#[derive(HexDomain, Entity)]
+#[derive(HexDomain, HexEntity)]
 struct Todo {
   id: String,
   title: String,

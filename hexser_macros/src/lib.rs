@@ -10,7 +10,7 @@
 //! - `#[derive(HexDomain)]` - Mark domain layer types
 //! - `#[derive(HexPort)]` - Mark port traits
 //! - `#[derive(HexAdapter)]` - Mark adapter implementations
-//! - `#[derive(Entity)]` - Implement HexEntity trait
+//! - `#[derive(HexEntity)]` - Implement HexEntity trait
 //! - `#[derive(HexValueItem)]` - Implement HexValueItem trait with default validation
 //! - `#[derive(HexAggregate)]` - Mark aggregate roots
 //! - `#[derive(Repository)]` - Mark repository ports
@@ -26,7 +26,7 @@
 //! ```rust,ignore
 //! use hexser::prelude::*;
 //!
-//! #[derive(HexDomain, Entity)]
+//! #[derive(HexDomain, HexEntity)]
 //! struct User {
 //!     id: String,
 //!     email: String,
@@ -36,6 +36,7 @@
 //! ```
 //!
 //! Revision History
+//! - 2025-10-09T14:14:00Z @AI: Remove Entity derive, expose only HexEntity for clarity.
 //! - 2025-10-06T02:00:00Z @AI: Add error construction macros.
 //! - 2025-10-02T00:00:00Z @AI: Initial Phase 3 proc macro crate.
 
@@ -64,8 +65,8 @@ pub fn derive_hex_aggregate(input: proc_macro::TokenStream) -> proc_macro::Token
   crate::derive::aggregate::derive(input)
 }
 
-#[proc_macro_derive(Entity)]
-pub fn derive_entity(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+#[proc_macro_derive(HexEntity)]
+pub fn derive_hex_entity(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   crate::derive::entity::derive(input)
 }
 

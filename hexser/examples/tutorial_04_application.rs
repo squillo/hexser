@@ -11,7 +11,7 @@
 use hexser::prelude::*;
 
 // Domain Layer
-#[derive(HexDomain, Entity, Clone)]
+#[derive(HexDomain, HexEntity, Clone)]
 struct Todo {
   id: String,
   title: String,

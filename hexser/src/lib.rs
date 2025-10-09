@@ -50,6 +50,7 @@
 //! - `analysis`: Architectural analysis and validation (Phase 4+)
 //!
 //! Revision History
+//! - 2025-10-09T14:14:00Z @AI: Remove Entity derive alias, expose HexEntity at crate root for qualified addressing.
 //! - 2025-10-02T13:00:00Z @AI: Re-export inventory and error_codes for proc macros.
 //! - 2025-10-02T12:00:00Z @AI: Add showcase module with Describable and Inspectable traits.
 //! - 2025-10-01T00:01:00Z @AI: Added comprehensive re-exports and prelude module.
@@ -108,6 +109,13 @@ pub use crate::graph::{
 // Re-export showcase traits
 pub use crate::showcase::{ArcGraphExt, Describable, Inspectable, PrettyPrint};
 
+// Re-export derive macros at crate root for qualified addressing (e.g., hexser::HexEntity)
+#[cfg(feature = "macros")]
+pub use hexser_macros::{
+  HexAdapter, HexAggregate, HexDirective, HexDomain, HexEntity, HexPort, HexQuery, HexRepository,
+  HexValueItem,
+};
+
 /// Prelude module for convenient imports.
 ///
 /// Import everything you need with a single use statement:
@@ -137,13 +145,9 @@ pub mod prelude {
   // Phase 3: Registry and derive macro support
   #[cfg(feature = "macros")]
   pub use hexser_macros::{
-    Entity, HexAdapter, HexAggregate, HexDirective, HexDomain, HexPort, HexQuery, HexRepository,
+    HexAdapter, HexAggregate, HexDirective, HexDomain, HexEntity, HexPort, HexQuery, HexRepository,
     HexValueItem,
   };
-
-  // Alias Entity as HexEntity for consistency with trait name
-  #[cfg(feature = "macros")]
-  pub use hexser_macros::Entity as HexEntity;
 
   pub use crate::registry::{ComponentEntry, ComponentRegistry, NodeInfo, Registrable};
 

@@ -7,21 +7,21 @@
 use hexser::prelude::*;
 
 // Domain Layer - Core business logic
-#[derive(HexDomain, Entity)]
+#[derive(HexDomain, HexEntity)]
 struct Customer {
   id: String,
   name: String,
   email: String,
 }
 
-#[derive(HexDomain, Entity)]
+#[derive(HexDomain, HexEntity)]
 struct Order {
   id: String,
   customer_id: String,
   total: f64,
 }
 
-#[derive(HexDomain, Entity)]
+#[derive(HexDomain, HexEntity)]
 struct Product {
   id: String,
   name: String,

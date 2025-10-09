@@ -7,7 +7,7 @@
 
 use hexser::prelude::*;
 
-#[derive(HexDomain, Entity)]
+#[derive(HexDomain, HexEntity)]
 struct TodoMore {
   id: String,
   title: String,
