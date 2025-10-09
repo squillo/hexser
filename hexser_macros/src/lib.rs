@@ -10,7 +10,9 @@
 //! - `#[derive(HexDomain)]` - Mark domain layer types
 //! - `#[derive(HexPort)]` - Mark port traits
 //! - `#[derive(HexAdapter)]` - Mark adapter implementations
-//! - `#[derive(Entity)]` - Implement Entity trait
+//! - `#[derive(Entity)]` - Implement HexEntity trait
+//! - `#[derive(HexValueItem)]` - Implement HexValueItem trait with default validation
+//! - `#[derive(HexAggregate)]` - Mark aggregate roots
 //! - `#[derive(Repository)]` - Mark repository ports
 //!
 //! # Error Macros
@@ -65,6 +67,11 @@ pub fn derive_hex_aggregate(input: proc_macro::TokenStream) -> proc_macro::Token
 #[proc_macro_derive(Entity)]
 pub fn derive_entity(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   crate::derive::entity::derive(input)
+}
+
+#[proc_macro_derive(HexValueItem)]
+pub fn derive_hex_value_item(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+  crate::derive::hex_value_item::derive(input)
 }
 
 #[proc_macro_derive(HexRepository)]

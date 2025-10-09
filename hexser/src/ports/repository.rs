@@ -51,10 +51,10 @@ pub struct Sort<K> {
 ///
 /// # Type Parameters
 ///
-/// * `T` - The entity type this repository manages (must implement `Entity`)
+/// * `T` - The entity type this repository manages (must implement `HexEntity`)
 pub trait Repository<T>
 where
-  T: crate::domain::entity::Entity,
+  T: crate::domain::entity::HexEntity,
 {
   /// Save an entity to the repository.
   fn save(&mut self, entity: T) -> crate::result::hex_result::HexResult<()>;
@@ -63,7 +63,7 @@ where
 /// Generic query-capable repository port for expressive, domain-owned filters.
 pub trait QueryRepository<T>
 where
-  T: crate::domain::entity::Entity,
+  T: crate::domain::entity::HexEntity,
 {
   /// Domain-owned filter type the adapter understands.
   type Filter;
@@ -109,7 +109,7 @@ mod tests {
     name: String,
   }
 
-  impl crate::domain::entity::Entity for TestEntity {
+  impl crate::domain::entity::HexEntity for TestEntity {
     type Id = u64;
   }
 

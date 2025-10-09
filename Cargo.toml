@@ -23,5 +23,5 @@ reqwest = { version = "0.12", default-features = false, features = ["blocking", 
 pretty_assertions = "1.4"
 
 # Workspace member crates (for path + version unification)
-hexser_macros = { version = "0.4.1", path = "hexser_macros" }
-hexser = { version = "0.4.1", path = "hexser" }
+hexser_macros = { version = "0.4.2", path = "hexser_macros" }
+hexser = { version = "0.4.2", path = "hexser" }

@@ -12,5 +12,6 @@ pub mod entity;
 pub mod hex_adapter;
 pub mod hex_domain;
 pub mod hex_port;
+pub mod hex_value_item;
 pub mod query;
 pub mod repository;

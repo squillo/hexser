@@ -21,5 +21,5 @@ pub mod mcp;
 pub use aggregate::Aggregate;
 pub use domain_event::DomainEvent;
 pub use domain_service::DomainService;
-pub use entity::Entity;
-pub use value_object::ValueObject;
+pub use entity::HexEntity;
+pub use value_object::HexValueItem;

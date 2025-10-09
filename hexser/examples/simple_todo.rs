@@ -75,7 +75,7 @@ struct Todo {
   completed: bool,
 }
 
-impl hexser::domain::Entity for Todo {
+impl hexser::domain::HexEntity for Todo {
   type Id = String;
 }
 

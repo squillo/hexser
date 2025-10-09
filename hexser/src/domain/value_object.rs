@@ -1,4 +1,4 @@
-//! ValueObject trait for domain objects defined by their values.
+//! HexValueItem trait for domain objects defined by their values.
 //!
 //! Value objects are immutable objects that are defined entirely by their
 //! attribute values. Two value objects with the same attribute values are
@@ -6,6 +6,7 @@
 //! They are used to model descriptive aspects of the domain with no conceptual identity.
 //!
 //! Revision History
+//! - 2025-10-09T09:43:00Z @AI: Rename ValueObject to HexValueItem for consistency.
 //! - 2025-10-01T00:00:00Z @AI: Initial ValueObject trait definition with validation.
 
 /// Trait for domain value objects.
@@ -16,13 +17,13 @@
 /// # Example
 ///
 /// ```rust
-/// use hexser::domain::ValueObject;
+/// use hexser::domain::HexValueItem;
 /// use hexser::HexResult;
 ///
 /// #[derive(Clone, PartialEq, Eq)]
 /// struct Email(String);
 ///
-/// impl ValueObject for Email {
+/// impl HexValueItem for Email {
 ///     fn validate(&self) -> HexResult<()> {
 ///         if self.0.contains('@') {
 ///             Ok(())
@@ -32,7 +33,7 @@
 ///     }
 /// }
 /// ```
-pub trait ValueObject {
+pub trait HexValueItem {
   /// Validate the value object's invariants.
   ///
   /// Returns `Ok(())` if the value object is valid, or an error describing
@@ -47,7 +48,7 @@ mod tests {
   #[derive(Clone)]
   struct TestEmail(String);
 
-  impl ValueObject for TestEmail {
+  impl HexValueItem for TestEmail {
     fn validate(&self) -> crate::result::hex_result::HexResult<()> {
       if self.0.contains('@') {
         Result::Ok(())

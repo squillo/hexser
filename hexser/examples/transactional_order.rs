@@ -30,7 +30,7 @@ struct Order {
   total: f64,
 }
 
-impl hexser::domain::entity::Entity for Order {
+impl hexser::domain::entity::HexEntity for Order {
   type Id = std::string::String;
 }
 

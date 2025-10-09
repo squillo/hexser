@@ -5,9 +5,8 @@
 //! Includes field-specific context and actionable guidance.
 //!
 //! Revision History
+//! - 2025-10-09T09:56:00Z @AI: Remove unused Display and Formatter imports per NO use STATEMENTS rule.
 //! - 2025-10-06T00:00:00Z @AI: Initial ValidationError struct for Phase 1.
-
-use std::fmt::{Display, Formatter};
 
 /// Validation error with field-specific context
 #[derive(Debug, Clone, PartialEq, Eq)]

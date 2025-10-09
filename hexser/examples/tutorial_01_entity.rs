@@ -17,9 +17,9 @@ fn main() -> hexser::HexResult<()> {
     name: String,
   }
 
-  // Step 2: Implement the Entity trait
+  // Step 2: Implement the HexEntity trait
   // This gives your type hexagonal architecture superpowers!
-  impl hexser::domain::Entity for User {
+  impl hexser::domain::HexEntity for User {
     type Id = String; // Define what uniquely identifies this entity
   }
 

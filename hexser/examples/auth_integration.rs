@@ -22,7 +22,7 @@ struct User {
   password_hash: std::string::String,
 }
 
-impl hexser::domain::entity::Entity for User {
+impl hexser::domain::entity::HexEntity for User {
   type Id = std::string::String;
 }
 

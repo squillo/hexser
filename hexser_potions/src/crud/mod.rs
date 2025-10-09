@@ -14,7 +14,7 @@ pub struct Item {
   pub name: String,
 }
 
-impl Entity for Item {
+impl HexEntity for Item {
   type Id = u64;
 }
 

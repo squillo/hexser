@@ -1,9 +1,10 @@
 //! Implementation of #[derive(Entity)] macro.
 //!
-//! Automatically implements the Entity trait, detecting the Id type
+//! Automatically implements the HexEntity trait, detecting the Id type
 //! from a field named 'id'.
 //!
 //! Revision History
+//! - 2025-10-09T09:43:00Z @AI: Update to implement HexEntity trait.
 //! - 2025-10-02T00:00:00Z @AI: Initial Entity derive implementation.
 
 /// Derive Entity for a type
@@ -27,7 +28,7 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
   let expanded = quote::quote! {
-      impl #impl_generics hexser::domain::Entity for #name #ty_generics #where_clause {
+      impl #impl_generics hexser::domain::HexEntity for #name #ty_generics #where_clause {
           type Id = #id_type;
       }
   };

@@ -20,7 +20,7 @@ See also: ../graph-overview (future section) and the Architecture chapter.
 
 ## Entities and Aggregates
 
-- Entity: Has an identity and invariants. Derive with `#[derive(Entity)]`.
+- HexEntity: Has an identity and invariants. Derive with `#[derive(Entity)]`.
 - Aggregate: A consistency boundary that enforces invariants across entities. Derive with `#[derive(HexAggregate)]`.
 
 ## Ports and Repositories

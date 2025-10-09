@@ -21,7 +21,7 @@ pub struct User {
   pub email: String,
 }
 
-impl Entity for User {
+impl HexEntity for User {
   type Id = String;
 }
 

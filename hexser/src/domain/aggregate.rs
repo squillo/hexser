@@ -6,6 +6,7 @@
 //! External objects can only reference the aggregate root, ensuring consistency.
 //!
 //! Revision History
+//! - 2025-10-09T09:43:00Z @AI: Update to use HexEntity trait.
 //! - 2025-10-01T00:00:00Z @AI: Initial Aggregate trait definition extending Entity.
 
 /// Trait for aggregate roots that define transactional consistency boundaries.
@@ -17,7 +18,7 @@
 /// # Example
 ///
 /// ```rust
-/// use hexser::domain::{Entity, Aggregate};
+/// use hexser::domain::{HexEntity, Aggregate};
 /// use hexser::HexResult;
 ///
 /// struct Order {
@@ -30,7 +31,7 @@
 ///     quantity: u32,
 /// }
 ///
-/// impl Entity for Order {
+/// impl HexEntity for Order {
 ///     type Id = String;
 /// }
 ///
@@ -44,7 +45,7 @@
 ///     }
 /// }
 /// ```
-pub trait Aggregate: crate::domain::entity::Entity {
+pub trait Aggregate: crate::domain::entity::HexEntity {
   /// Check the aggregate's invariants.
   ///
   /// This method should validate that all business rules and invariants
@@ -61,7 +62,7 @@ mod tests {
     item_count: usize,
   }
 
-  impl crate::domain::entity::Entity for TestOrder {
+  impl crate::domain::entity::HexEntity for TestOrder {
     type Id = u64;
   }
 

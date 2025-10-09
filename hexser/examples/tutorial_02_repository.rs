@@ -16,7 +16,7 @@ fn main() -> hexser::HexResult<()> {
     name: String,
   }
 
-  impl hexser::domain::Entity for User {
+  impl hexser::domain::HexEntity for User {
     type Id = String;
   }
 

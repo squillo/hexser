@@ -8,7 +8,7 @@
 //!
 //! # Architecture Layers
 //!
-//! - **Domain**: Core business logic (`Entity`, `ValueObject`, `Aggregate`)
+//! - **Domain**: Core business logic (`HexEntity`, `HexValueItem`, `Aggregate`)
 //! - **Ports**: Interface definitions (`Repository`, `UseCase`, `Query`)
 //! - **Adapters**: Port implementations (`Adapter`, `Mapper`)
 //! - **Application**: Use case orchestration (`Directive`, `DirectiveHandler`)
@@ -25,7 +25,7 @@
 //!     email: String,
 //! }
 //!
-//! impl Entity for User {
+//! impl HexEntity for User {
 //!     type Id = String;
 //! }
 //!
@@ -80,7 +80,7 @@ pub mod container;
 pub use crate::{error::hex_error::Hexserror, result::hex_result::HexResult};
 
 // Re-export all domain traits
-pub use crate::domain::{Aggregate, DomainEvent, DomainService, Entity, ValueObject};
+pub use crate::domain::{Aggregate, DomainEvent, DomainService, HexEntity, HexValueItem};
 
 // Re-export all port traits
 pub use crate::ports::{InputPort, OutputPort, Query, Repository, UseCase};
@@ -118,7 +118,7 @@ pub use crate::showcase::{ArcGraphExt, Describable, Inspectable, PrettyPrint};
 pub mod prelude {
   pub use crate::{HexResult, Hexserror};
 
-  pub use crate::domain::{Aggregate, DomainEvent, DomainService, Entity, ValueObject};
+  pub use crate::domain::{Aggregate, DomainEvent, DomainService, HexEntity, HexValueItem};
 
   pub use crate::ports::{InputPort, OutputPort, Query, Repository, UseCase};
 
@@ -137,8 +137,13 @@ pub mod prelude {
   // Phase 3: Registry and derive macro support
   #[cfg(feature = "macros")]
   pub use hexser_macros::{
-    Entity, HexAdapter, HexDirective, HexDomain, HexPort, HexQuery, HexRepository,
+    Entity, HexAdapter, HexAggregate, HexDirective, HexDomain, HexPort, HexQuery, HexRepository,
+    HexValueItem,
   };
+
+  // Alias Entity as HexEntity for consistency with trait name
+  #[cfg(feature = "macros")]
+  pub use hexser_macros::Entity as HexEntity;
 
   pub use crate::registry::{ComponentEntry, ComponentRegistry, NodeInfo, Registrable};
 

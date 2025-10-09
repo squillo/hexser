@@ -10,14 +10,14 @@
 
 #[cfg(test)]
 mod domain_integration {
-  use hexser::{Aggregate, ValueObject};
+  use hexser::{Aggregate, HexValueItem};
 
   /// Test Entity and ValueObject integration.
   #[test]
   fn test_entity_with_value_object() {
     struct Email(String);
 
-    impl hexser::domain::ValueObject for Email {
+    impl hexser::HexValueItem for Email {
       fn validate(&self) -> hexser::HexResult<()> {
         if self.0.contains('@') {
           Ok(())
@@ -32,7 +32,7 @@ mod domain_integration {
       email: Email,
     }
 
-    impl hexser::domain::Entity for User {
+    impl hexser::HexEntity for User {
       type Id = String;
     }
 
@@ -44,7 +44,7 @@ mod domain_integration {
       email,
     };
 
-    let _id: <User as hexser::domain::Entity>::Id = user.id;
+    let _id: <User as hexser::HexEntity>::Id = user.id;
   }
 
   /// Test HexAggregate macro with custom invariants via attribute.
@@ -56,7 +56,7 @@ mod domain_integration {
       items: Vec<String>,
     }
 
-    impl hexser::domain::Entity for Order {
+    impl hexser::HexEntity for Order {
       type Id = String;
     }
 
@@ -94,7 +94,7 @@ mod domain_integration {
       value: i32,
     }
 
-    impl hexser::domain::Entity for SimpleAggregate {
+    impl hexser::HexEntity for SimpleAggregate {
       type Id = String;
     }
 
@@ -121,7 +121,7 @@ mod port_adapter_integration {
       done: bool,
     }
 
-    impl hexser::domain::Entity for Todo {
+    impl hexser::HexEntity for Todo {
       type Id = String;
     }
 

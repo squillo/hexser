@@ -42,7 +42,7 @@ struct Profile {
   preferences: Preferences,
 }
 
-impl hexser::domain::entity::Entity for Profile {
+impl hexser::domain::entity::HexEntity for Profile {
   type Id = std::string::String;
 }
 

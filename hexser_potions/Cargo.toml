@@ -1,6 +1,6 @@
 [package]
 name = "hexser_potions"
-version = "0.4.1"
+version = "0.4.2"
 edition = "2024"
 authors = ["N Lang Team"]
 description = "Potions: ready-to-mix patterns and examples for the hexser crate"

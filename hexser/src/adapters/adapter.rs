@@ -18,14 +18,14 @@
 /// ```rust
 /// use hexser::adapters::Adapter;
 /// use hexser::ports::Repository;
-/// use hexser::domain::Entity;
+/// use hexser::HexEntity;
 /// use hexser::HexResult;
 ///
 /// struct User {
 ///     id: String,
 /// }
 ///
-/// impl Entity for User {
+/// impl HexEntity for User {
 ///     type Id = String;
 /// }
 ///

@@ -14,6 +14,7 @@ The `hexser` crate provides reusable generic types and traits for implementing H
 
 - [Why hexser?](#why-hexser)
 - [Quick Start](#quick-start)
+- [Feature Flags](#feature-flags)
 - [Complete Tutorial](#complete-tutorial)
 - [CQRS Pattern with hex](#part-3-cqrs-pattern-with-hex)
 - [Testing Your Hexagonal Application](#part-4-testing-your-hexagonal-application)
@@ -60,7 +61,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hexser = "0.4.1"
+hexser = "0.4.2"
 ```
 
 Your First Hexagonal Application
@@ -69,7 +70,7 @@ Your First Hexagonal Application
 use hexser::prelude::*;
 
 // 1. Define your domain entity
-#[derive(HexEntity)]
+#[derive(Entity)]
 struct User {
   id: String,
   email: String,
@@ -89,22 +90,13 @@ struct InMemoryUserRepository {
 }
 
 impl Repository<User> for InMemoryUserRepository {
-  fn find_by_id(&self, id: &String) -> HexResult<Option<User>> {
-    Ok(self.users.iter().find(|u| &u.id == id).cloned())
-  }
-
   fn save(&mut self, user: User) -> HexResult<()> {
-    self.users.push(user);
+    if let Some(existing) = self.users.iter_mut().find(|u| u.id == user.id) {
+      *existing = user;
+    } else {
+      self.users.push(user);
+    }
     Ok(())
-  }
-
-  fn delete(&mut self, id: &String) -> HexResult<()> {
-    self.users.retain(|u| &u.id != id);
-    Ok(())
-  }
-
-  fn find_all(&self) -> HexResult<Vec<User>> {
-    Ok(self.users.clone())
   }
 }
 
@@ -138,6 +130,242 @@ That's it! You've just built a hexagonal architecture application with:
 - Type-safe interfaces
 - Testable components
 - Swappable implementations
+
+---
+
+## Feature Flags
+
+Hexser provides granular feature flags to enable only the functionality you need. This keeps compile times fast and binary sizes small, especially for WASM targets.
+
+### Available Features
+
+#### `default = ["macros", "static-di"]`
+Enabled by default. Includes procedural macros and zero-cost static dependency injection.
+
+```toml
+[dependencies]
+hexser = "0.4.2"  # Uses default features
+```
+
+#### `macros`
+Enables procedural macros for deriving hexagonal architecture traits.
+
+**Provides:**
+- `#[derive(Entity)]` or `#[derive(HexEntity)]` - Implement HexEntity trait for domain entities
+- `#[derive(HexValueItem)]` - Implement HexValueItem trait with default validation (override validate() for custom logic)
+- `#[derive(HexAggregate)]` - Mark aggregate roots
+- `#[derive(HexPort)]` - Mark port traits
+- `#[derive(HexAdapter)]` - Mark adapter implementations
+- `#[derive(HexRepository)]` - Mark repository ports
+- `#[derive(HexDirective)]` - Mark command/directive types
+- `#[derive(HexQuery)]` - Mark query types
+
+**Dependencies:** `hexser_macros`
+
+```toml
+[dependencies]
+hexser = { version = "0.4.2", default-features = false, features = ["macros"] }
+```
+
+#### `static-di`
+Zero-cost, WASM-friendly static dependency injection. No runtime overhead, no dynamic dispatch.
+
+**Provides:**
+- `StaticContainer` for compile-time dependency resolution
+- Type-safe service registration without `dyn`
+- Full WASM compatibility
+
+**Dependencies:** None (zero-cost abstraction)
+
+```toml
+[dependencies]
+hexser = { version = "0.4.2", features = ["static-di"] }
+```
+
+**Example:**
+```rust
+use hexser::prelude::*;
+
+let container = StaticContainer::new()
+    .with_service(MyRepository::new())
+    .with_service(MyService::new());
+
+let service = container.get::<MyService>();
+```
+
+#### `ai`
+Enables AI context export functionality for exposing architecture metadata to AI agents.
+
+**Provides:**
+- `AIContext` type with architecture metadata
+- `AgentPack` for packaging context
+- JSON serialization of graph data
+- CLI tools: `hex-ai-export`, `hex-ai-pack`
+
+**Dependencies:** `chrono`, `serde`, `serde_json`
+
+```toml
+[dependencies]
+hexser = { version = "0.4.2", features = ["ai"] }
+```
+
+**Usage:**
+```bash
+# Export architecture context to JSON
+cargo run --bin hex-ai-export > context.json
+
+# Create agent pack
+cargo run --bin hex-ai-pack --output agent-pack.json
+```
+
+#### `mcp`
+Model Context Protocol server implementation for serving architecture data via JSON-RPC.
+
+**Provides:**
+- MCP server over stdio transport
+- Resources: `hexser://context`, `hexser://pack`
+- JSON-RPC 2.0 interface
+- CLI tool: `hex-mcp-server`
+
+**Dependencies:** Requires `ai` feature, plus `serde`, `serde_json`
+
+```toml
+[dependencies]
+hexser = { version = "0.4.2", features = ["mcp"] }
+```
+
+**Usage:**
+```bash
+# Start MCP server (communicates via stdin/stdout)
+cargo run --bin hex-mcp-server
+```
+
+#### `async`
+Enables async/await support for ports and adapters.
+
+**Provides:**
+- `AsyncRepository` trait
+- `AsyncDirective` trait
+- `AsyncQuery` trait
+- Tokio runtime integration
+
+**Dependencies:** `tokio`, `async-trait`
+
+```toml
+[dependencies]
+hexser = { version = "0.4.2", features = ["async"] }
+```
+
+**Example:**
+```rust
+#[async_trait::async_trait]
+impl AsyncRepository<User> for AsyncUserRepo {
+    async fn find_by_id(&self, id: &String) -> HexResult<Option<User>> {
+        // async implementation
+    }
+}
+```
+
+#### `visualization`
+Enables graph visualization and export capabilities.
+
+**Provides:**
+- Graph serialization to JSON
+- DOT format export for Graphviz
+- Architecture diagram generation
+
+**Dependencies:** `serde`, `serde_json`
+
+```toml
+[dependencies]
+hexser = { version = "0.4.2", features = ["visualization"] }
+```
+
+#### `container`
+Dynamic dependency injection container with async support. **Not enabled by default** to maintain WASM compatibility.
+
+**Provides:**
+- `DynContainer` with runtime service resolution
+- Async service factories
+- Dynamic dispatch with `dyn` traits
+
+**Dependencies:** `tokio`, `async-trait`
+
+**Note:** Use `static-di` instead if you need WASM compatibility or want zero runtime overhead.
+
+```toml
+[dependencies]
+hexser = { version = "0.4.2", features = ["container"] }
+```
+
+#### `full`
+Enables all features: `ai`, `mcp`, `async`, `macros`, `visualization`, `container`, and `static-di`.
+
+**Use for:** Development, full-featured applications, or when you need all capabilities.
+
+```toml
+[dependencies]
+hexser = { version = "0.4.2", features = ["full"] }
+```
+
+### Binary Targets
+
+Hexser includes three command-line tools that require specific features:
+
+#### `hex-ai-export`
+Exports architecture context as JSON for AI consumption.
+
+**Required feature:** `ai`
+
+```bash
+cargo run --bin hex-ai-export --features ai > context.json
+```
+
+#### `hex-ai-pack`
+Creates a complete agent pack with architecture metadata.
+
+**Required feature:** `ai`
+
+```bash
+cargo run --bin hex-ai-pack --features ai --output pack.json
+```
+
+#### `hex-mcp-server`
+Runs an MCP (Model Context Protocol) server over stdio.
+
+**Required feature:** `mcp`
+
+```bash
+cargo run --bin hex-mcp-server --features mcp
+```
+
+### Feature Combinations
+
+#### Minimal (no default features)
+```toml
+[dependencies]
+hexser = { version = "0.4.2", default-features = false }
+```
+
+#### WASM-optimized
+```toml
+[dependencies]
+hexser = { version = "0.4.2", default-features = false, features = ["macros", "static-di"] }
+```
+
+#### AI-enabled with async
+```toml
+[dependencies]
+hexser = { version = "0.4.2", features = ["ai", "async", "visualization"] }
+```
+
+#### Full development setup
+```toml
+[dependencies]
+hexser = { version = "0.4.2", features = ["full"] }
+```
+
+---
 
 ## Complete Tutorial
 ### Part 1: Understanding Hexagonal Architecture
@@ -181,7 +409,7 @@ Entities - Things with identity:
 ```rust
 use hexser::prelude::*;
 
-#[derive(HexEntity)]
+#[derive(Entity)]
 struct Order {
   id: OrderId,
   customer_id: CustomerId,
@@ -205,10 +433,10 @@ impl Aggregate for Order {
 Value Objects - Things defined by values:
 
 ```rust
-#[derive(Clone, PartialEq, Eq, HexValueObject)]
+#[derive(Clone, PartialEq, Eq)]
 struct Email(String);
 
-impl Email {
+impl HexValueItem for Email {
   fn validate(&self) -> HexResult<()> {
     if !self.0.contains('@') {
       return Err(Hexserror::validation("Email must contain @"));
@@ -221,18 +449,24 @@ impl Email {
 Domain Events - Things that happened:
 
 ```rust
-#[derive(HexDomainEvent)]
 struct OrderPlaced {
   order_id: OrderId,
   customer_id: CustomerId,
   timestamp: u64,
 }
+
+impl DomainEvent for OrderPlaced {
+  // Manual implementation - no derive macro available
+}
 ```
 
 Domain Services - Operations spanning multiple entities:
 ```rust
-#[derive(HexDomainService)]
 struct PricingService;
+
+impl DomainService for PricingService {
+  // Manual implementation - no derive macro available
+}
 
 impl PricingService {
   fn calculate_order_total(&self, order: &Order) -> Money {
@@ -307,17 +541,10 @@ struct PostgresOrderRepository {
 }
 
 impl Repository<Order> for PostgresOrderRepository {
-  fn find_by_id(&self, id: &OrderId) -> HexResult<Option<Order>> {
-  // SQL query implementation
-  todo!()
-}
-
   fn save(&mut self, order: Order) -> HexResult<()> {
       // SQL insert/update implementation
       todo!()
   }
-
-  // ... other methods
 }
 
 impl OrderRepository for PostgresOrderRepository {
@@ -565,16 +792,10 @@ struct MockUserRepository {
 }
 
 impl Repository<User> for MockUserRepository {
-  fn find_by_id(&self, id: &UserId) -> HexResult<Option<User>> {
-    Ok(self.users.get(id).cloned())
-  }
-
   fn save(&mut self, user: User) -> HexResult<()> {
     self.users.insert(user.id.clone(), user);
     Ok(())
   }
-
-  // ... other methods
 }
 
 #[test]
@@ -709,7 +930,7 @@ Domain Layer:
 ```rust
 use hexser::prelude::*;
 
-#[derive(Clone, HexEntity)]
+#[derive(Clone, Entity)]
 struct Todo {
   id: TodoId,
   title: String,
@@ -746,11 +967,6 @@ struct InMemoryTodoRepository {
 }
 
 impl Repository<Todo> for InMemoryTodoRepository {
-  fn find_by_id(&self, id: &TodoId) -> HexResult<Option<Todo>> {
-    let todos = self.todos.lock().unwrap();
-    Ok(todos.iter().find(|t| &t.id == id).cloned())
-  }
-
   fn save(&mut self, todo: Todo) -> HexResult<()> {
       let mut todos = self.todos.lock().unwrap();
       if let Some(existing) = todos.iter_mut().find(|t| t.id == todo.id) {
@@ -759,17 +975,6 @@ impl Repository<Todo> for InMemoryTodoRepository {
           todos.push(todo);
       }
       Ok(())
-  }
-
-  fn delete(&mut self, id: &TodoId) -> HexResult<()> {
-      let mut todos = self.todos.lock().unwrap();
-      todos.retain(|t| &t.id != id);
-      Ok(())
-  }
-
-  fn find_all(&self) -> HexResult<Vec<Todo>> {
-      let todos = self.todos.lock().unwrap();
-      Ok(todos.clone())
   }
 }
 
@@ -904,8 +1109,8 @@ impl ApplicationContext {
 ```
 hexser/
 ├── domain/              [Core Business Logic - No Dependencies]
-│   ├── Entity           - Identity-based objects
-│   ├── ValueObject      - Value-based objects
+│   ├── HexEntity        - Identity-based objects
+│   ├── HexValueItem     - Value-based objects
 │   ├── Aggregate        - Consistency boundaries
 │   ├── DomainEvent      - Significant occurrences
 │   └── DomainService    - Cross-entity operations
@@ -1007,7 +1212,7 @@ Add to your project via workspace path:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "../hexser_potions", version = "0.4.1" }
+hexser_potions = { path = "../hexser_potions", version = "0.4.2" }
 ```
 
 Then in code:
@@ -1073,7 +1278,7 @@ Example:
 use hexser::prelude::*;
 use hexser::ports::repository::{QueryRepository, FindOptions, Sort, Direction};
 
-#[derive(HexEntity, Clone, Debug)]
+#[derive(Entity, Clone, Debug)]
 struct User { id: String, email: String, created_at: u64 }
 
 // Domain-owned query types
@@ -1091,10 +1296,7 @@ enum UserSortKey { CreatedAt, Email }
 struct InMemoryUserRepository { users: Vec<User> }
 
 impl Repository<User> for InMemoryUserRepository {
-    fn find_by_id(&self, id: &String) -> HexResult<Option<User>> { Ok(self.users.iter().find(|u| &u.id == id).cloned()) }
     fn save(&mut self, user: User) -> HexResult<()> { if let Some(i)=self.users.iter().position(|u| u.id==user.id){self.users[i]=user;} else { self.users.push(user);} Ok(()) }
-    fn delete(&mut self, id: &String) -> HexResult<()> { self.users.retain(|u| &u.id != id); Ok(()) }
-    fn find_all(&self) -> HexResult<Vec<User>> { Ok(self.users.clone()) }
 }
 
 impl QueryRepository<User> for InMemoryUserRepository {

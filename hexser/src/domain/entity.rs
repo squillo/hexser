@@ -1,4 +1,4 @@
-//! Entity trait for domain objects with unique identity.
+//! HexEntity trait for domain objects with unique identity.
 //!
 //! Entities are objects that have a unique identity that persists over time,
 //! even if their attributes change. Two entities are considered equal if they
@@ -7,6 +7,7 @@
 //! The identity type is defined via an associated type for maximum flexibility.
 //!
 //! Revision History
+//! - 2025-10-09T09:43:00Z @AI: Rename Entity to HexEntity for consistency.
 //! - 2025-10-01T00:00:00Z @AI: Initial Entity trait definition with associated type Id.
 
 /// Trait for domain entities with unique identity.
@@ -17,18 +18,18 @@
 /// # Example
 ///
 /// ```rust
-/// use hexser::domain::Entity;
+/// use hexser::domain::HexEntity;
 ///
 /// struct User {
 ///     id: String,
 ///     email: String,
 /// }
 ///
-/// impl Entity for User {
+/// impl HexEntity for User {
 ///     type Id = String;
 /// }
 /// ```
-pub trait Entity {
+pub trait HexEntity {
   /// The type used to uniquely identify this entity.
   type Id;
 }
@@ -42,7 +43,7 @@ mod tests {
     name: String,
   }
 
-  impl Entity for TestUser {
+  impl HexEntity for TestUser {
     type Id = u64;
   }
 
@@ -52,6 +53,6 @@ mod tests {
       id: 1,
       name: String::from("Test"),
     };
-    let _id_type: <TestUser as Entity>::Id = user.id;
+    let _id_type: <TestUser as HexEntity>::Id = user.id;
   }
 }
