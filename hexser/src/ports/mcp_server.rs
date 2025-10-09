@@ -13,61 +13,61 @@
 /// by any adapter. Handles initialization handshake and resource operations.
 /// Implementation should integrate with HexGraph to provide architecture data.
 pub trait McpServer {
-    /// Handles the initialize method.
-    ///
-    /// First method called by client. Performs capability negotiation
-    /// and returns server information.
-    ///
-    /// # Arguments
-    ///
-    /// * `request` - Client's initialization request
-    ///
-    /// # Returns
-    ///
-    /// Result containing initialization response or error
-    fn initialize(
-        &self,
-        request: crate::domain::mcp::InitializeRequest,
-    ) -> crate::HexResult<crate::domain::mcp::InitializeResult>;
+  /// Handles the initialize method.
+  ///
+  /// First method called by client. Performs capability negotiation
+  /// and returns server information.
+  ///
+  /// # Arguments
+  ///
+  /// * `request` - Client's initialization request
+  ///
+  /// # Returns
+  ///
+  /// Result containing initialization response or error
+  fn initialize(
+    &self,
+    request: crate::domain::mcp::InitializeRequest,
+  ) -> crate::HexResult<crate::domain::mcp::InitializeResult>;
 
-    /// Lists available resources.
-    ///
-    /// Returns all resources that clients can query. For Hexser, this
-    /// includes architecture context and agent pack resources.
-    ///
-    /// # Returns
-    ///
-    /// Result containing resource list or error
-    fn list_resources(&self) -> crate::HexResult<crate::domain::mcp::ResourceList>;
+  /// Lists available resources.
+  ///
+  /// Returns all resources that clients can query. For Hexser, this
+  /// includes architecture context and agent pack resources.
+  ///
+  /// # Returns
+  ///
+  /// Result containing resource list or error
+  fn list_resources(&self) -> crate::HexResult<crate::domain::mcp::ResourceList>;
 
-    /// Reads a specific resource by URI.
-    ///
-    /// Retrieves the content of the requested resource. Hexser supports
-    /// hexser://context (AIContext JSON) and hexser://pack (AgentPack JSON).
-    ///
-    /// # Arguments
-    ///
-    /// * `uri` - Resource URI to read
-    ///
-    /// # Returns
-    ///
-    /// Result containing resource content or error
-    fn read_resource(&self, uri: &str) -> crate::HexResult<crate::domain::mcp::ResourceContent>;
+  /// Reads a specific resource by URI.
+  ///
+  /// Retrieves the content of the requested resource. Hexser supports
+  /// hexser://context (AIContext JSON) and hexser://pack (AgentPack JSON).
+  ///
+  /// # Arguments
+  ///
+  /// * `uri` - Resource URI to read
+  ///
+  /// # Returns
+  ///
+  /// Result containing resource content or error
+  fn read_resource(&self, uri: &str) -> crate::HexResult<crate::domain::mcp::ResourceContent>;
 
-    /// Processes a JSON-RPC request and returns a JSON-RPC response.
-    ///
-    /// Main entry point for handling MCP requests. Routes to appropriate
-    /// handler based on method name.
-    ///
-    /// # Arguments
-    ///
-    /// * `request` - JSON-RPC request
-    ///
-    /// # Returns
-    ///
-    /// JSON-RPC response (success or error)
-    fn handle_request(
-        &self,
-        request: crate::domain::mcp::JsonRpcRequest,
-    ) -> crate::domain::mcp::JsonRpcResponse;
+  /// Processes a JSON-RPC request and returns a JSON-RPC response.
+  ///
+  /// Main entry point for handling MCP requests. Routes to appropriate
+  /// handler based on method name.
+  ///
+  /// # Arguments
+  ///
+  /// * `request` - JSON-RPC request
+  ///
+  /// # Returns
+  ///
+  /// JSON-RPC response (success or error)
+  fn handle_request(
+    &self,
+    request: crate::domain::mcp::JsonRpcRequest,
+  ) -> crate::domain::mcp::JsonRpcResponse;
 }

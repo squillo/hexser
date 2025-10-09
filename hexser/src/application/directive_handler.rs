@@ -45,41 +45,41 @@
 /// ```
 pub trait DirectiveHandler<D>
 where
-    D: crate::application::directive::Directive,
+  D: crate::application::directive::Directive,
 {
-    /// Handle the execution of a directive.
-    ///
-    /// Returns `Ok(())` if the directive was successfully executed, or an error
-    /// describing what went wrong.
-    fn handle(&self, directive: D) -> crate::result::hex_result::HexResult<()>;
+  /// Handle the execution of a directive.
+  ///
+  /// Returns `Ok(())` if the directive was successfully executed, or an error
+  /// describing what went wrong.
+  fn handle(&self, directive: D) -> crate::result::hex_result::HexResult<()>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestDirective {
-        value: i32,
+  struct TestDirective {
+    value: i32,
+  }
+
+  impl crate::application::directive::Directive for TestDirective {
+    fn validate(&self) -> crate::result::hex_result::HexResult<()> {
+      Result::Ok(())
     }
+  }
 
-    impl crate::application::directive::Directive for TestDirective {
-        fn validate(&self) -> crate::result::hex_result::HexResult<()> {
-            Result::Ok(())
-        }
+  struct TestHandler;
+
+  impl DirectiveHandler<TestDirective> for TestHandler {
+    fn handle(&self, _directive: TestDirective) -> crate::result::hex_result::HexResult<()> {
+      Result::Ok(())
     }
+  }
 
-    struct TestHandler;
-
-    impl DirectiveHandler<TestDirective> for TestHandler {
-        fn handle(&self, _directive: TestDirective) -> crate::result::hex_result::HexResult<()> {
-            Result::Ok(())
-        }
-    }
-
-    #[test]
-    fn test_directive_handler_execution() {
-        let handler = TestHandler;
-        let directive = TestDirective { value: 5 };
-        assert!(handler.handle(directive).is_ok());
-    }
+  #[test]
+  fn test_directive_handler_execution() {
+    let handler = TestHandler;
+    let directive = TestDirective { value: 5 };
+    assert!(handler.handle(directive).is_ok());
+  }
 }

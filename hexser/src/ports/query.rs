@@ -37,51 +37,54 @@
 /// trait FindUserByEmail: Query<FindUserByEmailParams, Option<UserView>> {}
 /// ```
 pub trait Query<Params, Result> {
-    /// Execute the query with the given parameters.
-    ///
-    /// Returns the query result if successful, or an error if the query fails.
-    fn query(&self, params: Params) -> crate::result::hex_result::HexResult<Result>;
+  /// Execute the query with the given parameters.
+  ///
+  /// Returns the query result if successful, or an error if the query fails.
+  fn query(&self, params: Params) -> crate::result::hex_result::HexResult<Result>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestQueryParams {
-        id: u64,
+  struct TestQueryParams {
+    id: u64,
+  }
+
+  struct TestQueryResult {
+    name: String,
+  }
+
+  struct TestQuery;
+
+  impl Query<TestQueryParams, Option<TestQueryResult>> for TestQuery {
+    fn query(
+      &self,
+      params: TestQueryParams,
+    ) -> crate::result::hex_result::HexResult<Option<TestQueryResult>> {
+      if params.id == 1 {
+        Result::Ok(Some(TestQueryResult {
+          name: String::from("Found"),
+        }))
+      } else {
+        Result::Ok(None)
+      }
     }
+  }
 
-    struct TestQueryResult {
-        name: String,
-    }
+  #[test]
+  fn test_query_found() {
+    let query = TestQuery;
+    let params = TestQueryParams { id: 1 };
+    let result = query.query(params).unwrap();
+    assert!(result.is_some());
+  }
 
-    struct TestQuery;
-
-    impl Query<TestQueryParams, Option<TestQueryResult>> for TestQuery {
-        fn query(&self, params: TestQueryParams) -> crate::result::hex_result::HexResult<Option<TestQueryResult>> {
-            if params.id == 1 {
-                Result::Ok(Some(TestQueryResult {
-                    name: String::from("Found"),
-                }))
-            } else {
-                Result::Ok(None)
-            }
-        }
-    }
-
-    #[test]
-    fn test_query_found() {
-        let query = TestQuery;
-        let params = TestQueryParams { id: 1 };
-        let result = query.query(params).unwrap();
-        assert!(result.is_some());
-    }
-
-    #[test]
-    fn test_query_not_found() {
-        let query = TestQuery;
-        let params = TestQueryParams { id: 999 };
-        let result = query.query(params).unwrap();
-        assert!(result.is_none());
-    }
+  #[test]
+  fn test_query_not_found() {
+    let query = TestQuery;
+    let params = TestQueryParams { id: 999 };
+    let result = query.query(params).unwrap();
+    assert!(result.is_none());
+  }
 }

@@ -27,5 +27,5 @@ pub mod describable;
 pub mod inspectable;
 pub mod visualizable;
 
-pub use describable::{Describable, PrettyPrint, ArcGraphExt};
+pub use describable::{ArcGraphExt, Describable, PrettyPrint};
 pub use inspectable::Inspectable;

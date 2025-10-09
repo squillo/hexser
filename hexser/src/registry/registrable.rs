@@ -10,47 +10,47 @@
 /// Trait for components that can be registered in the architecture graph
 pub trait Registrable: 'static {
   /// Get node information for this component
-    fn node_info() -> crate::registry::node_info::NodeInfo;
+  fn node_info() -> crate::registry::node_info::NodeInfo;
 
-    /// Get IDs of components this depends on
-    fn dependencies() -> Vec<crate::graph::node_id::NodeId>;
+  /// Get IDs of components this depends on
+  fn dependencies() -> Vec<crate::graph::node_id::NodeId>;
 
-    /// Register this component (helper method)
-    fn register_self() -> crate::graph::node_id::NodeId
-    where
-        Self: Sized,
-    {
-        crate::graph::node_id::NodeId::of::<Self>()
-    }
+  /// Register this component (helper method)
+  fn register_self() -> crate::graph::node_id::NodeId
+  where
+    Self: Sized,
+  {
+    crate::graph::node_id::NodeId::of::<Self>()
+  }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestComponent;
+  struct TestComponent;
 
-    impl Registrable for TestComponent {
-        fn node_info() -> crate::registry::node_info::NodeInfo {
-            crate::registry::node_info::NodeInfo {
-                layer: crate::graph::layer::Layer::Domain,
-                role: crate::graph::role::Role::Entity,
-                type_name: "TestComponent",
-                module_path: module_path!(),
-            }
-        }
-
-        fn dependencies() -> Vec<crate::graph::node_id::NodeId> {
-            Vec::new()
-        }
+  impl Registrable for TestComponent {
+    fn node_info() -> crate::registry::node_info::NodeInfo {
+      crate::registry::node_info::NodeInfo {
+        layer: crate::graph::layer::Layer::Domain,
+        role: crate::graph::role::Role::Entity,
+        type_name: "TestComponent",
+        module_path: module_path!(),
+      }
     }
 
-    #[test]
-    fn test_registrable_implementation() {
-        let info = TestComponent::node_info();
-        assert_eq!(info.type_name, "TestComponent");
-
-        let deps = TestComponent::dependencies();
-        assert_eq!(deps.len(), 0);
+    fn dependencies() -> Vec<crate::graph::node_id::NodeId> {
+      Vec::new()
     }
+  }
+
+  #[test]
+  fn test_registrable_implementation() {
+    let info = TestComponent::node_info();
+    assert_eq!(info.type_name, "TestComponent");
+
+    let deps = TestComponent::dependencies();
+    assert_eq!(deps.len(), 0);
+  }
 }

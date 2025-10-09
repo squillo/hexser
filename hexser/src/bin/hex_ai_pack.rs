@@ -7,24 +7,23 @@
 //! - 2025-10-06T18:14:00Z @AI: Introduce `hex-ai-pack` binary emitting comprehensive AgentPack JSON.
 
 fn main() -> hexser::HexResult<()> {
-    // Build the current architecture graph from the component registry.
-    let graph_arc = hexser::HexGraph::current();
+  // Build the current architecture graph from the component registry.
+  let graph_arc = hexser::HexGraph::current();
 
-    // Build the aggregated AgentPack and serialize to JSON.
-    let pack = match hexser::ai::AgentPack::from_graph_with_defaults(std::sync::Arc::as_ref(&graph_arc)) {
-        std::result::Result::Ok(p) => p,
-        std::result::Result::Err(e) => {
-            return std::result::Result::Err(e)
-        }
+  // Build the aggregated AgentPack and serialize to JSON.
+  let pack =
+    match hexser::ai::AgentPack::from_graph_with_defaults(std::sync::Arc::as_ref(&graph_arc)) {
+      std::result::Result::Ok(p) => p,
+      std::result::Result::Err(e) => return std::result::Result::Err(e),
     };
 
-    let json = match pack.to_json() {
-        std::result::Result::Ok(s) => s,
-        std::result::Result::Err(e) => {
-            return std::result::Result::Err(hexser::Hexserror::adapter("E_AI_PACK_SERIALIZE", &e))
-        }
-    };
+  let json = match pack.to_json() {
+    std::result::Result::Ok(s) => s,
+    std::result::Result::Err(e) => {
+      return std::result::Result::Err(hexser::Hexserror::adapter("E_AI_PACK_SERIALIZE", &e));
+    }
+  };
 
-    std::println!("{}", json);
-    std::result::Result::Ok(())
+  std::println!("{}", json);
+  std::result::Result::Ok(())
 }

@@ -25,22 +25,23 @@ pub type HexResult<T> = Result<T, crate::error::hex_error::Hexserror>;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    fn test_function() -> HexResult<i32> {
-        Result::Ok(42)
-    }
+  fn test_function() -> HexResult<i32> {
+    Result::Ok(42)
+  }
 
-    #[test]
-    fn test_hex_result_ok() {
-        let result = test_function();
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 42);
-    }
+  #[test]
+  fn test_hex_result_ok() {
+    let result = test_function();
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), 42);
+  }
 
-    #[test]
-    fn test_hex_result_err() {
-        let result: HexResult<i32> = Result::Err(crate::error::hex_error::Hexserror::validation("test"));
-        assert!(result.is_err());
-    }
+  #[test]
+  fn test_hex_result_err() {
+    let result: HexResult<i32> =
+      Result::Err(crate::error::hex_error::Hexserror::validation("test"));
+    assert!(result.is_err());
+  }
 }

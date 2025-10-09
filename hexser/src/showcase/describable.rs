@@ -89,24 +89,24 @@ impl PrettyPrint for std::sync::Arc<crate::graph::hex_graph::HexGraph> {
 /// Extension methods for Arc<HexGraph>
 pub trait ArcGraphExt {
   /// Get nodes by layer
-  fn nodes_by_layer(&self, layer: crate::graph::layer::Layer)
-    -> Vec<&crate::graph::hex_node::HexNode>;
+  fn nodes_by_layer(
+    &self,
+    layer: crate::graph::layer::Layer,
+  ) -> Vec<&crate::graph::hex_node::HexNode>;
 
   /// Get nodes by role
-  fn nodes_by_role(&self, role: crate::graph::role::Role)
-    -> Vec<&crate::graph::hex_node::HexNode>;
+  fn nodes_by_role(&self, role: crate::graph::role::Role) -> Vec<&crate::graph::hex_node::HexNode>;
 }
 
 impl ArcGraphExt for std::sync::Arc<crate::graph::hex_graph::HexGraph> {
-  fn nodes_by_layer(&self, layer: crate::graph::layer::Layer)
-    -> Vec<&crate::graph::hex_node::HexNode>
-  {
+  fn nodes_by_layer(
+    &self,
+    layer: crate::graph::layer::Layer,
+  ) -> Vec<&crate::graph::hex_node::HexNode> {
     (**self).nodes_by_layer(layer)
   }
 
-  fn nodes_by_role(&self, role: crate::graph::role::Role)
-    -> Vec<&crate::graph::hex_node::HexNode>
-  {
+  fn nodes_by_role(&self, role: crate::graph::role::Role) -> Vec<&crate::graph::hex_node::HexNode> {
     (**self).nodes_by_role(role)
   }
 }
@@ -149,7 +149,7 @@ mod tests {
           "Test",
           "test",
         ))
-        .build()
+        .build(),
     );
 
     let domain_nodes = graph.nodes_by_layer(crate::graph::layer::Layer::Domain);
@@ -159,4 +159,3 @@ mod tests {
     assert_eq!(entities.len(), 1);
   }
 }
-

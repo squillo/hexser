@@ -9,17 +9,18 @@
 pub use inventory;
 
 /// Helper to iterate over registered components
-pub fn iter_components() -> impl Iterator<Item = &'static crate::registry::component_entry::ComponentEntry> {
-    inventory::iter::<crate::registry::component_entry::ComponentEntry>()
+pub fn iter_components()
+-> impl Iterator<Item = &'static crate::registry::component_entry::ComponentEntry> {
+  inventory::iter::<crate::registry::component_entry::ComponentEntry>()
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
-    fn test_component_iteration() {
-        let components: Vec<_> = iter_components().collect();
-        assert!(components.len() >= 0);
-    }
+  #[test]
+  fn test_component_iteration() {
+    let components: Vec<_> = iter_components().collect();
+    assert!(components.len() >= 0);
+  }
 }

@@ -26,18 +26,18 @@
 //! - 2025-10-06T00:00:00Z @AI: Add new error structs and source location for Phase 1.
 //! - 2025-10-01T00:00:00Z @AI: Initial Phase 1 error module structure.
 
-pub mod hex_error;
-pub mod rich_error;
-pub mod layer_error;
-pub mod domain_error;
-pub mod port_error;
 pub mod adapter_error;
-pub mod validation_error;
-pub mod not_found_error;
-pub mod conflict_error;
-pub mod source_location;
 pub mod codes;
+pub mod conflict_error;
+pub mod domain_error;
+pub mod hex_error;
+pub mod layer_error;
+pub mod not_found_error;
+pub mod port_error;
+pub mod rich_error;
+pub mod source_location;
+pub mod validation_error;
 
+pub use codes as error_codes;
 pub use hex_error::Hexserror;
 pub use rich_error::RichError;
-pub use codes as error_codes;

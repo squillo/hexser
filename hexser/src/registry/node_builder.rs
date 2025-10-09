@@ -8,35 +8,35 @@
 
 /// Build a HexNode from NodeInfo
 pub fn build_node_from_info(
-    info: crate::registry::node_info::NodeInfo,
+  info: crate::registry::node_info::NodeInfo,
 ) -> crate::graph::hex_node::HexNode {
-    let node_id = crate::graph::node_id::NodeId::from_type_name(info.type_name);
-    let metadata = std::collections::HashMap::new();
+  let node_id = crate::graph::node_id::NodeId::from_type_name(info.type_name);
+  let metadata = std::collections::HashMap::new();
 
-    crate::graph::hex_node::HexNode::with_metadata(
-        node_id,
-        info.layer,
-        info.role,
-        info.type_name,
-        info.module_path,
-        metadata,
-    )
+  crate::graph::hex_node::HexNode::with_metadata(
+    node_id,
+    info.layer,
+    info.role,
+    info.type_name,
+    info.module_path,
+    metadata,
+  )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
-    fn test_build_node_from_info() {
-        let info = crate::registry::node_info::NodeInfo {
-            layer: crate::graph::layer::Layer::Domain,
-            role: crate::graph::role::Role::Entity,
-            type_name: "TestNode",
-            module_path: "test",
-        };
+  #[test]
+  fn test_build_node_from_info() {
+    let info = crate::registry::node_info::NodeInfo {
+      layer: crate::graph::layer::Layer::Domain,
+      role: crate::graph::role::Role::Entity,
+      type_name: "TestNode",
+      module_path: "test",
+    };
 
-        let node = build_node_from_info(info);
-        assert_eq!(node.type_name(), "TestNode");
-    }
+    let node = build_node_from_info(info);
+    assert_eq!(node.type_name(), "TestNode");
+  }
 }

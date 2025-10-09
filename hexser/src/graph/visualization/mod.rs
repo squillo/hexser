@@ -6,7 +6,7 @@
 //! Revision History
 //! - 2025-10-02T16:00:00Z @AI: Initial visualization module for Phase 5.
 
-pub mod domain;
-pub mod ports;
 pub mod adapters;
 pub mod application;
+pub mod domain;
+pub mod ports;

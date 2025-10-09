@@ -12,15 +12,15 @@
 
 pub mod input_port;
 pub mod output_port;
+pub mod query;
 pub mod repository;
 pub mod use_case;
-pub mod query;
 
 #[cfg(feature = "mcp")]
 pub mod mcp_server;
 
 pub use input_port::InputPort;
 pub use output_port::OutputPort;
+pub use query::Query;
 pub use repository::Repository;
 pub use use_case::UseCase;
-pub use query::Query;

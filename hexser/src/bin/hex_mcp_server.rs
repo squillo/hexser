@@ -10,6 +10,6 @@
 //! - 2025-10-08T23:35:00Z @AI: Initial MCP server binary implementation.
 
 fn main() -> hexser::HexResult<()> {
-    let server = hexser::adapters::mcp_stdio::McpStdioServer::new();
-    server.run()
+  let server = hexser::adapters::mcp_stdio::McpStdioServer::new();
+  server.run()
 }

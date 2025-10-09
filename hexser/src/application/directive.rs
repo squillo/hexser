@@ -36,45 +36,43 @@
 /// }
 /// ```
 pub trait Directive {
-    /// Validate the directive before execution.
-    ///
-    /// Returns `Ok(())` if the directive is valid, or an error describing
-    /// validation failures.
-    fn validate(&self) -> crate::result::hex_result::HexResult<()>;
+  /// Validate the directive before execution.
+  ///
+  /// Returns `Ok(())` if the directive is valid, or an error describing
+  /// validation failures.
+  fn validate(&self) -> crate::result::hex_result::HexResult<()>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestDirective {
-        value: i32,
-    }
+  struct TestDirective {
+    value: i32,
+  }
 
-    impl Directive for TestDirective {
-        fn validate(&self) -> crate::result::hex_result::HexResult<()> {
-            if self.value > 0 {
-                Result::Ok(())
-            } else {
-                    Result::Err(
-                        crate::error::hex_error::Hexserror::validation_field(
-                            "Value must be positive",
-                            "value"
-                        )
-                    )
-            }
-        }
+  impl Directive for TestDirective {
+    fn validate(&self) -> crate::result::hex_result::HexResult<()> {
+      if self.value > 0 {
+        Result::Ok(())
+      } else {
+        Result::Err(crate::error::hex_error::Hexserror::validation_field(
+          "Value must be positive",
+          "value",
+        ))
+      }
     }
+  }
 
-    #[test]
-    fn test_directive_validation_success() {
-        let directive = TestDirective { value: 10 };
-        assert!(directive.validate().is_ok());
-    }
+  #[test]
+  fn test_directive_validation_success() {
+    let directive = TestDirective { value: 10 };
+    assert!(directive.validate().is_ok());
+  }
 
-    #[test]
-    fn test_directive_validation_failure() {
-        let directive = TestDirective { value: -5 };
-        assert!(directive.validate().is_err());
-    }
+  #[test]
+  fn test_directive_validation_failure() {
+    let directive = TestDirective { value: -5 };
+    assert!(directive.validate().is_err());
+  }
 }

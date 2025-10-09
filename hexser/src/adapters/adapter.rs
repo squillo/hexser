@@ -41,14 +41,14 @@ pub trait Adapter {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestAdapter;
+  struct TestAdapter;
 
-    impl Adapter for TestAdapter {}
+  impl Adapter for TestAdapter {}
 
-    #[test]
-    fn test_adapter_marker_compiles() {
-        let _adapter = TestAdapter;
-    }
+  #[test]
+  fn test_adapter_marker_compiles() {
+    let _adapter = TestAdapter;
+  }
 }

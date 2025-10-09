@@ -14,66 +14,64 @@
 use crate::error::RichError;
 
 /// Port layer error type
-pub type PortError = crate::error::layer_error::LayerError<
-    crate::error::layer_error::layer_markers::PortLayer
->;
+pub type PortError =
+  crate::error::layer_error::LayerError<crate::error::layer_error::layer_markers::PortLayer>;
 
 /// Create communication failure error
 pub fn communication_failure(details: impl Into<String>) -> PortError {
-    PortError::new(crate::error::codes::port::COMMUNICATION_FAILURE, details)
-        .with_next_step("Check port implementation and connectivity")
-        .with_suggestion("Verify port configuration and network status")
+  PortError::new(crate::error::codes::port::COMMUNICATION_FAILURE, details)
+    .with_next_step("Check port implementation and connectivity")
+    .with_suggestion("Verify port configuration and network status")
 }
 
 /// Create port not found error
 pub fn port_not_found(port_name: impl Into<String>) -> PortError {
-    PortError::new(
-        crate::error::codes::port::PORT_NOT_FOUND,
-        format!("Port not found: {}", port_name.into())
-    )
-    .with_next_step("Ensure the port is properly registered")
-    .with_suggestion("Check port registration in container or registry")
+  PortError::new(
+    crate::error::codes::port::PORT_NOT_FOUND,
+    format!("Port not found: {}", port_name.into()),
+  )
+  .with_next_step("Ensure the port is properly registered")
+  .with_suggestion("Check port registration in container or registry")
 }
 
 /// Create port timeout error
 pub fn port_timeout(port_name: impl Into<String>) -> PortError {
-    PortError::new(
-        crate::error::codes::port::PORT_TIMEOUT,
-        format!("Port operation timed out: {}", port_name.into())
-    )
-    .with_next_step("Increase timeout or check port responsiveness")
-    .with_suggestion("Verify network connectivity and port availability")
+  PortError::new(
+    crate::error::codes::port::PORT_TIMEOUT,
+    format!("Port operation timed out: {}", port_name.into()),
+  )
+  .with_next_step("Increase timeout or check port responsiveness")
+  .with_suggestion("Verify network connectivity and port availability")
 }
 
 #[cfg(test)]
 mod tests {
-  use std::error::Error;
   use super::*;
-    use crate::error::rich_error::RichError;
+  use crate::error::rich_error::RichError;
+  use std::error::Error;
 
-    #[test]
-    fn test_port_error_creation() {
-        let err = PortError::new("E_HEX_100", "Communication failure");
-        assert_eq!(err.code(), "E_HEX_100");
-        assert_eq!(err.message(), "Communication failure");
-    }
+  #[test]
+  fn test_port_error_creation() {
+    let err = PortError::new("E_HEX_100", "Communication failure");
+    assert_eq!(err.code(), "E_HEX_100");
+    assert_eq!(err.message(), "Communication failure");
+  }
 
-    #[test]
-    fn test_port_error_builder() {
-        let err = PortError::new("E_HEX_101", "Port not found")
-            .with_next_step("Register port")
-            .with_suggestion("Check port configuration");
+  #[test]
+  fn test_port_error_builder() {
+    let err = PortError::new("E_HEX_101", "Port not found")
+      .with_next_step("Register port")
+      .with_suggestion("Check port configuration");
 
-        assert_eq!(err.next_steps().len(), 1);
-        assert_eq!(err.suggestions().len(), 1);
-    }
+    assert_eq!(err.next_steps().len(), 1);
+    assert_eq!(err.suggestions().len(), 1);
+  }
 
-    #[test]
-    fn test_port_error_with_source() {
-        let inner = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
-        let err = PortError::new("E_HEX_102", "Port timeout")
-            .with_source(inner);
+  #[test]
+  fn test_port_error_with_source() {
+    let inner = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
+    let err = PortError::new("E_HEX_102", "Port timeout").with_source(inner);
 
-        assert!(err.source().is_some());
-    }
+    assert!(err.source().is_some());
+  }
 }

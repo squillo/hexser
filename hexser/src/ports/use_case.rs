@@ -36,39 +36,42 @@
 /// trait RegisterUser: UseCase<RegisterUserInput, RegisterUserOutput> {}
 /// ```
 pub trait UseCase<Input, Output> {
-    /// Execute the use case with the given input.
-    ///
-    /// Returns the output if successful, or an error describing what went wrong.
-    fn execute(&self, input: Input) -> crate::result::hex_result::HexResult<Output>;
+  /// Execute the use case with the given input.
+  ///
+  /// Returns the output if successful, or an error describing what went wrong.
+  fn execute(&self, input: Input) -> crate::result::hex_result::HexResult<Output>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestUseCaseInput {
-        value: i32,
+  struct TestUseCaseInput {
+    value: i32,
+  }
+
+  struct TestUseCaseOutput {
+    doubled: i32,
+  }
+
+  struct TestUseCase;
+
+  impl UseCase<TestUseCaseInput, TestUseCaseOutput> for TestUseCase {
+    fn execute(
+      &self,
+      input: TestUseCaseInput,
+    ) -> crate::result::hex_result::HexResult<TestUseCaseOutput> {
+      Result::Ok(TestUseCaseOutput {
+        doubled: input.value * 2,
+      })
     }
+  }
 
-    struct TestUseCaseOutput {
-        doubled: i32,
-    }
-
-    struct TestUseCase;
-
-    impl UseCase<TestUseCaseInput, TestUseCaseOutput> for TestUseCase {
-        fn execute(&self, input: TestUseCaseInput) -> crate::result::hex_result::HexResult<TestUseCaseOutput> {
-            Result::Ok(TestUseCaseOutput {
-                doubled: input.value * 2,
-            })
-        }
-    }
-
-    #[test]
-    fn test_use_case_execution() {
-        let use_case = TestUseCase;
-        let input = TestUseCaseInput { value: 7 };
-        let output = use_case.execute(input).unwrap();
-        assert_eq!(output.doubled, 14);
-    }
+  #[test]
+  fn test_use_case_execution() {
+    let use_case = TestUseCase;
+    let input = TestUseCaseInput { value: 7 };
+    let output = use_case.execute(input).unwrap();
+    assert_eq!(output.doubled, 14);
+  }
 }

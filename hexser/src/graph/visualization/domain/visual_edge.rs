@@ -8,18 +8,18 @@
 /// Visual edge
 #[derive(Clone, Debug)]
 pub struct VisualEdge {
-    pub source: String,
-    pub target: String,
-    pub relationship: String,
+  pub source: String,
+  pub target: String,
+  pub relationship: String,
 }
 
 impl VisualEdge {
-    /// Create from HexEdge
-    pub fn from_hex_edge(edge: &crate::graph::hex_edge::HexEdge) -> Self {
-        Self {
-            source: edge.source.to_string(),
-            target: edge.target.to_string(),
-            relationship: format!("{:?}", edge.relationship),
-        }
+  /// Create from HexEdge
+  pub fn from_hex_edge(edge: &crate::graph::hex_edge::HexEdge) -> Self {
+    Self {
+      source: edge.source.to_string(),
+      target: edge.target.to_string(),
+      relationship: format!("{:?}", edge.relationship),
     }
+  }
 }

@@ -9,37 +9,37 @@
 
 /// Derives Aggregate trait implementation
 pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let input = syn::parse_macro_input!(input as syn::DeriveInput);
-    let name = &input.ident;
+  let input = syn::parse_macro_input!(input as syn::DeriveInput);
+  let name = &input.ident;
 
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+  let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-    let expanded = quote::quote! {
-        impl #impl_generics hexser::domain::Aggregate for #name #ty_generics #where_clause {
-            fn check_invariants(&self) -> hexser::HexResult<()> {
-                Ok(())
-            }
-        }
-    };
+  let expanded = quote::quote! {
+      impl #impl_generics hexser::domain::Aggregate for #name #ty_generics #where_clause {
+          fn check_invariants(&self) -> hexser::HexResult<()> {
+              Ok(())
+          }
+      }
+  };
 
-    proc_macro::TokenStream::from(expanded)
+  proc_macro::TokenStream::from(expanded)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
-    #[ignore]
-    fn test_derive_compiles() {
-        let input = quote::quote! {
-            struct TestAggregate {
-                id: String,
-                value: i32,
-            }
-        };
+  #[test]
+  #[ignore]
+  fn test_derive_compiles() {
+    let input = quote::quote! {
+        struct TestAggregate {
+            id: String,
+            value: i32,
+        }
+    };
 
-        let result = derive(input.into());
-        assert!(!result.is_empty());
-    }
+    let result = derive(input.into());
+    assert!(!result.is_empty());
+  }
 }

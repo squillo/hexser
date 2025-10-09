@@ -9,23 +9,23 @@
 //! - 2025-10-01T00:03:00Z @AI: Phase 2 implementation with graph core.
 //! - 2025-10-01T00:00:00Z @AI: Initial placeholder for graph module structure.
 
-pub mod layer;
-pub mod role;
-pub mod relationship;
-pub mod node_id;
-pub mod hex_node;
-pub mod hex_edge;
-pub mod metadata;
-pub mod hex_graph;
 pub mod builder;
+pub mod hex_edge;
+pub mod hex_graph;
+pub mod hex_node;
+pub mod layer;
+pub mod metadata;
+pub mod node_id;
+pub mod relationship;
+pub mod role;
 pub mod visualization;
 
-pub use layer::Layer;
-pub use role::Role;
-pub use relationship::Relationship;
-pub use node_id::NodeId;
-pub use hex_node::HexNode;
-pub use hex_edge::HexEdge;
-pub use metadata::GraphMetadata;
-pub use hex_graph::HexGraph;
 pub use builder::GraphBuilder;
+pub use hex_edge::HexEdge;
+pub use hex_graph::HexGraph;
+pub use hex_node::HexNode;
+pub use layer::Layer;
+pub use metadata::GraphMetadata;
+pub use node_id::NodeId;
+pub use relationship::Relationship;
+pub use role::Role;

@@ -36,39 +36,39 @@
 /// trait CreateUserPort: InputPort<CreateUserInput, CreateUserOutput> {}
 /// ```
 pub trait InputPort<Input, Output> {
-    /// Execute the operation with the given input.
-    ///
-    /// Returns the output if successful, or an error if the operation fails.
-    fn execute(&self, input: Input) -> crate::result::hex_result::HexResult<Output>;
+  /// Execute the operation with the given input.
+  ///
+  /// Returns the output if successful, or an error if the operation fails.
+  fn execute(&self, input: Input) -> crate::result::hex_result::HexResult<Output>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestInput {
-        value: i32,
+  struct TestInput {
+    value: i32,
+  }
+
+  struct TestOutput {
+    result: i32,
+  }
+
+  struct TestPort;
+
+  impl InputPort<TestInput, TestOutput> for TestPort {
+    fn execute(&self, input: TestInput) -> crate::result::hex_result::HexResult<TestOutput> {
+      Result::Ok(TestOutput {
+        result: input.value * 2,
+      })
     }
+  }
 
-    struct TestOutput {
-        result: i32,
-    }
-
-    struct TestPort;
-
-    impl InputPort<TestInput, TestOutput> for TestPort {
-        fn execute(&self, input: TestInput) -> crate::result::hex_result::HexResult<TestOutput> {
-            Result::Ok(TestOutput {
-                result: input.value * 2,
-            })
-        }
-    }
-
-    #[test]
-    fn test_input_port_execution() {
-        let port = TestPort;
-        let input = TestInput { value: 5 };
-        let output = port.execute(input).unwrap();
-        assert_eq!(output.result, 10);
-    }
+  #[test]
+  fn test_input_port_execution() {
+    let port = TestPort;
+    let input = TestInput { value: 5 };
+    let output = port.execute(input).unwrap();
+    assert_eq!(output.result, 10);
+  }
 }

@@ -55,16 +55,16 @@
 //! - 2025-10-01T00:01:00Z @AI: Added comprehensive re-exports and prelude module.
 //! - 2025-10-01T00:00:00Z @AI: Initial Phase 1 implementation with core traits and types.
 
-pub mod domain;
-pub mod ports;
 pub mod adapters;
 pub mod application;
-pub mod infrastructure;
+pub mod domain;
 pub mod error;
+pub mod graph;
+pub mod infrastructure;
+pub mod ports;
+pub mod registry;
 pub mod result;
 pub mod showcase;
-pub mod graph;
-pub mod registry;
 pub mod templates;
 
 #[cfg(feature = "static-di")]
@@ -77,39 +77,19 @@ pub mod ai;
 pub mod container;
 
 // Re-export commonly used items at crate root for convenience
-pub use crate::error::hex_error::Hexserror;
-pub use crate::result::hex_result::HexResult;
+pub use crate::{error::hex_error::Hexserror, result::hex_result::HexResult};
 
 // Re-export all domain traits
-pub use crate::domain::{
-    Aggregate,
-    DomainEvent,
-    DomainService,
-    Entity,
-    ValueObject,
-};
+pub use crate::domain::{Aggregate, DomainEvent, DomainService, Entity, ValueObject};
 
 // Re-export all port traits
-pub use crate::ports::{
-    InputPort,
-    OutputPort,
-    Query,
-    Repository,
-    UseCase,
-};
+pub use crate::ports::{InputPort, OutputPort, Query, Repository, UseCase};
 
 // Re-export all adapter traits
-pub use crate::adapters::{
-    Adapter,
-    Mapper,
-};
+pub use crate::adapters::{Adapter, Mapper};
 
 // Re-export all application traits
-pub use crate::application::{
-    Directive,
-    DirectiveHandler,
-    QueryHandler,
-};
+pub use crate::application::{Directive, DirectiveHandler, QueryHandler};
 
 // Re-export infrastructure traits
 pub use crate::infrastructure::Config;
@@ -122,24 +102,11 @@ pub use crate::error::codes as error_codes;
 
 // Re-export graph types (Phase 2)
 pub use crate::graph::{
-    GraphBuilder,
-    GraphMetadata,
-    HexEdge,
-    HexGraph,
-    HexNode,
-    Layer,
-    NodeId,
-    Relationship,
-    Role,
+  GraphBuilder, GraphMetadata, HexEdge, HexGraph, HexNode, Layer, NodeId, Relationship, Role,
 };
 
 // Re-export showcase traits
-pub use crate::showcase::{
-    ArcGraphExt,
-    Describable,
-    Inspectable,
-    PrettyPrint,
-};
+pub use crate::showcase::{ArcGraphExt, Describable, Inspectable, PrettyPrint};
 
 /// Prelude module for convenient imports.
 ///
@@ -149,82 +116,38 @@ pub use crate::showcase::{
 /// use hexser::prelude::*;
 /// ```
 pub mod prelude {
-    pub use crate::Hexserror;
-    pub use crate::HexResult;
+  pub use crate::{HexResult, Hexserror};
 
-    pub use crate::domain::{
-        Aggregate,
-        DomainEvent,
-        DomainService,
-        Entity,
-        ValueObject,
-    };
+  pub use crate::domain::{Aggregate, DomainEvent, DomainService, Entity, ValueObject};
 
-    pub use crate::ports::{
-        InputPort,
-        OutputPort,
-        Query,
-        Repository,
-        UseCase,
-    };
+  pub use crate::ports::{InputPort, OutputPort, Query, Repository, UseCase};
 
-    pub use crate::adapters::{
-        Adapter,
-        Mapper,
-    };
+  pub use crate::adapters::{Adapter, Mapper};
 
-    pub use crate::application::{
-        Directive,
-        DirectiveHandler,
-        QueryHandler,
-    };
+  pub use crate::application::{Directive, DirectiveHandler, QueryHandler};
 
-    pub use crate::infrastructure::Config;
+  pub use crate::infrastructure::Config;
 
-    pub use crate::graph::{
-        GraphBuilder,
-        GraphMetadata,
-        HexEdge,
-        HexGraph,
-        HexNode,
-        Layer,
-        NodeId,
-        Relationship,
-        Role,
-    };
+  pub use crate::graph::{
+    GraphBuilder, GraphMetadata, HexEdge, HexGraph, HexNode, Layer, NodeId, Relationship, Role,
+  };
 
-    pub use crate::showcase::{
-        ArcGraphExt,
-        Describable,
-        Inspectable,
-        PrettyPrint,
-    };
+  pub use crate::showcase::{ArcGraphExt, Describable, Inspectable, PrettyPrint};
 
-    // Phase 3: Registry and derive macro support
-    #[cfg(feature = "macros")]
-    pub use hexser_macros::{
-        HexDomain,
-        HexPort,
-        HexAdapter,
-        Entity,
-        HexRepository,
-        HexDirective,
-        HexQuery,
-    };
+  // Phase 3: Registry and derive macro support
+  #[cfg(feature = "macros")]
+  pub use hexser_macros::{
+    Entity, HexAdapter, HexDirective, HexDomain, HexPort, HexQuery, HexRepository,
+  };
 
-    pub use crate::registry::{
-        ComponentRegistry,
-        Registrable,
-        ComponentEntry,
-        NodeInfo,
-    };
+  pub use crate::registry::{ComponentEntry, ComponentRegistry, NodeInfo, Registrable};
 
-    #[cfg(feature = "ai")]
-    pub use crate::ai::{AIContext, ContextBuilder};
+  #[cfg(feature = "ai")]
+  pub use crate::ai::{AIContext, ContextBuilder};
 
-    #[cfg(feature = "container")]
-    pub use crate::container::{Container, Provider, Scope};
+  #[cfg(feature = "container")]
+  pub use crate::container::{Container, Provider, Scope};
 
-    #[cfg(feature = "static-di")]
-    pub use crate::static_di::{StaticContainer, StaticBuilder};
+  #[cfg(feature = "static-di")]
+  pub use crate::static_di::{StaticBuilder, StaticContainer};
 }

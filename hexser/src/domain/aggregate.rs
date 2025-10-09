@@ -45,52 +45,55 @@
 /// }
 /// ```
 pub trait Aggregate: crate::domain::entity::Entity {
-    /// Check the aggregate's invariants.
-    ///
-    /// This method should validate that all business rules and invariants
-    /// within the aggregate boundary are satisfied.
-    fn check_invariants(&self) -> crate::result::hex_result::HexResult<()>;
+  /// Check the aggregate's invariants.
+  ///
+  /// This method should validate that all business rules and invariants
+  /// within the aggregate boundary are satisfied.
+  fn check_invariants(&self) -> crate::result::hex_result::HexResult<()>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestOrder {
-        id: u64,
-        item_count: usize,
-    }
+  struct TestOrder {
+    id: u64,
+    item_count: usize,
+  }
 
-    impl crate::domain::entity::Entity for TestOrder {
-        type Id = u64;
-    }
+  impl crate::domain::entity::Entity for TestOrder {
+    type Id = u64;
+  }
 
-    impl Aggregate for TestOrder {
-        fn check_invariants(&self) -> crate::result::hex_result::HexResult<()> {
-            if self.item_count > 0 {
-                Result::Ok(())
-            } else {
-                    Result::Err(
-                        crate::error::hex_error::Hexserror::domain(
-                            "E_HEX_001",
-                            "Order must have items"
-                        )
-                        .with_next_step("Add at least one item")
-                        .with_suggestion("order.add_item(item)")
-                    )
-            }
-        }
+  impl Aggregate for TestOrder {
+    fn check_invariants(&self) -> crate::result::hex_result::HexResult<()> {
+      if self.item_count > 0 {
+        Result::Ok(())
+      } else {
+        Result::Err(
+          crate::error::hex_error::Hexserror::domain("E_HEX_001", "Order must have items")
+            .with_next_step("Add at least one item")
+            .with_suggestion("order.add_item(item)"),
+        )
+      }
     }
+  }
 
-    #[test]
-    fn test_aggregate_invariants_valid() {
-        let order = TestOrder { id: 1, item_count: 5 };
-        assert!(order.check_invariants().is_ok());
-    }
+  #[test]
+  fn test_aggregate_invariants_valid() {
+    let order = TestOrder {
+      id: 1,
+      item_count: 5,
+    };
+    assert!(order.check_invariants().is_ok());
+  }
 
-    #[test]
-    fn test_aggregate_invariants_invalid() {
-        let order = TestOrder { id: 1, item_count: 0 };
-        assert!(order.check_invariants().is_err());
-    }
+  #[test]
+  fn test_aggregate_invariants_invalid() {
+    let order = TestOrder {
+      id: 1,
+      item_count: 0,
+    };
+    assert!(order.check_invariants().is_err());
+  }
 }

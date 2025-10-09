@@ -9,100 +9,109 @@
 #[cfg(feature = "container")]
 #[tokio::main]
 async fn main() -> hexser::HexResult<()> {
-    println!("=== Dependency Injection Container Example ===\n");
+  println!("=== Dependency Injection Container Example ===\n");
 
-    let container = hexser::container::Container::new();
+  let container = hexser::container::Container::new();
 
-    println!("1. Registering services...");
+  println!("1. Registering services...");
 
-    let config_provider = ConfigProvider {
-        api_key: String::from("secret-key-123"),
-    };
-    container.register(
-        "config",
-        config_provider,
-        hexser::container::Scope::Singleton,
-    ).await?;
-    println!("   ✓ Config service registered (Singleton)");
+  let config_provider = ConfigProvider {
+    api_key: String::from("secret-key-123"),
+  };
+  container
+    .register(
+      "config",
+      config_provider,
+      hexser::container::Scope::Singleton,
+    )
+    .await?;
+  println!("   ✓ Config service registered (Singleton)");
 
-    let email_provider = EmailProvider {
-        host: String::from("smtp.example.com"),
-    };
-    container.register(
-        "email",
-        email_provider,
-        hexser::container::Scope::Transient,
-    ).await?;
-    println!("   ✓ Email service registered (Transient)");
+  let email_provider = EmailProvider {
+    host: String::from("smtp.example.com"),
+  };
+  container
+    .register("email", email_provider, hexser::container::Scope::Transient)
+    .await?;
+  println!("   ✓ Email service registered (Transient)");
 
-    println!("\n2. Resolving services...");
+  println!("\n2. Resolving services...");
 
-    let config = container.resolve::<ConfigService>("config").await?;
-    println!("   ✓ Config resolved: API Key = {}", config.api_key);
+  let config = container.resolve::<ConfigService>("config").await?;
+  println!("   ✓ Config resolved: API Key = {}", config.api_key);
 
-    let email1 = container.resolve::<EmailService>("email").await?;
-    let email2 = container.resolve::<EmailService>("email").await?;
-    println!("   ✓ Email service resolved twice (Transient scope)");
-    println!("     - Instance 1: {}", email1.host);
-    println!("     - Instance 2: {}", email2.host);
+  let email1 = container.resolve::<EmailService>("email").await?;
+  let email2 = container.resolve::<EmailService>("email").await?;
+  println!("   ✓ Email service resolved twice (Transient scope)");
+  println!("     - Instance 1: {}", email1.host);
+  println!("     - Instance 2: {}", email2.host);
 
-    println!("\n3. Container info:");
-    println!("   Total services registered: {}", container.service_count().await);
-    println!("   Contains 'config': {}", container.contains("config").await);
-    println!("   Contains 'email': {}", container.contains("email").await);
+  println!("\n3. Container info:");
+  println!(
+    "   Total services registered: {}",
+    container.service_count().await
+  );
+  println!(
+    "   Contains 'config': {}",
+    container.contains("config").await
+  );
+  println!("   Contains 'email': {}", container.contains("email").await);
 
-    println!("\n4. Cloning container (shares registrations)...");
-    let container2 = container.clone();
-    println!("   ✓ Cloned container service count: {}", container2.service_count().await);
+  println!("\n4. Cloning container (shares registrations)...");
+  let container2 = container.clone();
+  println!(
+    "   ✓ Cloned container service count: {}",
+    container2.service_count().await
+  );
 
-    let config2 = container2.resolve::<ConfigService>("config").await?;
-    println!("   ✓ Resolved from cloned container: {}", config2.api_key);
+  let config2 = container2.resolve::<ConfigService>("config").await?;
+  println!("   ✓ Resolved from cloned container: {}", config2.api_key);
 
-    println!("\n✅ Container example completed!");
+  println!("\n✅ Container example completed!");
 
-    Ok(())
+  Ok(())
 }
 
 #[cfg(not(feature = "container"))]
 fn main() {
-    println!("This example requires the 'container' feature.");
-    println!("Run with: cargo run --example container_example --features container");
+  println!("This example requires the 'container' feature.");
+  println!("Run with: cargo run --example container_example --features container");
 }
 
 #[cfg(feature = "container")]
 struct ConfigService {
-    api_key: String,
+  api_key: String,
 }
 
 #[cfg(feature = "container")]
 struct ConfigProvider {
-    api_key: String,
+  api_key: String,
 }
 
 #[cfg(feature = "container")]
 impl hexser::container::Provider<ConfigService> for ConfigProvider {
-    fn provide(&self) -> hexser::HexResult<ConfigService> {
-        Ok(ConfigService {
-            api_key: self.api_key.clone(),
-        })
-    }
+  fn provide(&self) -> hexser::HexResult<ConfigService> {
+    Ok(ConfigService {
+      api_key: self.api_key.clone(),
+    })
+  }
 }
 
 #[cfg(feature = "container")]
 struct EmailService {
-    host: String,
+  host: String,
 }
 
 #[cfg(feature = "container")]
 struct EmailProvider {
-    host: String,
+  host: String,
 }
 
 #[cfg(feature = "container")]
 impl hexser::container::Provider<EmailService> for EmailProvider {
-    fn provide(&self) -> hexser::HexResult<EmailService> {
-        Ok(EmailService {
-            host: self.host.clone(),
-        })
-    }
+  fn provide(&self) -> hexser::HexResult<EmailService> {
+    Ok(EmailService {
+      host: self.host.clone(),
+    })
+  }
 }

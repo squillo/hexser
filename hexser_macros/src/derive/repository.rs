@@ -8,13 +8,13 @@
 
 /// Derive Repository marker for a port
 pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let _input = syn::parse_macro_input!(input as syn::DeriveInput);
+  let _input = syn::parse_macro_input!(input as syn::DeriveInput);
 
-    // HexRepository is a marker - registration is handled by HexPort
-    // No trait implementations to avoid conflicts
-    let expanded = quote::quote! {
-        // Marker only - HexPort handles registration
-    };
+  // HexRepository is a marker - registration is handled by HexPort
+  // No trait implementations to avoid conflicts
+  let expanded = quote::quote! {
+      // Marker only - HexPort handles registration
+  };
 
-    proc_macro::TokenStream::from(expanded)
+  proc_macro::TokenStream::from(expanded)
 }

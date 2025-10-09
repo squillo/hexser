@@ -9,7 +9,7 @@
 
 /// Generate port error macro implementation
 pub fn generate_port_error_macro() -> proc_macro::TokenStream {
-    quote::quote! {
+  quote::quote! {
         #[macro_export]
         macro_rules! hex_port_error {
             ($code:expr, $message:expr) => {

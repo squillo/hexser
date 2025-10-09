@@ -37,41 +37,41 @@
 /// trait EmailPort: OutputPort<EmailRequest, EmailResponse> {}
 /// ```
 pub trait OutputPort<Request, Response> {
-    /// Send a request to the external system.
-    ///
-    /// Returns the response if successful, or an error if the operation fails.
-    fn send(&self, request: Request) -> crate::result::hex_result::HexResult<Response>;
+  /// Send a request to the external system.
+  ///
+  /// Returns the response if successful, or an error if the operation fails.
+  fn send(&self, request: Request) -> crate::result::hex_result::HexResult<Response>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestRequest {
-        data: String,
+  struct TestRequest {
+    data: String,
+  }
+
+  struct TestResponse {
+    status: String,
+  }
+
+  struct TestOutputPort;
+
+  impl OutputPort<TestRequest, TestResponse> for TestOutputPort {
+    fn send(&self, _request: TestRequest) -> crate::result::hex_result::HexResult<TestResponse> {
+      Result::Ok(TestResponse {
+        status: String::from("success"),
+      })
     }
+  }
 
-    struct TestResponse {
-        status: String,
-    }
-
-    struct TestOutputPort;
-
-    impl OutputPort<TestRequest, TestResponse> for TestOutputPort {
-        fn send(&self, _request: TestRequest) -> crate::result::hex_result::HexResult<TestResponse> {
-            Result::Ok(TestResponse {
-                status: String::from("success"),
-            })
-        }
-    }
-
-    #[test]
-    fn test_output_port_send() {
-        let port = TestOutputPort;
-        let request = TestRequest {
-            data: String::from("test"),
-        };
-        let response = port.send(request).unwrap();
-        assert_eq!(response.status, "success");
-    }
+  #[test]
+  fn test_output_port_send() {
+    let port = TestOutputPort;
+    let request = TestRequest {
+      data: String::from("test"),
+    };
+    let response = port.send(request).unwrap();
+    assert_eq!(response.status, "success");
+  }
 }

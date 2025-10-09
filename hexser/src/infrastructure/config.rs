@@ -38,18 +38,18 @@ pub trait Config {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestConfig {
-        value: String,
-    }
+  struct TestConfig {
+    value: String,
+  }
 
-    impl Config for TestConfig {}
+  impl Config for TestConfig {}
 
-    #[test]
-    fn test_config_marker_compiles() {
-        let _config = TestConfig {
-            value: String::from("test"),
-        };
-    }
+  #[test]
+  fn test_config_marker_compiles() {
+    let _config = TestConfig {
+      value: String::from("test"),
+    };
+  }
 }

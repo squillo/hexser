@@ -14,17 +14,17 @@
 /// server information.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct InitializeRequest {
-    /// MCP protocol version the client supports
-    #[serde(rename = "protocolVersion")]
-    pub protocol_version: String,
+  /// MCP protocol version the client supports
+  #[serde(rename = "protocolVersion")]
+  pub protocol_version: String,
 
-    /// Client capabilities (optional)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub capabilities: Option<ClientCapabilities>,
+  /// Client capabilities (optional)
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub capabilities: Option<ClientCapabilities>,
 
-    /// Client information (optional)
-    #[serde(skip_serializing_if = "Option::is_none", rename = "clientInfo")]
-    pub client_info: Option<ClientInfo>,
+  /// Client information (optional)
+  #[serde(skip_serializing_if = "Option::is_none", rename = "clientInfo")]
+  pub client_info: Option<ClientInfo>,
 }
 
 /// Client capability declarations.
@@ -33,9 +33,9 @@ pub struct InitializeRequest {
 /// as Hexser server doesn't require specific client capabilities.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Default)]
 pub struct ClientCapabilities {
-    /// Experimental features (placeholder)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub experimental: Option<serde_json::Value>,
+  /// Experimental features (placeholder)
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub experimental: Option<serde_json::Value>,
 }
 
 /// Client information for identification.
@@ -44,11 +44,11 @@ pub struct ClientCapabilities {
 /// and debugging MCP interactions.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct ClientInfo {
-    /// Client name
-    pub name: String,
+  /// Client name
+  pub name: String,
 
-    /// Client version
-    pub version: String,
+  /// Client version
+  pub version: String,
 }
 
 /// Initialize result from server to client.
@@ -57,33 +57,33 @@ pub struct ClientInfo {
 /// protocol version, server capabilities, and server information.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct InitializeResult {
-    /// MCP protocol version the server supports
-    #[serde(rename = "protocolVersion")]
-    pub protocol_version: String,
+  /// MCP protocol version the server supports
+  #[serde(rename = "protocolVersion")]
+  pub protocol_version: String,
 
-    /// Server capabilities declaration
-    pub capabilities: super::capabilities::ServerCapabilities,
+  /// Server capabilities declaration
+  pub capabilities: super::capabilities::ServerCapabilities,
 
-    /// Server information for identification
-    #[serde(rename = "serverInfo")]
-    pub server_info: ServerInfo,
+  /// Server information for identification
+  #[serde(rename = "serverInfo")]
+  pub server_info: ServerInfo,
 }
 
 impl InitializeResult {
-    /// Creates Hexser MCP server initialization result.
-    ///
-    /// Uses default Hexser capabilities and current version information.
-    ///
-    /// # Returns
-    ///
-    /// InitializeResult for Hexser MCP server
-    pub fn hexser_default() -> Self {
-        InitializeResult {
-            protocol_version: String::from("2024-11-05"),
-            capabilities: super::capabilities::ServerCapabilities::hexser_default(),
-            server_info: ServerInfo::hexser_default(),
-        }
+  /// Creates Hexser MCP server initialization result.
+  ///
+  /// Uses default Hexser capabilities and current version information.
+  ///
+  /// # Returns
+  ///
+  /// InitializeResult for Hexser MCP server
+  pub fn hexser_default() -> Self {
+    InitializeResult {
+      protocol_version: String::from("2024-11-05"),
+      capabilities: super::capabilities::ServerCapabilities::hexser_default(),
+      server_info: ServerInfo::hexser_default(),
     }
+  }
 }
 
 /// Server information for identification.
@@ -92,34 +92,34 @@ impl InitializeResult {
 /// understand what server implementation they are connected to.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct ServerInfo {
-    /// Server name
-    pub name: String,
+  /// Server name
+  pub name: String,
 
-    /// Server version
-    pub version: String,
+  /// Server version
+  pub version: String,
 }
 
 impl ServerInfo {
-    /// Creates Hexser server information.
-    ///
-    /// # Returns
-    ///
-    /// ServerInfo for Hexser MCP server
-    pub fn hexser_default() -> Self {
-        ServerInfo {
-            name: String::from("hexser-mcp-server"),
-            version: String::from(env!("CARGO_PKG_VERSION")),
-        }
+  /// Creates Hexser server information.
+  ///
+  /// # Returns
+  ///
+  /// ServerInfo for Hexser MCP server
+  pub fn hexser_default() -> Self {
+    ServerInfo {
+      name: String::from("hexser-mcp-server"),
+      version: String::from(env!("CARGO_PKG_VERSION")),
     }
+  }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
-    fn test_initialize_request_deserialization() {
-        let json = r#"{
+  #[test]
+  fn test_initialize_request_deserialization() {
+    let json = r#"{
             "protocolVersion": "2024-11-05",
             "clientInfo": {
                 "name": "test-client",
@@ -127,26 +127,26 @@ mod tests {
             }
         }"#;
 
-        let req: InitializeRequest = serde_json::from_str(json).unwrap();
-        std::assert_eq!(req.protocol_version, "2024-11-05");
-        std::assert!(req.client_info.is_some());
-    }
+    let req: InitializeRequest = serde_json::from_str(json).unwrap();
+    std::assert_eq!(req.protocol_version, "2024-11-05");
+    std::assert!(req.client_info.is_some());
+  }
 
-    #[test]
-    fn test_initialize_result_serialization() {
-        let result = InitializeResult::hexser_default();
-        let json = serde_json::to_string(&result).unwrap();
+  #[test]
+  fn test_initialize_result_serialization() {
+    let result = InitializeResult::hexser_default();
+    let json = serde_json::to_string(&result).unwrap();
 
-        std::assert!(json.contains("\"protocolVersion\":\"2024-11-05\""));
-        std::assert!(json.contains("\"serverInfo\""));
-        std::assert!(json.contains("\"capabilities\""));
-    }
+    std::assert!(json.contains("\"protocolVersion\":\"2024-11-05\""));
+    std::assert!(json.contains("\"serverInfo\""));
+    std::assert!(json.contains("\"capabilities\""));
+  }
 
-    #[test]
-    fn test_server_info_default() {
-        let info = ServerInfo::hexser_default();
+  #[test]
+  fn test_server_info_default() {
+    let info = ServerInfo::hexser_default();
 
-        std::assert_eq!(info.name, "hexser-mcp-server");
-        std::assert!(!info.version.is_empty());
-    }
+    std::assert_eq!(info.name, "hexser-mcp-server");
+    std::assert!(!info.version.is_empty());
+  }
 }

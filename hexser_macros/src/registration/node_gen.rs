@@ -7,11 +7,11 @@
 
 /// Generate NodeInfo for a component
 pub fn generate_node_info(
-    _type_name: &syn::Ident,
-    _layer: &str,
-    _role: &str,
+  _type_name: &syn::Ident,
+  _layer: &str,
+  _role: &str,
 ) -> proc_macro2::TokenStream {
-    quote::quote! {
-        // NodeInfo generation will be implemented here
-    }
+  quote::quote! {
+      // NodeInfo generation will be implemented here
+  }
 }

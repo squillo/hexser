@@ -12,71 +12,71 @@
 use crate::error::RichError;
 
 /// Domain layer error type
-pub type DomainError = crate::error::layer_error::LayerError<
-    crate::error::layer_error::layer_markers::DomainLayer
->;
+pub type DomainError =
+  crate::error::layer_error::LayerError<crate::error::layer_error::layer_markers::DomainLayer>;
 
 /// Create invariant violation error
 pub fn invariant_violation(message: impl Into<String>) -> DomainError {
-    DomainError::new(crate::error::codes::domain::INVARIANT_VIOLATION, message)
-        .with_next_step("Check aggregate invariants")
-        .with_suggestion("Verify business rules before operations")
+  DomainError::new(crate::error::codes::domain::INVARIANT_VIOLATION, message)
+    .with_next_step("Check aggregate invariants")
+    .with_suggestion("Verify business rules before operations")
 }
 
 /// Create invalid state transition error
 pub fn invalid_state_transition(message: impl Into<String>) -> DomainError {
-    DomainError::new(crate::error::codes::domain::INVALID_STATE_TRANSITION, message)
-        .with_next_step("Verify entity lifecycle")
-        .with_suggestion("Check valid state transitions in documentation")
+  DomainError::new(
+    crate::error::codes::domain::INVALID_STATE_TRANSITION,
+    message,
+  )
+  .with_next_step("Verify entity lifecycle")
+  .with_suggestion("Check valid state transitions in documentation")
 }
 
 /// Create empty invariant error
 pub fn invariant_empty(message: impl Into<String>) -> DomainError {
-    DomainError::new(crate::error::codes::domain::INVARIANT_EMPTY, message)
-        .with_next_step("Add required items")
-        .with_suggestion("Ensure container is not empty before save")
+  DomainError::new(crate::error::codes::domain::INVARIANT_EMPTY, message)
+    .with_next_step("Add required items")
+    .with_suggestion("Ensure container is not empty before save")
 }
 
 #[cfg(test)]
 mod tests {
-  use std::error::Error;
   use super::*;
-    use crate::error::rich_error::RichError;
+  use crate::error::rich_error::RichError;
+  use std::error::Error;
 
-    #[test]
-    fn test_domain_error_creation() {
-        let err = DomainError::new("E_HEX_001", "Invariant violation");
-        assert_eq!(err.code(), "E_HEX_001");
-        assert_eq!(err.message(), "Invariant violation");
-    }
+  #[test]
+  fn test_domain_error_creation() {
+    let err = DomainError::new("E_HEX_001", "Invariant violation");
+    assert_eq!(err.code(), "E_HEX_001");
+    assert_eq!(err.message(), "Invariant violation");
+  }
 
-    #[test]
-    fn test_domain_error_builder() {
-        let err = DomainError::new("E_HEX_002", "Invalid state")
-            .with_next_step("Check entity state")
-            .with_suggestion("Validate before save");
+  #[test]
+  fn test_domain_error_builder() {
+    let err = DomainError::new("E_HEX_002", "Invalid state")
+      .with_next_step("Check entity state")
+      .with_suggestion("Validate before save");
 
-        assert_eq!(err.next_steps().len(), 1);
-        assert_eq!(err.suggestions().len(), 1);
-    }
+    assert_eq!(err.next_steps().len(), 1);
+    assert_eq!(err.suggestions().len(), 1);
+  }
 
-    #[test]
-    fn test_domain_error_display() {
-        let err = DomainError::new("E_HEX_001", "Test error")
-            .with_next_step("Do this");
+  #[test]
+  fn test_domain_error_display() {
+    let err = DomainError::new("E_HEX_001", "Test error").with_next_step("Do this");
 
-        let display = format!("{}", err);
-        assert!(display.contains("E_HEX_001"));
-        assert!(display.contains("Test error"));
-        assert!(display.contains("Next Steps"));
-    }
+    let display = format!("{}", err);
+    assert!(display.contains("E_HEX_001"));
+    assert!(display.contains("Test error"));
+    assert!(display.contains("Next Steps"));
+  }
 
-    #[test]
-    fn test_domain_error_with_source() {
-        let inner = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
-        let err = DomainError::new("E_HEX_003", "Load failed")
-            .with_source(inner);
+  #[test]
+  fn test_domain_error_with_source() {
+    let inner = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+    let err = DomainError::new("E_HEX_003", "Load failed").with_source(inner);
 
-        assert!(err.source().is_some());
-    }
+    assert!(err.source().is_some());
+  }
 }

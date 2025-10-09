@@ -40,22 +40,22 @@ pub trait DomainService {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestPricingService;
+  struct TestPricingService;
 
-    impl DomainService for TestPricingService {}
+  impl DomainService for TestPricingService {}
 
-    impl TestPricingService {
-        fn calculate_price(&self, base_price: f64, discount: f64) -> f64 {
-            base_price * (1.0 - discount)
-        }
+  impl TestPricingService {
+    fn calculate_price(&self, base_price: f64, discount: f64) -> f64 {
+      base_price * (1.0 - discount)
     }
+  }
 
-    #[test]
-    fn test_domain_service_implementation() {
-        let service = TestPricingService;
-        let price = service.calculate_price(100.0, 0.1);
-        assert_eq!(price, 90.0);
-    }
+  #[test]
+  fn test_domain_service_implementation() {
+    let service = TestPricingService;
+    let price = service.calculate_price(100.0, 0.1);
+    assert_eq!(price, 90.0);
+  }
 }

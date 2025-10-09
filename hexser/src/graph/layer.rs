@@ -23,64 +23,64 @@
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Layer {
-    /// Core business logic layer, no infrastructure dependencies.
-    Domain,
+  /// Core business logic layer, no infrastructure dependencies.
+  Domain,
 
-    /// Interface definitions for external interactions.
-    Port,
+  /// Interface definitions for external interactions.
+  Port,
 
-    /// Concrete implementations of ports using specific technologies.
-    Adapter,
+  /// Concrete implementations of ports using specific technologies.
+  Adapter,
 
-    /// Use case orchestration layer.
-    Application,
+  /// Use case orchestration layer.
+  Application,
 
-    /// External concerns like databases and APIs.
-    Infrastructure,
+  /// External concerns like databases and APIs.
+  Infrastructure,
 
-    /// Unknown or unclassified layer.
-    Unknown,
+  /// Unknown or unclassified layer.
+  Unknown,
 }
 
 impl Layer {
-    /// Returns the name of the layer as a string.
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::Domain => "Domain",
-            Self::Port => "Port",
-            Self::Adapter => "Adapter",
-            Self::Application => "Application",
-            Self::Infrastructure => "Infrastructure",
-            Self::Unknown => "Unknown",
-        }
+  /// Returns the name of the layer as a string.
+  pub fn as_str(&self) -> &'static str {
+    match self {
+      Self::Domain => "Domain",
+      Self::Port => "Port",
+      Self::Adapter => "Adapter",
+      Self::Application => "Application",
+      Self::Infrastructure => "Infrastructure",
+      Self::Unknown => "Unknown",
     }
+  }
 }
 
 impl std::fmt::Display for Layer {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}", self.as_str())
+  }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
-    fn test_layer_equality() {
-        assert_eq!(Layer::Domain, Layer::Domain);
-        assert_ne!(Layer::Domain, Layer::Port);
-    }
+  #[test]
+  fn test_layer_equality() {
+    assert_eq!(Layer::Domain, Layer::Domain);
+    assert_ne!(Layer::Domain, Layer::Port);
+  }
 
-    #[test]
-    fn test_layer_as_str() {
-        assert_eq!(Layer::Domain.as_str(), "Domain");
-        assert_eq!(Layer::Port.as_str(), "Port");
-    }
+  #[test]
+  fn test_layer_as_str() {
+    assert_eq!(Layer::Domain.as_str(), "Domain");
+    assert_eq!(Layer::Port.as_str(), "Port");
+  }
 
-    #[test]
-    fn test_layer_display() {
-        let layer = Layer::Domain;
-        assert_eq!(format!("{}", layer), "Domain");
-    }
+  #[test]
+  fn test_layer_display() {
+    let layer = Layer::Domain;
+    assert_eq!(format!("{}", layer), "Domain");
+  }
 }

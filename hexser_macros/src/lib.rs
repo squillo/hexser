@@ -39,61 +39,60 @@
 
 mod common;
 mod derive;
-mod registration;
 mod error;
+mod registration;
 
 #[proc_macro_derive(HexDomain, attributes(hex))]
 pub fn derive_hex_domain(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    crate::derive::hex_domain::derive(input)
+  crate::derive::hex_domain::derive(input)
 }
 
 #[proc_macro_derive(HexPort, attributes(hex))]
 pub fn derive_hex_port(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    crate::derive::hex_port::derive(input)
+  crate::derive::hex_port::derive(input)
 }
 
 #[proc_macro_derive(HexAdapter, attributes(hex))]
 pub fn derive_hex_adapter(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    crate::derive::hex_adapter::derive(input)
+  crate::derive::hex_adapter::derive(input)
 }
 
 #[proc_macro_derive(HexAggregate, attributes(hex))]
 pub fn derive_hex_aggregate(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    crate::derive::aggregate::derive(input)
+  crate::derive::aggregate::derive(input)
 }
 
 #[proc_macro_derive(Entity)]
 pub fn derive_entity(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    crate::derive::entity::derive(input)
+  crate::derive::entity::derive(input)
 }
 
 #[proc_macro_derive(HexRepository)]
 pub fn derive_repository(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    crate::derive::repository::derive(input)
+  crate::derive::repository::derive(input)
 }
 
 #[proc_macro_derive(HexDirective)]
 pub fn derive_directive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    crate::derive::directive::derive(input)
+  crate::derive::directive::derive(input)
 }
 
 #[proc_macro_derive(HexQuery)]
 pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    crate::derive::query::derive(input)
+  crate::derive::query::derive(input)
 }
 
 #[proc_macro]
 pub fn hex_domain_error(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    crate::error::hex_error_macro::hex_domain_error_impl(input)
+  crate::error::hex_error_macro::hex_domain_error_impl(input)
 }
 
 #[proc_macro]
 pub fn hex_port_error(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    crate::error::hex_error_macro::hex_port_error_impl(input)
+  crate::error::hex_error_macro::hex_port_error_impl(input)
 }
 
 #[proc_macro]
 pub fn hex_adapter_error(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    crate::error::hex_error_macro::hex_adapter_error_impl(input)
+  crate::error::hex_error_macro::hex_adapter_error_impl(input)
 }
-

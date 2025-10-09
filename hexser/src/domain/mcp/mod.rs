@@ -20,13 +20,13 @@ pub mod resource;
 pub mod initialize;
 
 #[cfg(feature = "mcp")]
-pub use self::json_rpc::{JsonRpcRequest, JsonRpcResponse, JsonRpcError};
+pub use self::json_rpc::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 
 #[cfg(feature = "mcp")]
-pub use self::capabilities::{ServerCapabilities, ResourceCapability};
+pub use self::capabilities::{ResourceCapability, ServerCapabilities};
 
 #[cfg(feature = "mcp")]
-pub use self::resource::{Resource, ResourceList, ResourceContent};
+pub use self::resource::{Resource, ResourceContent, ResourceList};
 
 #[cfg(feature = "mcp")]
 pub use self::initialize::{InitializeRequest, InitializeResult};

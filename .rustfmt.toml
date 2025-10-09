@@ -1,0 +1,4 @@
+indent_style = "Block"
+tab_spaces = 2
+imports_granularity = "Crate"
+edition = "2024"

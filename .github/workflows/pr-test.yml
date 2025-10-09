@@ -1,0 +1,154 @@
+# Super efficient GitHub Actions workflow for PR testing
+#
+# This workflow runs on all pull requests and provides:
+# - Fast feedback through parallel jobs
+# - Efficient caching to minimize build times
+# - Comprehensive testing across all workspace members
+# - Code quality checks (format, clippy)
+# - Feature flag validation
+# - Artifact storage for binaries, docs, and reports
+#
+# Revision History
+# - 2025-10-09T08:27:00Z @AI: Add artifact storage for binaries, documentation, and clippy reports.
+
+name: PR Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Job 1: Check code formatting (fastest feedback)
+  format:
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+  # Job 2: Run clippy for linting (runs in parallel with tests)
+  clippy:
+    name: Clippy Lints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "clippy"
+
+      - name: Run clippy on all targets
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Run clippy with JSON output for artifact
+        run: cargo clippy --workspace --all-targets --all-features --message-format=json -- -D warnings > clippy-report.json
+        continue-on-error: true
+
+      - name: Upload clippy results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: clippy-results
+          path: clippy-report.json
+          retention-days: 14
+
+  # Job 3: Test with default features (common usage scenario)
+  test-default:
+    name: Test (Default Features)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "test-default"
+
+      - name: Run tests with default features
+        run: cargo test --workspace --all-targets
+
+  # Job 4: Test with all features enabled (comprehensive coverage)
+  test-all-features:
+    name: Test (All Features)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "test-all-features"
+
+      - name: Run tests with all features
+        run: cargo test --workspace --all-targets --all-features
+
+      - name: Build all binaries
+        run: cargo build --workspace --all-features --bins --release
+
+      - name: Upload built binaries
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: binaries
+          path: |
+            target/release/hex-ai-export
+            target/release/hex-ai-pack
+            target/release/hex-mcp-server
+          retention-days: 7
+          if-no-files-found: warn
+
+  # Job 5: Check documentation builds
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          shared-key: "docs"
+
+      - name: Check documentation
+        run: cargo doc --workspace --all-features --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+      - name: Upload documentation
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: documentation
+          path: target/doc/
+          retention-days: 14

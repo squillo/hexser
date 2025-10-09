@@ -43,51 +43,51 @@
 /// }
 /// ```
 pub trait QueryHandler<Q, R> {
-    /// Handle the execution of a query.
-    ///
-    /// Returns the query result if successful, or an error if the query fails.
-    fn handle(&self, query: Q) -> crate::result::hex_result::HexResult<R>;
+  /// Handle the execution of a query.
+  ///
+  /// Returns the query result if successful, or an error if the query fails.
+  fn handle(&self, query: Q) -> crate::result::hex_result::HexResult<R>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestQuery {
-        id: u64,
+  struct TestQuery {
+    id: u64,
+  }
+
+  struct TestResult {
+    data: String,
+  }
+
+  struct TestQueryHandler;
+
+  impl QueryHandler<TestQuery, Option<TestResult>> for TestQueryHandler {
+    fn handle(&self, query: TestQuery) -> crate::result::hex_result::HexResult<Option<TestResult>> {
+      if query.id == 1 {
+        Result::Ok(Some(TestResult {
+          data: String::from("Found"),
+        }))
+      } else {
+        Result::Ok(None)
+      }
     }
+  }
 
-    struct TestResult {
-        data: String,
-    }
+  #[test]
+  fn test_query_handler_found() {
+    let handler = TestQueryHandler;
+    let query = TestQuery { id: 1 };
+    let result = handler.handle(query).unwrap();
+    assert!(result.is_some());
+  }
 
-    struct TestQueryHandler;
-
-    impl QueryHandler<TestQuery, Option<TestResult>> for TestQueryHandler {
-        fn handle(&self, query: TestQuery) -> crate::result::hex_result::HexResult<Option<TestResult>> {
-            if query.id == 1 {
-                Result::Ok(Some(TestResult {
-                    data: String::from("Found"),
-                }))
-            } else {
-                Result::Ok(None)
-            }
-        }
-    }
-
-    #[test]
-    fn test_query_handler_found() {
-        let handler = TestQueryHandler;
-        let query = TestQuery { id: 1 };
-        let result = handler.handle(query).unwrap();
-        assert!(result.is_some());
-    }
-
-    #[test]
-    fn test_query_handler_not_found() {
-        let handler = TestQueryHandler;
-        let query = TestQuery { id: 999 };
-        let result = handler.handle(query).unwrap();
-        assert!(result.is_none());
-    }
+  #[test]
+  fn test_query_handler_not_found() {
+    let handler = TestQueryHandler;
+    let query = TestQuery { id: 999 };
+    let result = handler.handle(query).unwrap();
+    assert!(result.is_none());
+  }
 }

@@ -6,8 +6,8 @@
 //! Revision History
 //! - 2025-10-06T02:00:00Z @AI: Initial error macros module.
 
-pub mod hex_error_macro;
-pub mod domain_error_macro;
-pub mod port_error_macro;
 pub mod adapter_error_macro;
+pub mod domain_error_macro;
+pub mod hex_error_macro;
+pub mod port_error_macro;
 pub mod validation_error_macro;

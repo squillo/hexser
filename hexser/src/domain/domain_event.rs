@@ -35,47 +35,47 @@
 /// }
 /// ```
 pub trait DomainEvent {
-    /// Returns the type name of this event.
-    fn event_type(&self) -> &str;
+  /// Returns the type name of this event.
+  fn event_type(&self) -> &str;
 
-    /// Returns the identifier of the aggregate that produced this event.
-    fn aggregate_id(&self) -> String;
+  /// Returns the identifier of the aggregate that produced this event.
+  fn aggregate_id(&self) -> String;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestUserCreated {
-        user_id: String,
-        email: String,
+  struct TestUserCreated {
+    user_id: String,
+    email: String,
+  }
+
+  impl DomainEvent for TestUserCreated {
+    fn event_type(&self) -> &str {
+      "UserCreated"
     }
 
-    impl DomainEvent for TestUserCreated {
-        fn event_type(&self) -> &str {
-            "UserCreated"
-        }
-
-        fn aggregate_id(&self) -> String {
-            self.user_id.clone()
-        }
+    fn aggregate_id(&self) -> String {
+      self.user_id.clone()
     }
+  }
 
-    #[test]
-    fn test_domain_event_type() {
-        let event = TestUserCreated {
-            user_id: String::from("123"),
-            email: String::from("test@example.com"),
-        };
-        assert_eq!(event.event_type(), "UserCreated");
-    }
+  #[test]
+  fn test_domain_event_type() {
+    let event = TestUserCreated {
+      user_id: String::from("123"),
+      email: String::from("test@example.com"),
+    };
+    assert_eq!(event.event_type(), "UserCreated");
+  }
 
-    #[test]
-    fn test_domain_event_aggregate_id() {
-        let event = TestUserCreated {
-            user_id: String::from("123"),
-            email: String::from("test@example.com"),
-        };
-        assert_eq!(event.aggregate_id(), "123");
-    }
+  #[test]
+  fn test_domain_event_aggregate_id() {
+    let event = TestUserCreated {
+      user_id: String::from("123"),
+      email: String::from("test@example.com"),
+    };
+    assert_eq!(event.aggregate_id(), "123");
+  }
 }

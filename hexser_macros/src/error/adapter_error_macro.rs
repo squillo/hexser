@@ -9,7 +9,7 @@
 
 /// Generate adapter error macro implementation
 pub fn generate_adapter_error_macro() -> proc_macro::TokenStream {
-    quote::quote! {
+  quote::quote! {
         #[macro_export]
         macro_rules! hex_adapter_error {
             ($code:expr, $message:expr) => {

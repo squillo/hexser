@@ -9,7 +9,7 @@
 
 /// Generate domain error macro implementation
 pub fn generate_domain_error_macro() -> proc_macro::TokenStream {
-    quote::quote! {
+  quote::quote! {
         #[macro_export]
         macro_rules! hex_domain_error {
             ($code:expr, $message:expr) => {

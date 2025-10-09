@@ -55,37 +55,37 @@
 /// }
 /// ```
 pub trait Mapper<From, To> {
-    /// Map from one representation to another.
-    ///
-    /// Returns the mapped value if successful, or an error if the mapping fails.
-    fn map(&self, from: From) -> crate::result::hex_result::HexResult<To>;
+  /// Map from one representation to another.
+  ///
+  /// Returns the mapped value if successful, or an error if the mapping fails.
+  fn map(&self, from: From) -> crate::result::hex_result::HexResult<To>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct SourceType {
-        value: i32,
+  struct SourceType {
+    value: i32,
+  }
+
+  struct TargetType {
+    data: i32,
+  }
+
+  struct TestMapper;
+
+  impl Mapper<SourceType, TargetType> for TestMapper {
+    fn map(&self, from: SourceType) -> crate::result::hex_result::HexResult<TargetType> {
+      Result::Ok(TargetType { data: from.value })
     }
+  }
 
-    struct TargetType {
-        data: i32,
-    }
-
-    struct TestMapper;
-
-    impl Mapper<SourceType, TargetType> for TestMapper {
-        fn map(&self, from: SourceType) -> crate::result::hex_result::HexResult<TargetType> {
-            Result::Ok(TargetType { data: from.value })
-        }
-    }
-
-    #[test]
-    fn test_mapper_transformation() {
-        let mapper = TestMapper;
-        let source = SourceType { value: 42 };
-        let target = mapper.map(source).unwrap();
-        assert_eq!(target.data, 42);
-    }
+  #[test]
+  fn test_mapper_transformation() {
+    let mapper = TestMapper;
+    let source = SourceType { value: 42 };
+    let target = mapper.map(source).unwrap();
+    assert_eq!(target.data, 42);
+  }
 }

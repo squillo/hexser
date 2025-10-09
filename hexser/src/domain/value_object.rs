@@ -33,44 +33,42 @@
 /// }
 /// ```
 pub trait ValueObject {
-    /// Validate the value object's invariants.
-    ///
-    /// Returns `Ok(())` if the value object is valid, or an error describing
-    /// what validation rules were violated.
-    fn validate(&self) -> crate::result::hex_result::HexResult<()>;
+  /// Validate the value object's invariants.
+  ///
+  /// Returns `Ok(())` if the value object is valid, or an error describing
+  /// what validation rules were violated.
+  fn validate(&self) -> crate::result::hex_result::HexResult<()>;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[derive(Clone)]
-    struct TestEmail(String);
+  #[derive(Clone)]
+  struct TestEmail(String);
 
-    impl ValueObject for TestEmail {
-        fn validate(&self) -> crate::result::hex_result::HexResult<()> {
-            if self.0.contains('@') {
-                Result::Ok(())
-            } else {
-                    Result::Err(
-                        crate::error::hex_error::Hexserror::validation_field(
-                            "Email must contain @",
-                            "email"
-                        )
-                    )
-            }
-        }
+  impl ValueObject for TestEmail {
+    fn validate(&self) -> crate::result::hex_result::HexResult<()> {
+      if self.0.contains('@') {
+        Result::Ok(())
+      } else {
+        Result::Err(crate::error::hex_error::Hexserror::validation_field(
+          "Email must contain @",
+          "email",
+        ))
+      }
     }
+  }
 
-    #[test]
-    fn test_value_object_validation_success() {
-        let email = TestEmail(String::from("test@example.com"));
-        assert!(email.validate().is_ok());
-    }
+  #[test]
+  fn test_value_object_validation_success() {
+    let email = TestEmail(String::from("test@example.com"));
+    assert!(email.validate().is_ok());
+  }
 
-    #[test]
-    fn test_value_object_validation_failure() {
-        let email = TestEmail(String::from("invalid"));
-        assert!(email.validate().is_err());
-    }
+  #[test]
+  fn test_value_object_validation_failure() {
+    let email = TestEmail(String::from("invalid"));
+    assert!(email.validate().is_err());
+  }
 }

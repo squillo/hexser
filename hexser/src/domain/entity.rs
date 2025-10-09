@@ -29,29 +29,29 @@
 /// }
 /// ```
 pub trait Entity {
-    /// The type used to uniquely identify this entity.
-    type Id;
+  /// The type used to uniquely identify this entity.
+  type Id;
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    struct TestUser {
-        id: u64,
-        name: String,
-    }
+  struct TestUser {
+    id: u64,
+    name: String,
+  }
 
-    impl Entity for TestUser {
-        type Id = u64;
-    }
+  impl Entity for TestUser {
+    type Id = u64;
+  }
 
-    #[test]
-    fn test_entity_trait_compiles() {
-        let user = TestUser {
-            id: 1,
-            name: String::from("Test"),
-        };
-        let _id_type: <TestUser as Entity>::Id = user.id;
-    }
+  #[test]
+  fn test_entity_trait_compiles() {
+    let user = TestUser {
+      id: 1,
+      name: String::from("Test"),
+    };
+    let _id_type: <TestUser as Entity>::Id = user.id;
+  }
 }
