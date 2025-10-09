@@ -45,7 +45,7 @@ Quick start with hexser:
 
 ```toml
 [dependencies]
-hexser = { path = "./hexser", version = "0.3.0", features = ["macros"] }
+hexser = { path = "./hexser", version = "0.4.1", features = ["macros"] }
 ```
 
 ```rust
@@ -81,7 +81,7 @@ Use directly from the workspace:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "./hexser_potions", version = "0.3.0" }
+hexser_potions = { path = "./hexser_potions", version = "0.4.1" }
 ```
 
 Then in your code:

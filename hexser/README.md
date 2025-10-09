@@ -60,7 +60,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hexser = "0.3.0"
+hexser = "0.4.1"
 ```
 
 Your First Hexagonal Application
@@ -1007,7 +1007,7 @@ Add to your project via workspace path:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "../hexser_potions", version = "0.3.0" }
+hexser_potions = { path = "../hexser_potions", version = "0.4.1" }
 ```
 
 Then in code:
