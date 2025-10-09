@@ -6,11 +6,15 @@
 //! mapping data between different representations.
 //!
 //! Revision History
+//! - 2025-10-08T23:35:00Z @AI: Add mcp_stdio adapter for Model Context Protocol support.
 //! - 2025-10-08T22:54:00Z @AI: Remove rest_weather_adapter module (moved to examples).
 //! - 2025-10-01T00:00:00Z @AI: Initial Phase 1 adapters module structure.
 
 pub mod adapter;
 pub mod mapper;
+
+#[cfg(feature = "mcp")]
+pub mod mcp_stdio;
 
 pub use adapter::Adapter;
 pub use mapper::Mapper;

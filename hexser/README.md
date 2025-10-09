@@ -24,6 +24,7 @@ The `hexser` crate provides reusable generic types and traits for implementing H
 - [Static (non-dyn) DI — WASM-friendly](#static-non-dyn-di--wasm-friendly)
 - [Repository: Filter-based queries (vNext)](#repository-filter-based-queries-vnext)
 - [AI Context Export (CLI)](#ai-context-export-cli)
+- [MCP Server (Model Context Protocol)](#-mcp-server-model-context-protocol)
 - [Examples & Tutorials](#examples--tutorials)
 - [Potions (copy-friendly examples)](#potions-copy-friendly-examples)
 - [Contributing](#contributing)
@@ -1255,6 +1256,72 @@ cargo run -p hexser --features ai --bin hex-ai-pack --quiet > target/ai-pack.jso
 Notes:
 - Missing optional docs are skipped gracefully. The pack remains valid JSON.
 - Use this artifact as the single source of truth for external AIs and tools when proposing changes.
+
+---
+
+## 🔌 MCP Server (Model Context Protocol)
+
+Hexser includes a built-in MCP (Model Context Protocol) server that exposes your project's architecture to AI assistants via a standardized JSON-RPC interface. This enables AI tools like Claude Desktop, Cline, and other MCP-compatible clients to query your architecture in real-time.
+
+Requirements:
+- Enable the `mcp` feature (automatically includes `ai`, `serde`, and `serde_json`).
+
+### Running the MCP Server
+
+```sh
+# Run the MCP server (stdio transport)
+cargo run -p hexser --features mcp --bin hex-mcp-server
+
+# The server reads JSON-RPC requests from stdin and writes responses to stdout
+```
+
+### Available MCP Resources
+
+The MCP server exposes two primary resources:
+
+1. **`hexser://context`** - Machine-readable architecture context (AIContext JSON)
+   - Current component graph
+   - Layer relationships
+   - Architectural constraints
+   - Validation rules
+
+2. **`hexser://pack`** - Comprehensive Agent Pack (all-in-one JSON)
+   - AIContext (architecture)
+   - Guidelines snapshot (coding rules)
+   - Embedded documentation (README, ERROR_GUIDE, etc.)
+
+### Integration with AI Assistants
+
+Configure your AI assistant to use the MCP server:
+
+**Claude Desktop (config.json):**
+```json
+{
+  "mcpServers": {
+    "hexser": {
+      "command": "cargo",
+      "args": ["run", "-p", "hexser", "--features", "mcp", "--bin", "hex-mcp-server"],
+      "cwd": "/path/to/your/hexser/project"
+    }
+  }
+}
+```
+
+**Cline / Other MCP Clients:**
+Follow the client-specific configuration to add the above command as an MCP server endpoint.
+
+### What the MCP Server Does
+
+- Accepts JSON-RPC 2.0 requests via stdin
+- Implements the Model Context Protocol specification
+- Provides `initialize`, `resources/list`, and `resources/read` methods
+- Serves architecture data from the live `HexGraph` registry
+- Enables AI assistants to understand your project structure in real-time
+
+Notes:
+- The `hex-mcp-server` binary is only built when the `mcp` feature is enabled.
+- The server uses stdio transport (line-delimited JSON-RPC messages).
+- For production use, consider wrapping in a process manager or systemd service.
 
 ---
 

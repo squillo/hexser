@@ -6,6 +6,7 @@
 //! use cases, and queries (CQRS pattern).
 //!
 //! Revision History
+//! - 2025-10-08T23:35:00Z @AI: Add mcp_server port for Model Context Protocol support.
 //! - 2025-10-08T22:54:00Z @AI: Remove weather_port module (moved to examples).
 //! - 2025-10-01T00:00:00Z @AI: Initial Phase 1 ports module structure.
 
@@ -14,6 +15,9 @@ pub mod output_port;
 pub mod repository;
 pub mod use_case;
 pub mod query;
+
+#[cfg(feature = "mcp")]
+pub mod mcp_server;
 
 pub use input_port::InputPort;
 pub use output_port::OutputPort;
