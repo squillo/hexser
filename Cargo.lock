@@ -166,7 +166,7 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 
 [[package]]
 name = "hexser"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "async-trait",
  "chrono",
@@ -180,7 +180,7 @@ dependencies = [
 
 [[package]]
 name = "hexser_macros"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -190,7 +190,7 @@ dependencies = [
 
 [[package]]
 name = "hexser_potions"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "hexser",
  "pretty_assertions",

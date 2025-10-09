@@ -22,5 +22,5 @@ async-trait = "0.1.89"
 pretty_assertions = "1.4"
 
 # Workspace member crates (for path + version unification)
-hexser_macros = { version = "0.3.0", path = "hexser_macros" }
-hexser = { version = "0.3.0", path = "hexser" }
+hexser_macros = { version = "0.4.0", path = "hexser_macros" }
+hexser = { version = "0.4.0", path = "hexser" }

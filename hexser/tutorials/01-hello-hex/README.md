@@ -18,3 +18,13 @@ With just **3 lines of code**, you'll have a working hexagonal architecture comp
 cargo new hello-hex
 cd hello-hex
 ```
+
+
+## v0.4 Note: Reading data with QueryRepository
+
+As of v0.4, repositories focus on saving aggregates, while reads and deletes-by-criteria go through the generic QueryRepository trait using domain-owned filters (e.g., enums). Examples are included in:
+- hexser/examples/tutorial_03_adapters.rs
+- hexser/examples/simple_todo.rs
+- hexser_potions/src/crud/mod.rs
+
+These demonstrate find_one, find with options (sort/pagination), exists, count, and delete_where.
