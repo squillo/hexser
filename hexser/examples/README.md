@@ -17,6 +17,22 @@
 - `graph_example.rs` - Querying your architecture
 - `architecture_visualization.rs` - Export and visualization
 
+## Complete Application Example
+- `realworld_api/` - Full RealWorld API implementation
+  - Complete hexagonal architecture with DPAI layers (Domain, Ports, Application, Adapters)
+  - CQRS pattern with Directives (commands) and Queries (read operations)
+  - Repository pattern with domain-owned Filter and SortKey enums
+  - In-memory adapters with thread-safe Arc<Mutex<>> for concurrency
+  - **Web adapter with axum REST API** - Complete HTTP server with JWT authentication
+  - **Automatic Architecture Visualization** - Built-in Mermaid diagram generation via `./regenerate_diagram.sh`
+  - Rich error handling with Hexserror and actionable error messages
+  - Zero use statements - all types fully qualified for clarity
+  - **Two running modes:**
+    - Demonstration mode: `cargo run --example realworld_api` (shows architecture patterns)
+    - Web server mode: `cd hexser/examples/realworld_api && cargo run --bin web_server` (HTTP API on port 3000)
+  - **API Endpoints:** Users, Articles, Comments, Profiles, Tags with full CRUD operations
+  - All 89+ tests pass, demonstrating comprehensive test coverage
+
 ## Context7 Examples (Production Patterns)
 These examples demonstrate production-ready patterns for Context7 evaluation:
 

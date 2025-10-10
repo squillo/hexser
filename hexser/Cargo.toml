@@ -25,6 +25,7 @@ tokio = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+uuid = { workspace = true }
 
 [features]
 # Enable macros and static (non-dyn) DI by default. The dyn container remains opt-in.

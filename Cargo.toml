@@ -21,6 +21,7 @@ tokio = { version = "1.47.1", features = ["sync", "macros", "rt-multi-thread", "
 async-trait = "0.1.89"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json"] }
 pretty_assertions = "1.4"
+uuid = { version = "1.0", features = ["v4"] }
 
 # Workspace member crates (for path + version unification)
 hexser_macros = { version = "0.4.5", path = "hexser_macros" }
