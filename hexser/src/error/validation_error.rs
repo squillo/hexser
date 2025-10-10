@@ -5,6 +5,7 @@
 //! Includes field-specific context and actionable guidance.
 //!
 //! Revision History
+//! - 2025-10-09T21:51:00Z @AI: Add conditional source location serialization via env_control.
 //! - 2025-10-09T21:22:00Z @AI: Add Serde support for rich errors.
 //! - 2025-10-09T09:56:00Z @AI: Remove unused Display and Formatter imports per NO use STATEMENTS rule.
 //! - 2025-10-06T00:00:00Z @AI: Initial ValidationError struct for Phase 1.
@@ -20,6 +21,10 @@ pub struct ValidationError {
   /// Optional field name that failed validation
   pub field: Option<String>,
   /// Optional source code location
+  #[cfg_attr(
+    feature = "serde",
+    serde(skip_serializing_if = "crate::error::env_control::should_skip_location")
+  )]
   pub location: Option<crate::error::source_location::SourceLocation>,
 }
 

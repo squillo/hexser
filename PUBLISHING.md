@@ -102,8 +102,8 @@ export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 - After each publish, confirm the crate page on crates.io and docs.rs build status.
 - Create and push a signed tag (example):
 ```
-git tag -s v0.4.4 -m "hexser 0.4.5 release"
-git push origin v0.4.4
+git tag -s v0.4.5 -m "hexser 0.4.5 release"
+git push origin v0.4.5
 ```
 
 ---

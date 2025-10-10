@@ -922,6 +922,62 @@ Notes
 - Prefer hex_domain_error!, hex_port_error!, hex_adapter_error! and constants from hexser::error::codes::*.
 - Use with_source(err) to preserve underlying causes; Display shows a helpful, compact summary.
 
+#### Security: Controlling Source Location in Serialized Errors
+
+When using the `serde` feature to serialize errors (e.g., for API responses), source location information (file paths, line numbers, column numbers) can expose internal code structure to clients. **hexser is secure by default** and excludes this sensitive information from serialization unless explicitly enabled.
+
+**Environment Variable: `HEXSER_INCLUDE_SOURCE_LOCATION`**
+
+Control whether source location is included in serialized errors:
+
+```bash
+# Production (default, secure) - source location excluded
+# No environment variable needed
+
+# Development/Debug - include source location
+export HEXSER_INCLUDE_SOURCE_LOCATION=1
+# or
+export HEXSER_INCLUDE_SOURCE_LOCATION=true
+```
+
+**Example:**
+
+```rust
+use hexser::prelude::*;
+
+fn api_handler() -> Result<String, Box<dyn std::error::Error>> {
+    let err = hexser::hex_domain_error!(
+        hexser::error::codes::domain::INVARIANT_VIOLATION,
+        "Order must have items"
+    );
+    
+    // Serialize for API response
+    let json = serde_json::to_string(&err)?;
+    
+    // In production (env var not set):
+    // {"code":"E_HEX_001","message":"Order must have items",...}
+    // Source location is excluded for security
+    
+    // In development (HEXSER_INCLUDE_SOURCE_LOCATION=1):
+    // {"code":"E_HEX_001","message":"Order must have items",
+    //  "location":{"file":"src/api.rs","line":42,"column":10},...}
+    
+    Ok(json)
+}
+```
+
+**Production Best Practice:**
+- Never set `HEXSER_INCLUDE_SOURCE_LOCATION` in production environments
+- Source location is still captured and available via `Display` formatting for logs
+- Only serialization (JSON/API responses) is affected by this setting
+
+**Affected Error Types:**
+- `DomainError`, `PortError`, `AdapterError` (LayerError-based types)
+- `ValidationError`
+- `NotFoundError`
+- `ConflictError`
+- All errors with `location` fields
+
 
 Part 6: Real-World Example - TODO Application
 Let's build a complete TODO application using hexagonal architecture.

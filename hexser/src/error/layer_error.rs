@@ -5,6 +5,7 @@
 //! while sharing implementation. Eliminates code duplication across layer-specific errors.
 //!
 //! Revision History
+//! - 2025-10-09T21:51:00Z @AI: Add conditional source location serialization via env_control.
 //! - 2025-10-09T21:22:00Z @AI: Add Serde support for rich errors.
 //! - 2025-10-06T01:00:00Z @AI: Initial LayerError generic for Phase 1 refactor.
 
@@ -39,6 +40,10 @@ pub struct LayerError<L> {
   /// Concrete suggestions for fixing the error
   pub suggestions: Vec<String>,
   /// Optional source code location
+  #[cfg_attr(
+    feature = "serde",
+    serde(skip_serializing_if = "crate::error::env_control::should_skip_location")
+  )]
   pub location: Option<crate::error::source_location::SourceLocation>,
   /// Optional link to documentation
   pub more_info_url: Option<String>,

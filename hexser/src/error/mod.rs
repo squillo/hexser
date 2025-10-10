@@ -21,6 +21,7 @@
 //! ```
 //!
 //! Revision History
+//! - 2025-10-09T21:51:00Z @AI: Add env_control module for conditional source location serialization.
 //! - 2025-10-06T03:00:00Z @AI: Add error construction macros for Phase 2.
 //! - 2025-10-06T01:00:00Z @AI: Add RichError trait and LayerError generic for Phase 1.
 //! - 2025-10-06T00:00:00Z @AI: Add new error structs and source location for Phase 1.
@@ -30,6 +31,7 @@ pub mod adapter_error;
 pub mod codes;
 pub mod conflict_error;
 pub mod domain_error;
+pub mod env_control;
 pub mod hex_error;
 pub mod layer_error;
 pub mod not_found_error;

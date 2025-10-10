@@ -5,6 +5,7 @@
 //! Includes context about the conflicting resource.
 //!
 //! Revision History
+//! - 2025-10-09T21:51:00Z @AI: Add conditional source location serialization via env_control.
 //! - 2025-10-09T21:22:00Z @AI: Add Serde support for rich errors.
 //! - 2025-10-06T02:00:00Z @AI: Fix merge conflict duplicates.
 //! - 2025-10-06T00:00:00Z @AI: Initial ConflictError struct for Phase 1.
@@ -20,6 +21,10 @@ pub struct ConflictError {
   /// Optional ID of existing conflicting resource
   pub existing_id: Option<String>,
   /// Optional source code location
+  #[cfg_attr(
+    feature = "serde",
+    serde(skip_serializing_if = "crate::error::env_control::should_skip_location")
+  )]
   pub location: Option<crate::error::source_location::SourceLocation>,
 }
 
