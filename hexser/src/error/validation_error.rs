@@ -5,11 +5,13 @@
 //! Includes field-specific context and actionable guidance.
 //!
 //! Revision History
+//! - 2025-10-09T21:22:00Z @AI: Add Serde support for rich errors.
 //! - 2025-10-09T09:56:00Z @AI: Remove unused Display and Formatter imports per NO use STATEMENTS rule.
 //! - 2025-10-06T00:00:00Z @AI: Initial ValidationError struct for Phase 1.
 
 /// Validation error with field-specific context
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ValidationError {
   /// Error code from codes::validation module
   pub code: String,

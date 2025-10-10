@@ -61,7 +61,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hexser = "0.4.4"
+hexser = "0.4.5"
 ```
 
 Your First Hexagonal Application
@@ -144,7 +144,7 @@ Enabled by default. Includes procedural macros and zero-cost static dependency i
 
 ```toml
 [dependencies]
-hexser = "0.4.4"  # Uses default features
+hexser = "0.4.5"  # Uses default features
 ```
 
 #### `macros`
@@ -164,7 +164,7 @@ Enables procedural macros for deriving hexagonal architecture traits.
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.4", default-features = false, features = ["macros"] }
+hexser = { version = "0.4.5", default-features = false, features = ["macros"] }
 ```
 
 #### `static-di`
@@ -179,7 +179,7 @@ Zero-cost, WASM-friendly static dependency injection. No runtime overhead, no dy
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.4", features = ["static-di"] }
+hexser = { version = "0.4.5", features = ["static-di"] }
 ```
 
 **Example:**
@@ -206,7 +206,7 @@ Enables AI context export functionality for exposing architecture metadata to AI
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.4", features = ["ai"] }
+hexser = { version = "0.4.5", features = ["ai"] }
 ```
 
 **Usage:**
@@ -231,7 +231,7 @@ Model Context Protocol server implementation for serving architecture data via J
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.4", features = ["mcp"] }
+hexser = { version = "0.4.5", features = ["mcp"] }
 ```
 
 **Usage:**
@@ -253,7 +253,7 @@ Enables async/await support for ports and adapters.
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.4", features = ["async"] }
+hexser = { version = "0.4.5", features = ["async"] }
 ```
 
 **Example:**
@@ -278,7 +278,7 @@ Enables graph visualization and export capabilities.
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.4", features = ["visualization"] }
+hexser = { version = "0.4.5", features = ["visualization"] }
 ```
 
 #### `container`
@@ -295,7 +295,7 @@ Dynamic dependency injection container with async support. **Not enabled by defa
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.4", features = ["container"] }
+hexser = { version = "0.4.5", features = ["container"] }
 ```
 
 #### `full`
@@ -305,7 +305,7 @@ Enables all features: `ai`, `mcp`, `async`, `macros`, `visualization`, `containe
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.4", features = ["full"] }
+hexser = { version = "0.4.5", features = ["full"] }
 ```
 
 ### Binary Targets
@@ -344,25 +344,25 @@ cargo run --bin hex-mcp-server --features mcp
 #### Minimal (no default features)
 ```toml
 [dependencies]
-hexser = { version = "0.4.4", default-features = false }
+hexser = { version = "0.4.5", default-features = false }
 ```
 
 #### WASM-optimized
 ```toml
 [dependencies]
-hexser = { version = "0.4.4", default-features = false, features = ["macros", "static-di"] }
+hexser = { version = "0.4.5", default-features = false, features = ["macros", "static-di"] }
 ```
 
 #### AI-enabled with async
 ```toml
 [dependencies]
-hexser = { version = "0.4.4", features = ["ai", "async", "visualization"] }
+hexser = { version = "0.4.5", features = ["ai", "async", "visualization"] }
 ```
 
 #### Full development setup
 ```toml
 [dependencies]
-hexser = { version = "0.4.4", features = ["full"] }
+hexser = { version = "0.4.5", features = ["full"] }
 ```
 
 ---
@@ -1212,7 +1212,7 @@ Add to your project via workspace path:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "../hexser_potions", version = "0.4.4" }
+hexser_potions = { path = "../hexser_potions", version = "0.4.5" }
 ```
 
 Then in code:

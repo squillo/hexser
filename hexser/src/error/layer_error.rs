@@ -5,25 +5,30 @@
 //! while sharing implementation. Eliminates code duplication across layer-specific errors.
 //!
 //! Revision History
+//! - 2025-10-09T21:22:00Z @AI: Add Serde support for rich errors.
 //! - 2025-10-06T01:00:00Z @AI: Initial LayerError generic for Phase 1 refactor.
 
 /// Layer marker types for type-safe layer distinction
 pub mod layer_markers {
   /// Domain layer marker
   #[derive(Debug)]
+  #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
   pub struct DomainLayer;
 
   /// Port layer marker
   #[derive(Debug)]
+  #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
   pub struct PortLayer;
 
   /// Adapter layer marker
   #[derive(Debug)]
+  #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
   pub struct AdapterLayer;
 }
 
 /// Generic layer error with rich context and error chaining
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct LayerError<L> {
   /// Error code
   pub code: String,
@@ -38,6 +43,7 @@ pub struct LayerError<L> {
   /// Optional link to documentation
   pub more_info_url: Option<String>,
   /// Underlying error cause
+  #[cfg_attr(feature = "serde", serde(skip))]
   pub source: Option<Box<dyn std::error::Error + Send + Sync>>,
   /// Layer marker (zero-sized)
   pub layer: std::marker::PhantomData<L>,

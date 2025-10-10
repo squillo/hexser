@@ -6,6 +6,7 @@
 //! and suggestions for remediation. Designed for both humans and AI agents.
 //!
 //! Revision History
+//! - 2025-10-09T21:22:00Z @AI: Add Serde support for rich errors.
 //! - 2025-10-06T00:00:00Z @AI: Refactor to wrap layer-specific error structs for Phase 1.
 //! - 2025-10-01T00:00:00Z @AI: Initial Hexserror enum with rich error information.
 
@@ -31,6 +32,7 @@ use crate::error::RichError;
 /// }
 /// ```
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Hexserror {
   /// Domain layer error
   Domain(crate::error::domain_error::DomainError),

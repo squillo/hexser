@@ -1,6 +1,6 @@
 [package]
 name = "hexser_macros"
-version = "0.4.4"
+version = "0.4.5"
 edition = "2024"
 authors = ["N Lang Team"]
 description = "Procedural macros for the hexser hexagonal architecture crate"

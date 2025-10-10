@@ -16,10 +16,10 @@ You will almost always depend on `hexser` directly for your application code and
 
 ```toml
 [dependencies]
-hexser = "0.4.4"
+hexser = "0.4.5"
 
 [dev-dependencies]
-hexser_potions = "0.4.4"
+hexser_potions = "0.4.5"
 ```
 
 Nothing in `hexser_potions` is required for production use of `hexser`; it simply accelerates discovery, experimentation, and testing.

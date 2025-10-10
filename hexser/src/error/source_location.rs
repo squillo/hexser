@@ -5,11 +5,13 @@
 //! to enhance traceability and debugging.
 //!
 //! Revision History
+//! - 2025-10-09T21:22:00Z @AI: Add Serde support for rich errors.
 //! - 2025-10-06T02:00:00Z @AI: Fix merge conflict duplicates.
 //! - 2025-10-06T00:00:00Z @AI: Initial SourceLocation struct for Phase 1.
 
 /// Source code location for error tracking
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SourceLocation {
   /// Source file path
   pub file: String,
