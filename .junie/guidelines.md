@@ -3,7 +3,10 @@ AI Assistant: Code Generation & Modification Protocol
 YOU WILL NEVER ALTER THIS FILE.
 
 ---
+
 When you encounter a request for a specific library, framework, or crate, use Context7 MCP server.
+
+Rust Edition 2024 is the target for Rust.
 
 ### 1.Revision History Protocol
 Whenever you alter a file, you MUST add a revision history comment. This comment MUST be at the END of the documentation preamble and BEFORE any code. It MUST be in a valid Rust location.

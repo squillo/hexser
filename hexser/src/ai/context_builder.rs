@@ -5,6 +5,7 @@
 //! Primary entry point for AI agent integration.
 //!
 //! Revision History
+//! - 2025-10-10T20:28:00Z @AI: Add methods field to ComponentInfo with empty placeholder for future method extraction.
 //! - 2025-10-02T19:00:00Z @AI: Fix test add_edge calls to use HexEdge constructor, fix Relationship typo, fix edges iteration.
 //! - 2025-10-02T18:30:00Z @AI: Add comprehensive documentation and tests for all functions.
 //! - 2025-10-02T18:15:00Z @AI: Fix API usage - remove iter call, use correct edge field names.
@@ -69,22 +70,32 @@ impl<'a> ContextBuilder<'a> {
   ///
   /// Maps each graph node to ComponentInfo structure including
   /// type name, layer, role, and dependencies.
+  ///
+  /// Uses method_extractor to populate methods field with trait method information
+  /// for Repository, Directive, and Query components.
   fn build_components(&self) -> Vec<super::ai_context::ComponentInfo> {
     self
       .graph
       .nodes()
-      .map(|node| super::ai_context::ComponentInfo {
-        type_name: node.type_name.clone(),
-        layer: format!("{:?}", node.layer),
-        role: format!("{:?}", node.role),
-        module_path: node.module_path.clone(),
-        purpose: None,
-        dependencies: self
-          .graph
-          .edges_from(&node.id)
-          .into_iter()
-          .map(|edge| edge.target.to_string())
-          .collect(),
+      .map(|node| {
+        let role_str = format!("{:?}", node.role);
+        let methods =
+          crate::ai::method_extractor::extract_methods_for_type(&node.type_name, &role_str);
+
+        super::ai_context::ComponentInfo {
+          type_name: node.type_name.clone(),
+          layer: format!("{:?}", node.layer),
+          role: role_str,
+          module_path: node.module_path.clone(),
+          purpose: None,
+          dependencies: self
+            .graph
+            .edges_from(&node.id)
+            .into_iter()
+            .map(|edge| edge.target.to_string())
+            .collect(),
+          methods,
+        }
       })
       .collect()
   }

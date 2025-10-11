@@ -61,7 +61,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hexser = "0.4.5"
+hexser = "0.4.6"
 ```
 
 Your First Hexagonal Application
@@ -144,7 +144,7 @@ Enabled by default. Includes procedural macros and zero-cost static dependency i
 
 ```toml
 [dependencies]
-hexser = "0.4.5"  # Uses default features
+hexser = "0.4.6"  # Uses default features
 ```
 
 #### `macros`
@@ -164,7 +164,7 @@ Enables procedural macros for deriving hexagonal architecture traits.
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.5", default-features = false, features = ["macros"] }
+hexser = { version = "0.4.6", default-features = false, features = ["macros"] }
 ```
 
 #### `static-di`
@@ -179,7 +179,7 @@ Zero-cost, WASM-friendly static dependency injection. No runtime overhead, no dy
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.5", features = ["static-di"] }
+hexser = { version = "0.4.6", features = ["static-di"] }
 ```
 
 **Example:**
@@ -201,12 +201,13 @@ Enables AI context export functionality for exposing architecture metadata to AI
 - `AgentPack` for packaging context
 - JSON serialization of graph data
 - CLI tools: `hex-ai-export`, `hex-ai-pack`
+- **Method-level documentation**: ComponentInfo now includes a `methods` field capturing method signatures, parameters, return types, and documentation (currently empty, ready for future extraction via rustdoc JSON)
 
 **Dependencies:** `chrono`, `serde`, `serde_json`
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.5", features = ["ai"] }
+hexser = { version = "0.4.6", features = ["ai"] }
 ```
 
 **Usage:**
@@ -231,7 +232,7 @@ Model Context Protocol server implementation for serving architecture data via J
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.5", features = ["mcp"] }
+hexser = { version = "0.4.6", features = ["mcp"] }
 ```
 
 **Usage:**
@@ -253,7 +254,7 @@ Enables async/await support for ports and adapters.
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.5", features = ["async"] }
+hexser = { version = "0.4.6", features = ["async"] }
 ```
 
 **Example:**
@@ -278,7 +279,7 @@ Enables graph visualization and export capabilities.
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.5", features = ["visualization"] }
+hexser = { version = "0.4.6", features = ["visualization"] }
 ```
 
 #### `container`
@@ -295,7 +296,7 @@ Dynamic dependency injection container with async support. **Not enabled by defa
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.5", features = ["container"] }
+hexser = { version = "0.4.6", features = ["container"] }
 ```
 
 #### `full`
@@ -305,7 +306,7 @@ Enables all features: `ai`, `mcp`, `async`, `macros`, `visualization`, `containe
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.5", features = ["full"] }
+hexser = { version = "0.4.6", features = ["full"] }
 ```
 
 ### Binary Targets
@@ -344,25 +345,25 @@ cargo run --bin hex-mcp-server --features mcp
 #### Minimal (no default features)
 ```toml
 [dependencies]
-hexser = { version = "0.4.5", default-features = false }
+hexser = { version = "0.4.6", default-features = false }
 ```
 
 #### WASM-optimized
 ```toml
 [dependencies]
-hexser = { version = "0.4.5", default-features = false, features = ["macros", "static-di"] }
+hexser = { version = "0.4.6", default-features = false, features = ["macros", "static-di"] }
 ```
 
 #### AI-enabled with async
 ```toml
 [dependencies]
-hexser = { version = "0.4.5", features = ["ai", "async", "visualization"] }
+hexser = { version = "0.4.6", features = ["ai", "async", "visualization"] }
 ```
 
 #### Full development setup
 ```toml
 [dependencies]
-hexser = { version = "0.4.5", features = ["full"] }
+hexser = { version = "0.4.6", features = ["full"] }
 ```
 
 ---
@@ -1268,7 +1269,7 @@ Add to your project via workspace path:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "../hexser_potions", version = "0.4.5" }
+hexser_potions = { path = "../hexser_potions", version = "0.4.6" }
 ```
 
 Then in code:
@@ -1494,6 +1495,59 @@ Notes:
 - The binary `hex-ai-export` is only built when the `ai` feature is enabled.
 - For reproducible diffs, commit `target/ai-context.json` or generate it in CI as an artifact.
 
+### 📋 AIContext Structure
+
+The exported `AIContext` JSON includes detailed component information:
+
+**ComponentInfo fields:**
+- `type_name`: Fully qualified type name
+- `layer`: Architectural layer (Domain, Port, Adapter, Application)
+- `role`: Component role (Entity, Repository, Directive, Query, etc.)
+- `module_path`: Module path where component is defined
+- `purpose`: Optional description of component purpose
+- `dependencies`: List of component dependencies
+- **`methods`**: List of public methods with detailed information (**NEW**)
+
+**MethodInfo structure** (available in `methods` array):
+- `name`: Method name
+- `signature`: Full method signature
+- `documentation`: Doc comment for the method
+- `parameters`: Array of parameter details (name, type, description)
+- `return_type`: Method return type
+- `is_public`: Visibility flag
+- `is_async`: Async flag
+
+**Current Status:** The `methods` field is included in the JSON schema and ready for use. Currently populated as an empty array; future enhancement will extract method information via rustdoc JSON output or source code parsing to provide complete API documentation to AI models.
+
+**Example ComponentInfo with methods:**
+```json
+{
+  "type_name": "UserRepository",
+  "layer": "Port",
+  "role": "Repository",
+  "module_path": "ports::user_repository",
+  "purpose": "Manages user persistence",
+  "methods": [
+    {
+      "name": "find_by_id",
+      "signature": "fn find_by_id(&self, id: &str) -> HexResult<Option<User>>",
+      "documentation": "Finds a user by their ID",
+      "parameters": [
+        {
+          "name": "id",
+          "param_type": "&str",
+          "description": "User identifier"
+        }
+      ],
+      "return_type": "HexResult<Option<User>>",
+      "is_public": true,
+      "is_async": false
+    }
+  ],
+  "dependencies": []
+}
+```
+
 ### 🧠 AI Agent Pack (All-in-One)
 
 Export a comprehensive, single-file JSON that bundles:
@@ -1521,6 +1575,8 @@ Notes:
 
 Hexser includes a built-in MCP (Model Context Protocol) server that exposes your project's architecture to AI assistants via a standardized JSON-RPC interface. This enables AI tools like Claude Desktop, Cline, and other MCP-compatible clients to query your architecture in real-time.
 
+**🆕 New to MCP?** Check out the [Beginner's Walkthrough for IntelliJ + Junie](docs/MCP_BEGINNER_WALKTHROUGH.md) for step-by-step setup instructions.
+
 Requirements:
 - Enable the `mcp` feature (automatically includes `ai`, `serde`, and `serde_json`).
 
@@ -1535,18 +1591,29 @@ cargo run -p hexser --features mcp --bin hex-mcp-server
 
 ### Available MCP Resources
 
-The MCP server exposes two primary resources:
+The MCP server supports **multi-project mode**, exposing resources for multiple projects simultaneously:
 
-1. **`hexser://context`** - Machine-readable architecture context (AIContext JSON)
-   - Current component graph
+**Resource URI Format:**
+- **New (multi-project):** `hexser://{project}/context` and `hexser://{project}/pack`
+- **Legacy (backward compatible):** `hexser://context` and `hexser://pack` (assumes project name "hexser")
+
+**Resource Types:**
+
+1. **`hexser://{project}/context`** - Machine-readable architecture context (AIContext JSON)
+   - Current component graph for the specified project
    - Layer relationships
    - Architectural constraints
    - Validation rules
 
-2. **`hexser://pack`** - Comprehensive Agent Pack (all-in-one JSON)
+2. **`hexser://{project}/pack`** - Comprehensive Agent Pack (all-in-one JSON)
    - AIContext (architecture)
    - Guidelines snapshot (coding rules)
    - Embedded documentation (README, ERROR_GUIDE, etc.)
+
+**Example Resources:**
+- `hexser://hexser/context` - Architecture context for the hexser project
+- `hexser://myapp/pack` - Full agent pack for myapp project
+- `hexser://context` - Legacy format, maps to `hexser://hexser/context`
 
 ### Integration with AI Assistants
 
@@ -1572,13 +1639,125 @@ Follow the client-specific configuration to add the above command as an MCP serv
 
 - Accepts JSON-RPC 2.0 requests via stdin
 - Implements the Model Context Protocol specification
-- Provides `initialize`, `resources/list`, and `resources/read` methods
-- Serves architecture data from the live `HexGraph` registry
+- Provides `initialize`, `resources/list`, `resources/read`, and `hexser/refresh` methods
+- Serves architecture data from multiple projects via `ProjectRegistry`
 - Enables AI assistants to understand your project structure in real-time
+
+### Refreshing Architecture After Code Changes
+
+When AI agents modify project code (adding new components, changing architecture), the MCP server needs to be updated to reflect these changes. Hexser uses Rust's `inventory` crate which populates a static registry at **compile time**, so changes require recompilation.
+
+**The `hexser/refresh` Method:**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "hexser/refresh",
+  "params": {
+    "project": "myproject"
+  }
+}
+```
+
+**Workflow:**
+
+1. AI agent makes code changes (adds `#[derive(HexEntity)]` to new struct, etc.)
+2. AI agent calls `hexser/refresh` with project name
+3. MCP server triggers `cargo build -p {project} --features macros`
+4. Server returns compilation result:
+   - **Success**: Returns `{"status": "restart_required", "compiled": true, ...}` with message that MCP server must be restarted
+   - **Error**: Returns `{"status": "error", "compiled": false, "error": "..."}` with compilation errors
+
+**Important:** After successful compilation, you must **manually restart the MCP server** to load the updated architecture graph. The inventory static cache is cleared and repopulated during the restart.
+
+**Example Response (Success):**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "status": "restart_required",
+    "compiled": true,
+    "components_added": 0,
+    "components_removed": 0,
+    "error": "Compilation successful. Server restart required to load new graph."
+  }
+}
+```
+
+**Example Response (Compilation Error):**
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "status": "error",
+    "compiled": false,
+    "components_added": 0,
+    "components_removed": 0,
+    "error": "error[E0425]: cannot find value `foo` in this scope..."
+  }
+}
+```
+
+**Best Practices:**
+- Call `hexser/refresh` after making architectural changes
+- Check the `compiled` field to verify build success
+- Restart your MCP client or server process after successful refresh
+- Handle compilation errors gracefully in your AI workflow
+
+### Multi-Project Configuration
+
+The MCP server supports serving multiple projects simultaneously using `ProjectRegistry`:
+
+**Default Behavior (Single Project):**
+By default, `McpStdioServer::new()` creates a registry with the current `HexGraph` as a single project named "hexser". This provides backward compatibility with existing configurations.
+
+**Custom Multi-Project Setup:**
+Create a custom binary to register multiple projects:
+
+```rust
+use hexser::domain::mcp::{ProjectConfig, ProjectRegistry};
+use hexser::adapters::mcp_stdio::McpStdioServer;
+use hexser::graph::HexGraph;
+
+fn main() -> hexser::HexResult<()> {
+    let mut registry = ProjectRegistry::new();
+    
+    // Register project 1
+    let graph1 = HexGraph::current(); // or load from specific crate
+    registry.register(ProjectConfig::new(
+        String::from("myapp"),
+        std::path::PathBuf::from("/path/to/myapp"),
+        graph1,
+    ));
+    
+    // Register project 2
+    let graph2 = HexGraph::current(); // load from another crate
+    registry.register(ProjectConfig::new(
+        String::from("backend"),
+        std::path::PathBuf::from("/path/to/backend"),
+        graph2,
+    ));
+    
+    let server = McpStdioServer::with_registry(registry);
+    server.run()
+}
+```
+
+**Environment-Based Configuration (Future):**
+Future versions may support configuration via environment variables or config files for dynamic project discovery.
+
+**Available APIs:**
+- `McpStdioServer::new()` - Single project mode (backward compatible)
+- `McpStdioServer::with_registry(registry)` - Multi-project mode
+- `McpStdioServer::with_graph(graph)` - Deprecated, use `with_registry` instead
 
 Notes:
 - The `hex-mcp-server` binary is only built when the `mcp` feature is enabled.
 - The server uses stdio transport (line-delimited JSON-RPC messages).
+- Each project in the registry gets its own `hexser://{project}/context` and `hexser://{project}/pack` resources.
 - For production use, consider wrapping in a process manager or systemd service.
 
 ---

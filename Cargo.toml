@@ -24,5 +24,5 @@ pretty_assertions = "1.4"
 uuid = { version = "1.0", features = ["v4"] }
 
 # Workspace member crates (for path + version unification)
-hexser_macros = { version = "0.4.5", path = "hexser_macros" }
-hexser = { version = "0.4.5", path = "hexser" }
+hexser_macros = { version = "0.4.6", path = "hexser_macros" }
+hexser = { version = "0.4.6", path = "hexser" }

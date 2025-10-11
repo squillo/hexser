@@ -57,7 +57,7 @@ cargo publish -p hexser_macros
 2. Wait for indexing
 - crates.io indexing can take a few minutes. Verify that the specific version is visible either on crates.io or via:
 ```
-cargo search hexser_macros | grep 0.4.5
+cargo search hexser_macros | grep 0.4.6
 ```
 
 3. Publish the main crate
@@ -102,7 +102,7 @@ export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 - After each publish, confirm the crate page on crates.io and docs.rs build status.
 - Create and push a signed tag (example):
 ```
-git tag -s v0.4.5 -m "hexser 0.4.5 release"
+git tag -s v0.4.5 -m "hexser 0.4.6 release"
 git push origin v0.4.5
 ```
 

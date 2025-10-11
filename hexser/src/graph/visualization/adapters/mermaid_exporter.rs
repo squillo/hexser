@@ -3,6 +3,7 @@
 //! Exports graphs to Mermaid diagram format.
 //!
 //! Revision History
+//! - 2025-10-10T17:33:00Z @AI: Fix node ID sanitization to remove NodeId() wrapper for valid Mermaid syntax.
 //! - 2025-10-02T16:00:00Z @AI: Initial Mermaid exporter implementation.
 
 /// Mermaid format exporter
@@ -17,6 +18,21 @@ impl MermaidExporter {
       direction: String::from("TD"),
     }
   }
+
+  /// Sanitize node ID for Mermaid syntax
+  ///
+  /// Removes "NodeId(" prefix and ")" suffix, replaces "::" with "_"
+  /// to create valid Mermaid node identifiers
+  fn sanitize_node_id(id: &str) -> String {
+    let cleaned = if id.starts_with("NodeId(") && id.ends_with(")") {
+      // Extract the numeric part: "NodeId(12345)" -> "12345"
+      &id[7..id.len() - 1]
+    } else {
+      id
+    };
+    // Also replace :: with _ for any remaining type names
+    cleaned.replace("::", "_")
+  }
 }
 
 impl crate::graph::visualization::ports::format_exporter::FormatExporter for MermaidExporter {
@@ -27,7 +43,7 @@ impl crate::graph::visualization::ports::format_exporter::FormatExporter for Mer
     let mut output = format!("graph {}\n", self.direction);
 
     for node in &visual_graph.nodes {
-      let node_id = node.id.replace("::", "_");
+      let node_id = Self::sanitize_node_id(&node.id);
       output.push_str(&format!(
         "  {}[\"{}\\n({})\"]\n",
         node_id, node.label, node.role
@@ -37,8 +53,8 @@ impl crate::graph::visualization::ports::format_exporter::FormatExporter for Mer
     output.push_str("\n");
 
     for edge in &visual_graph.edges {
-      let source_id = edge.source.replace("::", "_");
-      let target_id = edge.target.replace("::", "_");
+      let source_id = Self::sanitize_node_id(&edge.source);
+      let target_id = Self::sanitize_node_id(&edge.target);
       output.push_str(&format!(
         "  {} -->|{}| {}\n",
         source_id, edge.relationship, target_id

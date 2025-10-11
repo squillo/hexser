@@ -16,14 +16,14 @@ In typical projects you do not need to add `hexser_macros` explicitly. The main 
 
 ```toml
 [dependencies]
-hexser = "0.4.5"  # macros enabled by default via the `macros` feature
+hexser = "0.4.6"  # macros enabled by default via the `macros` feature
 ```
 
 Advanced users who know they only need the macros can depend directly, but this is uncommon:
 
 ```toml
 [dependencies]
-hexser_macros = "0.4.5"
+hexser_macros = "0.4.6"
 ```
 
 > Note: The derive and attribute macros are designed to work with the types/traits defined in `hexser`. Using them standalone usually requires `hexser` in your dependency tree anyway.

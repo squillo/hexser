@@ -5,6 +5,7 @@
 //! Follows JSON Schema for validation and tooling integration.
 //!
 //! Revision History
+//! - 2025-10-10T20:28:00Z @AI: Add MethodInfo to ComponentInfo for capturing method signatures and documentation.
 //! - 2025-10-02T18:00:00Z @AI: Initial AI context structure.
 //! - 2025-10-06T17:59:00Z @AI: Add to_json() serializer and tests; ensure ai feature includes serde.
 
@@ -53,6 +54,47 @@ pub struct ComponentInfo {
 
   /// Dependencies on other components
   pub dependencies: Vec<String>,
+
+  /// Public methods and their documentation
+  pub methods: Vec<MethodInfo>,
+}
+
+/// Information about a method within a component
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct MethodInfo {
+  /// Method name
+  pub name: String,
+
+  /// Method signature (full declaration)
+  pub signature: String,
+
+  /// Documentation comment for the method
+  pub documentation: Option<String>,
+
+  /// Method parameters with types and descriptions
+  pub parameters: Vec<ParameterInfo>,
+
+  /// Return type information
+  pub return_type: Option<String>,
+
+  /// Whether this method is public
+  pub is_public: bool,
+
+  /// Whether this method is async
+  pub is_async: bool,
+}
+
+/// Information about a method parameter
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct ParameterInfo {
+  /// Parameter name
+  pub name: String,
+
+  /// Parameter type
+  pub param_type: String,
+
+  /// Parameter description from documentation
+  pub description: Option<String>,
 }
 
 /// Information about component relationships
@@ -243,6 +285,7 @@ mod tests {
       role: String::from("Entity"),
       module_path: String::from("domain::user"),
       purpose: Some(String::from("Represents a user")),
+      methods: vec![],
       dependencies: vec![],
     };
 
@@ -264,6 +307,69 @@ mod tests {
     let json = serde_json::to_string(&suggestion).unwrap();
     assert!(json.contains("missing_implementation"));
     assert!(json.contains("high"));
+  }
+
+  #[test]
+  fn test_method_info_serialization() {
+    // Test: Validates MethodInfo structure serializes correctly with method details
+    // Justification: New feature for capturing method-level documentation
+    let method = MethodInfo {
+      name: String::from("save"),
+      signature: String::from("fn save(&mut self, entity: T) -> HexResult<()>"),
+      documentation: Some(String::from("Saves an entity to the repository")),
+      parameters: vec![
+        ParameterInfo {
+          name: String::from("self"),
+          param_type: String::from("&mut self"),
+          description: None,
+        },
+        ParameterInfo {
+          name: String::from("entity"),
+          param_type: String::from("T"),
+          description: Some(String::from("The entity to save")),
+        },
+      ],
+      return_type: Some(String::from("HexResult<()>")),
+      is_public: true,
+      is_async: false,
+    };
+
+    let json = serde_json::to_string(&method).unwrap();
+    assert!(json.contains("save"));
+    assert!(json.contains("HexResult"));
+    assert!(json.contains("\"is_public\":true"));
+  }
+
+  #[test]
+  fn test_component_with_methods() {
+    // Test: Validates ComponentInfo with methods field serializes correctly
+    // Justification: Integration test for new methods feature
+    let component = ComponentInfo {
+      type_name: String::from("UserRepository"),
+      layer: String::from("Port"),
+      role: String::from("Repository"),
+      module_path: String::from("ports::user_repository"),
+      purpose: Some(String::from("Manages user persistence")),
+      methods: vec![MethodInfo {
+        name: String::from("find_by_id"),
+        signature: String::from("fn find_by_id(&self, id: &str) -> HexResult<Option<User>>"),
+        documentation: Some(String::from("Finds a user by their ID")),
+        parameters: vec![ParameterInfo {
+          name: String::from("id"),
+          param_type: String::from("&str"),
+          description: Some(String::from("User identifier")),
+        }],
+        return_type: Some(String::from("HexResult<Option<User>>")),
+        is_public: true,
+        is_async: false,
+      }],
+      dependencies: vec![],
+    };
+
+    let json = serde_json::to_string(&component).unwrap();
+    assert!(json.contains("UserRepository"));
+    assert!(json.contains("find_by_id"));
+    assert!(json.contains("Finds a user"));
   }
 }
 
