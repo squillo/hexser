@@ -86,7 +86,7 @@ dependencies = [
 
 [[package]]
 name = "axum-core"
-version = "0.4.6"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09f2bd6146b97ae3359fa0cc6d6b376d9539582c7b4220f041a33ec24c226199"
 dependencies = [
@@ -321,7 +321,7 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 
 [[package]]
 name = "hexser"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "chrono",
  "hexser_macros",
@@ -332,7 +332,7 @@ dependencies = [
 
 [[package]]
 name = "hexser_macros"
-version = "0.4.6"
+version = "0.4.7"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -556,7 +556,7 @@ dependencies = [
 
 [[package]]
 name = "num-bigint"
-version = "0.4.6"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a5e44f723f1133c9deac646763579fdb3ac745e418f2a7af9cd0c431da1f20b9"
 dependencies = [

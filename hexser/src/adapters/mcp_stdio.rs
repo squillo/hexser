@@ -57,7 +57,7 @@ impl McpStdioServer {
   /// # Returns
   ///
   /// New McpStdioServer instance
-  #[deprecated(since = "0.4.6", note = "Use with_registry instead")]
+  #[deprecated(since = "0.4.7", note = "Use with_registry instead")]
   pub fn with_graph(graph: std::sync::Arc<crate::graph::hex_graph::HexGraph>) -> Self {
     let mut registry = crate::domain::mcp::ProjectRegistry::new();
     let config = crate::domain::mcp::ProjectConfig::new(

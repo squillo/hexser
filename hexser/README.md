@@ -17,6 +17,7 @@ The `hexser` crate provides reusable generic types and traits for implementing H
 - [Feature Flags](#feature-flags)
 - [Complete Tutorial](#complete-tutorial)
 - [CQRS Pattern with hex](#part-3-cqrs-pattern-with-hex)
+- [Application Lifecycle and Entry Points](#part-35-application-lifecycle-and-entry-points)
 - [Testing Your Hexagonal Application](#part-4-testing-your-hexagonal-application)
 - [Error Handling](#part-5-error-handling)
 - [Real-World Example - TODO Application](#part-6-real-world-example---todo-application)
@@ -61,7 +62,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hexser = "0.4.6"
+hexser = "0.4.7"
 ```
 
 Your First Hexagonal Application
@@ -144,7 +145,7 @@ Enabled by default. Includes procedural macros and zero-cost static dependency i
 
 ```toml
 [dependencies]
-hexser = "0.4.6"  # Uses default features
+hexser = "0.4.7"  # Uses default features
 ```
 
 #### `macros`
@@ -164,7 +165,7 @@ Enables procedural macros for deriving hexagonal architecture traits.
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.6", default-features = false, features = ["macros"] }
+hexser = { version = "0.4.7", default-features = false, features = ["macros"] }
 ```
 
 #### `static-di`
@@ -179,7 +180,7 @@ Zero-cost, WASM-friendly static dependency injection. No runtime overhead, no dy
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.6", features = ["static-di"] }
+hexser = { version = "0.4.7", features = ["static-di"] }
 ```
 
 **Example:**
@@ -207,7 +208,7 @@ Enables AI context export functionality for exposing architecture metadata to AI
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.6", features = ["ai"] }
+hexser = { version = "0.4.7", features = ["ai"] }
 ```
 
 **Usage:**
@@ -232,7 +233,7 @@ Model Context Protocol server implementation for serving architecture data via J
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.6", features = ["mcp"] }
+hexser = { version = "0.4.7", features = ["mcp"] }
 ```
 
 **Usage:**
@@ -254,7 +255,7 @@ Enables async/await support for ports and adapters.
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.6", features = ["async"] }
+hexser = { version = "0.4.7", features = ["async"] }
 ```
 
 **Example:**
@@ -279,7 +280,7 @@ Enables graph visualization and export capabilities.
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.6", features = ["visualization"] }
+hexser = { version = "0.4.7", features = ["visualization"] }
 ```
 
 #### `container`
@@ -296,7 +297,7 @@ Dynamic dependency injection container with async support. **Not enabled by defa
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.6", features = ["container"] }
+hexser = { version = "0.4.7", features = ["container"] }
 ```
 
 #### `full`
@@ -306,7 +307,7 @@ Enables all features: `ai`, `mcp`, `async`, `macros`, `visualization`, `containe
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.6", features = ["full"] }
+hexser = { version = "0.4.7", features = ["full"] }
 ```
 
 ### Binary Targets
@@ -345,25 +346,25 @@ cargo run --bin hex-mcp-server --features mcp
 #### Minimal (no default features)
 ```toml
 [dependencies]
-hexser = { version = "0.4.6", default-features = false }
+hexser = { version = "0.4.7", default-features = false }
 ```
 
 #### WASM-optimized
 ```toml
 [dependencies]
-hexser = { version = "0.4.6", default-features = false, features = ["macros", "static-di"] }
+hexser = { version = "0.4.7", default-features = false, features = ["macros", "static-di"] }
 ```
 
 #### AI-enabled with async
 ```toml
 [dependencies]
-hexser = { version = "0.4.6", features = ["ai", "async", "visualization"] }
+hexser = { version = "0.4.7", features = ["ai", "async", "visualization"] }
 ```
 
 #### Full development setup
 ```toml
 [dependencies]
-hexser = { version = "0.4.6", features = ["full"] }
+hexser = { version = "0.4.7", features = ["full"] }
 ```
 
 ---
@@ -746,6 +747,254 @@ impl FindUserByEmailHandler {
   -> HexResult<Option<UserView>> {
     self.query_repo.find_by_email(&query.email)
   }
+}
+```
+
+
+### Part 3.5: Application Lifecycle and Entry Points
+
+The `Application` trait marks top-level entry points and coordinates the system lifecycle in hexagonal architecture. It orchestrates initialization of adapters, ports, and domain services, and manages the application from startup to shutdown.
+
+#### The Application Trait
+
+```rust
+use hexser::prelude::*;
+
+struct WebApplication {
+    port: u16,
+    user_handler: UpdateUserEmailHandler,
+    query_handler: FindUserByEmailHandler,
+}
+
+impl Application for WebApplication {
+    fn name(&self) -> &str {
+        "WebApplication"
+    }
+
+    fn initialize(&mut self) -> HexResult<()> {
+        println!("Initializing web server on port {}", self.port);
+        // Load configuration
+        // Set up dependency injection
+        // Initialize adapters and ports
+        // Validate system state
+        Ok(())
+    }
+
+    fn run(&mut self) -> HexResult<()> {
+        println!("Starting web server...");
+        // Start web server or event loop
+        // Process incoming requests
+        // Execute directives and queries
+        Ok(())
+    }
+
+    fn shutdown(&mut self) -> HexResult<()> {
+        println!("Shutting down web server...");
+        // Close database connections
+        // Flush buffers
+        // Save state
+        // Release resources
+        Ok(())
+    }
+}
+
+fn main() -> HexResult<()> {
+    let mut app = WebApplication {
+        port: 8080,
+        user_handler: UpdateUserEmailHandler {
+            repo: Box::new(PostgresUserRepository::new()),
+        },
+        query_handler: FindUserByEmailHandler {
+            query_repo: Box::new(PostgresUserQueryRepository::new()),
+        },
+    };
+
+    // Execute full lifecycle: initialize, run, shutdown
+    app.execute()
+}
+```
+
+#### Minimal Application
+
+The Application trait follows hexser's zero-boilerplate philosophy. All lifecycle methods have default implementations, so you only override what you need:
+
+```rust
+use hexser::prelude::*;
+
+struct MinimalApp;
+
+impl Application for MinimalApp {
+    fn name(&self) -> &str {
+        "MinimalApp"
+    }
+    // initialize(), run(), and shutdown() have default no-op implementations
+}
+
+fn main() -> HexResult<()> {
+    let mut app = MinimalApp;
+    app.execute() // Works perfectly with defaults
+}
+```
+
+#### Application with CQRS Integration
+
+Here's a complete example showing how the Application trait coordinates Directives and Queries:
+
+```rust
+use hexser::prelude::*;
+
+// Application that processes user directives and queries
+struct UserManagementApp {
+    directive_handler: UpdateUserEmailHandler,
+    query_handler: FindUserByEmailHandler,
+    config: AppConfig,
+}
+
+impl Application for UserManagementApp {
+    fn name(&self) -> &str {
+        "UserManagementApp"
+    }
+
+    fn initialize(&mut self) -> HexResult<()> {
+        // Load configuration
+        self.config.load()?;
+        
+        // Initialize database connections
+        let db_pool = self.config.create_db_pool()?;
+        
+        // Set up handlers with dependencies
+        self.directive_handler = UpdateUserEmailHandler {
+            repo: Box::new(PostgresUserRepository::new(db_pool.clone())),
+        };
+        
+        self.query_handler = FindUserByEmailHandler {
+            query_repo: Box::new(PostgresUserQueryRepository::new(db_pool)),
+        };
+        
+        Ok(())
+    }
+
+    fn run(&mut self) -> HexResult<()> {
+        // Example: Process a directive
+        let directive = UpdateUserEmail {
+            user_id: UserId::new(),
+            new_email: Email("newuser@example.com".to_string()),
+        };
+        
+        directive.validate()?;
+        self.directive_handler.handle(directive)?;
+        
+        // Example: Execute a query
+        let query = FindUserByEmail {
+            email: "newuser@example.com".to_string(),
+        };
+        
+        let user = self.query_handler.handle(query)?;
+        println!("Found user: {:?}", user);
+        
+        Ok(())
+    }
+
+    fn shutdown(&mut self) -> HexResult<()> {
+        // Close database connections
+        self.config.close_db_pool()?;
+        println!("Shutdown complete");
+        Ok(())
+    }
+}
+```
+
+#### Error Handling in Applications
+
+The Application trait integrates seamlessly with hexser's error handling:
+
+```rust
+impl Application for RobustApp {
+    fn name(&self) -> &str {
+        "RobustApp"
+    }
+
+    fn initialize(&mut self) -> HexResult<()> {
+        self.config.load()
+            .map_err(|e| Hexserror::infrastructure(
+                "Failed to load configuration"
+            ).with_source(e))?;
+        
+        Ok(())
+    }
+
+    fn run(&mut self) -> HexResult<()> {
+        // If run fails, shutdown is still called by execute()
+        self.process_requests()
+            .map_err(|e| Hexserror::application(
+                "Request processing failed"
+            ).with_source(e))
+    }
+
+    fn shutdown(&mut self) -> HexResult<()> {
+        // Shutdown errors are properly propagated
+        self.cleanup_resources()
+            .map_err(|e| Hexserror::infrastructure(
+                "Cleanup failed"
+            ).with_source(e))
+    }
+}
+
+fn main() -> HexResult<()> {
+    let mut app = RobustApp::new();
+    
+    // execute() calls initialize(), run(), and shutdown() in sequence
+    // If any step fails, the error is returned
+    // shutdown() is always called even if run() fails
+    app.execute()
+}
+```
+
+#### Architecture Benefits
+
+The Application trait provides several architectural benefits:
+
+1. **Clear Entry Points**: Marks the top level of your application, making architecture explicit
+2. **Lifecycle Management**: Standardizes initialization, execution, and cleanup patterns
+3. **Error Propagation**: Ensures errors during any lifecycle phase are properly handled
+4. **Testability**: Easy to test each lifecycle phase independently
+5. **Composability**: Applications can compose other applications for microservices or modular systems
+
+```rust
+// Example: Compose multiple applications
+struct MicroservicesApp {
+    user_service: UserManagementApp,
+    order_service: OrderProcessingApp,
+    notification_service: NotificationApp,
+}
+
+impl Application for MicroservicesApp {
+    fn name(&self) -> &str {
+        "MicroservicesApp"
+    }
+
+    fn initialize(&mut self) -> HexResult<()> {
+        self.user_service.initialize()?;
+        self.order_service.initialize()?;
+        self.notification_service.initialize()?;
+        Ok(())
+    }
+
+    fn run(&mut self) -> HexResult<()> {
+        // Run all services concurrently or sequentially
+        self.user_service.run()?;
+        self.order_service.run()?;
+        self.notification_service.run()?;
+        Ok(())
+    }
+
+    fn shutdown(&mut self) -> HexResult<()> {
+        // Shutdown in reverse order
+        self.notification_service.shutdown()?;
+        self.order_service.shutdown()?;
+        self.user_service.shutdown()?;
+        Ok(())
+    }
 }
 ```
 
@@ -1269,7 +1518,7 @@ Add to your project via workspace path:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "../hexser_potions", version = "0.4.6" }
+hexser_potions = { path = "../hexser_potions", version = "0.4.7" }
 ```
 
 Then in code:

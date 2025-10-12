@@ -61,11 +61,12 @@ hexser/
 │   ├── mapper.rs         # Mapper<From, To> trait
 │   └── mcp_stdio.rs      # MCP stdio adapter (feature-gated)
 │
-├── application/          # Use case orchestration
+├── application/          # Use case orchestration and lifecycle
+│   ├── application.rs    # Application trait (entry points, lifecycle)
 │   ├── directive.rs      # Directive trait (commands)
-│   ├── directive_handler.rs
+│   ├── directive_handler.rs # DirectiveHandler trait
 │   ├── query_handler.rs  # QueryHandler trait
-│   └── use_case.rs
+│   └── use_case.rs       # UseCase trait
 │
 ├── graph/                # Architecture graph
 │   ├── hex_graph.rs      # Main graph structure

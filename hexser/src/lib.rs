@@ -90,7 +90,7 @@ pub use crate::ports::{InputPort, OutputPort, Query, Repository, UseCase};
 pub use crate::adapters::{Adapter, Mapper};
 
 // Re-export all application traits
-pub use crate::application::{Directive, DirectiveHandler, QueryHandler};
+pub use crate::application::{Application, Directive, DirectiveHandler, QueryHandler};
 
 // Re-export infrastructure traits
 pub use crate::infrastructure::Config;
@@ -132,7 +132,7 @@ pub mod prelude {
 
   pub use crate::adapters::{Adapter, Mapper};
 
-  pub use crate::application::{Directive, DirectiveHandler, QueryHandler};
+  pub use crate::application::{Application, Directive, DirectiveHandler, QueryHandler};
 
   pub use crate::infrastructure::Config;
 

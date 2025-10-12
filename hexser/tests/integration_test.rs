@@ -5,6 +5,7 @@
 //! and adapters, ensuring proper separation of concerns and functionality.
 //!
 //! Revision History
+//! - 2025-10-12T18:37:00Z @AI: Add comprehensive Application trait integration test with full CQRS flow.
 //! - 2025-10-02T21:45:00Z @AI: Enhance HexAggregate macro test to use hex(invariants) attribute for custom validation.
 //! - 2025-10-02T21:30:00Z @AI: Fix conflicting Aggregate implementations, remove derive from custom invariant test.
 
@@ -372,5 +373,371 @@ mod error_integration {
     let display = format!("{}", err);
     assert!(display.contains("E_HEX_001"));
     assert!(display.contains("Next Steps"));
+  }
+}
+
+#[cfg(test)]
+mod application_integration {
+  use hexser::{
+    Application, Directive, DirectiveHandler, HexEntity, HexResult, QueryHandler, Repository,
+  };
+
+  // Domain layer
+  #[derive(Clone, Debug, PartialEq)]
+  struct Todo {
+    id: String,
+    title: String,
+    completed: bool,
+  }
+
+  impl HexEntity for Todo {
+    type Id = String;
+  }
+
+  // Repository port
+  trait TodoRepository: Repository<Todo> {
+    fn find_all(&self) -> HexResult<Vec<Todo>>;
+  }
+
+  // Repository adapter (using interior mutability for shared state)
+  struct InMemoryTodoRepository {
+    todos: std::sync::Arc<std::sync::Mutex<Vec<Todo>>>,
+    initialized: std::sync::Arc<std::sync::Mutex<bool>>,
+  }
+
+  impl InMemoryTodoRepository {
+    fn new() -> Self {
+      Self {
+        todos: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
+        initialized: std::sync::Arc::new(std::sync::Mutex::new(false)),
+      }
+    }
+
+    fn initialize(&mut self) -> HexResult<()> {
+      let mut initialized = self.initialized.lock().unwrap();
+      *initialized = true;
+      Ok(())
+    }
+  }
+
+  impl Clone for InMemoryTodoRepository {
+    fn clone(&self) -> Self {
+      Self {
+        todos: std::sync::Arc::clone(&self.todos),
+        initialized: std::sync::Arc::clone(&self.initialized),
+      }
+    }
+  }
+
+  impl hexser::adapters::Adapter for InMemoryTodoRepository {}
+
+  impl Repository<Todo> for InMemoryTodoRepository {
+    fn save(&mut self, todo: Todo) -> HexResult<()> {
+      let initialized = self.initialized.lock().unwrap();
+      if !*initialized {
+        return Err(hexser::Hexserror::adapter(
+          hexser::error_codes::adapter::DB_CONNECTION_FAILURE,
+          "Repository not initialized",
+        ));
+      }
+      drop(initialized);
+
+      let mut todos = self.todos.lock().unwrap();
+      todos.push(todo);
+      Ok(())
+    }
+  }
+
+  impl TodoRepository for InMemoryTodoRepository {
+    fn find_all(&self) -> HexResult<Vec<Todo>> {
+      let initialized = self.initialized.lock().unwrap();
+      if !*initialized {
+        return Err(hexser::Hexserror::adapter(
+          hexser::error_codes::adapter::DB_CONNECTION_FAILURE,
+          "Repository not initialized",
+        ));
+      }
+      drop(initialized);
+
+      let todos = self.todos.lock().unwrap();
+      Ok(todos.clone())
+    }
+  }
+
+  // Directive (write side)
+  struct CreateTodoDirective {
+    title: String,
+  }
+
+  impl Directive for CreateTodoDirective {
+    fn validate(&self) -> HexResult<()> {
+      if self.title.is_empty() {
+        return Err(hexser::Hexserror::validation_field(
+          "Title cannot be empty",
+          "title",
+        ));
+      }
+      Ok(())
+    }
+  }
+
+  // Directive handler
+  struct CreateTodoHandler {
+    repository: InMemoryTodoRepository,
+    next_id: std::cell::Cell<u32>,
+  }
+
+  impl CreateTodoHandler {
+    fn new(repository: InMemoryTodoRepository) -> Self {
+      Self {
+        repository,
+        next_id: std::cell::Cell::new(1),
+      }
+    }
+  }
+
+  impl DirectiveHandler<CreateTodoDirective> for CreateTodoHandler {
+    fn handle(&self, directive: CreateTodoDirective) -> HexResult<()> {
+      directive.validate()?;
+
+      let id = self.next_id.get();
+      let todo = Todo {
+        id: id.to_string(),
+        title: directive.title,
+        completed: false,
+      };
+
+      self.next_id.set(id + 1);
+      let mut repo = self.repository.clone();
+      repo.save(todo)
+    }
+  }
+
+  // Query (read side)
+  struct FindAllTodosQuery;
+
+  // Query handler
+  struct FindAllTodosHandler {
+    repository: InMemoryTodoRepository,
+  }
+
+  impl FindAllTodosHandler {
+    fn new(repository: InMemoryTodoRepository) -> Self {
+      Self { repository }
+    }
+  }
+
+  impl QueryHandler<FindAllTodosQuery, Vec<Todo>> for FindAllTodosHandler {
+    fn handle(&self, _query: FindAllTodosQuery) -> HexResult<Vec<Todo>> {
+      self.repository.find_all()
+    }
+  }
+
+  // Application
+  struct TodoApplication {
+    directive_handler: Option<CreateTodoHandler>,
+    query_handler: Option<FindAllTodosHandler>,
+    repository: InMemoryTodoRepository,
+    fail_on_initialize: bool,
+    fail_on_run: bool,
+  }
+
+  impl TodoApplication {
+    fn new() -> Self {
+      Self {
+        directive_handler: None,
+        query_handler: None,
+        repository: InMemoryTodoRepository::new(),
+        fail_on_initialize: false,
+        fail_on_run: false,
+      }
+    }
+
+    fn with_init_failure() -> Self {
+      let mut app = Self::new();
+      app.fail_on_initialize = true;
+      app
+    }
+
+    fn with_run_failure() -> Self {
+      let mut app = Self::new();
+      app.fail_on_run = true;
+      app
+    }
+  }
+
+  impl Application for TodoApplication {
+    fn name(&self) -> &str {
+      "TodoApplication"
+    }
+
+    fn initialize(&mut self) -> HexResult<()> {
+      if self.fail_on_initialize {
+        return Err(hexser::Hexserror::adapter(
+          hexser::error_codes::io::IO_FAILURE,
+          "Simulated initialization failure",
+        ));
+      }
+
+      // Initialize repository
+      self.repository.initialize()?;
+
+      // Create handlers with initialized repository
+      self.directive_handler = Some(CreateTodoHandler::new(self.repository.clone()));
+      self.query_handler = Some(FindAllTodosHandler::new(self.repository.clone()));
+
+      Ok(())
+    }
+
+    fn run(&mut self) -> HexResult<()> {
+      if self.fail_on_run {
+        return Err(hexser::Hexserror::domain(
+          hexser::error_codes::domain::INVARIANT_VIOLATION,
+          "Simulated runtime failure",
+        ));
+      }
+
+      // Execute some directives
+      let directive = CreateTodoDirective {
+        title: String::from("Integration test todo"),
+      };
+
+      self
+        .directive_handler
+        .as_mut()
+        .expect("Handler not initialized")
+        .handle(directive)?;
+
+      // Execute a query
+      let query = FindAllTodosQuery;
+      let todos = self
+        .query_handler
+        .as_ref()
+        .expect("Handler not initialized")
+        .handle(query)?;
+
+      assert_eq!(todos.len(), 1);
+      assert_eq!(todos[0].title, "Integration test todo");
+
+      Ok(())
+    }
+
+    fn shutdown(&mut self) -> HexResult<()> {
+      // Cleanup handlers
+      self.directive_handler = None;
+      self.query_handler = None;
+      Ok(())
+    }
+  }
+
+  /// Test: Complete application lifecycle with CQRS flow.
+  /// Justification: Validates that the Application trait orchestrates the entire
+  /// hexagonal architecture correctly, from initialization through execution to shutdown.
+  #[test]
+  fn test_complete_application_lifecycle() {
+    let mut app = TodoApplication::new();
+
+    // Execute full lifecycle
+    let result = app.execute();
+    assert!(result.is_ok());
+
+    // Verify handlers were cleaned up
+    assert!(app.directive_handler.is_none());
+    assert!(app.query_handler.is_none());
+  }
+
+  /// Test: Application handles initialization failures.
+  /// Justification: Ensures that initialization errors prevent the application
+  /// from running in an invalid state.
+  #[test]
+  fn test_application_initialization_failure() {
+    let mut app = TodoApplication::with_init_failure();
+
+    let result = app.execute();
+    assert!(result.is_err());
+
+    let err = result.unwrap_err();
+    assert!(err.to_string().contains("initialization failure"));
+  }
+
+  /// Test: Application handles runtime failures and still shuts down.
+  /// Justification: Verifies that runtime errors are propagated but shutdown
+  /// still occurs for cleanup.
+  #[test]
+  fn test_application_runtime_failure() {
+    let mut app = TodoApplication::with_run_failure();
+
+    let result = app.execute();
+    assert!(result.is_err());
+
+    let err = result.unwrap_err();
+    assert!(err.to_string().contains("runtime failure"));
+
+    // Verify shutdown was still called (handlers cleaned up)
+    assert!(app.directive_handler.is_none());
+    assert!(app.query_handler.is_none());
+  }
+
+  /// Test: Minimal application with default implementations.
+  /// Justification: Validates the zero-boilerplate philosophy where only
+  /// name() is required.
+  #[test]
+  fn test_minimal_application() {
+    struct MinimalApp;
+
+    impl Application for MinimalApp {
+      fn name(&self) -> &str {
+        "MinimalApp"
+      }
+    }
+
+    let mut app = MinimalApp;
+    assert_eq!(app.name(), "MinimalApp");
+
+    let result = app.execute();
+    assert!(result.is_ok());
+  }
+
+  /// Test: Directive validation through Application.
+  /// Justification: Ensures that directive validation errors are properly
+  /// propagated through the application layer.
+  #[test]
+  fn test_directive_validation_through_application() {
+    let mut app = TodoApplication::new();
+    app.initialize().expect("Initialization failed");
+
+    let invalid_directive = CreateTodoDirective {
+      title: String::from(""),
+    };
+
+    let result = app
+      .directive_handler
+      .as_mut()
+      .unwrap()
+      .handle(invalid_directive);
+
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(err.to_string().contains("Title cannot be empty"));
+  }
+
+  /// Test: Repository not initialized error handling.
+  /// Justification: Validates that the application properly handles infrastructure
+  /// errors when components aren't properly initialized.
+  #[test]
+  fn test_uninitialized_repository_error() {
+    let mut repo = InMemoryTodoRepository::new();
+
+    let todo = Todo {
+      id: String::from("1"),
+      title: String::from("Test"),
+      completed: false,
+    };
+
+    let result = repo.save(todo);
+    assert!(result.is_err());
+
+    let err = result.unwrap_err();
+    assert!(err.to_string().contains("not initialized"));
   }
 }
