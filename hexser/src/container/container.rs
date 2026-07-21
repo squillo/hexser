@@ -7,6 +7,7 @@
 //! for Singleton instances.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: PRD-272 §1.5/§3.G — services registry moves `tokio::RwLock<HashMap>`→`ArcSwap<IndexMap>` (wait-free resolve reads, CAS-retry rcu register as SOLE write site per N_BOOK §23); shared insert_service/load_entry helpers (DRY); per-entry OnceCell singleton cache retained.
 //! - 2026-07-20T00:00:00Z @AI: Never hold container locks across provider execution; singletons use a per-entry OnceCell (lock-free reads, single init, no deadlock on concurrent/nested resolution of distinct services).
 //! - 2025-10-02T20:45:00Z @AI: Clean async-only implementation with tokio::sync::RwLock.
 //! - 2025-10-02T20:40:00Z @AI: Simplify to tokio::sync::RwLock when container feature enabled.
@@ -14,27 +15,32 @@
 //! - 2025-10-02T20:30:00Z @AI: Add async resolution support for Phase 6.2.
 //! - 2025-10-02T20:00:00Z @AI: Initial container implementation for Phase 6.
 
-/// Dependency injection container
+/// Boxed singleton cell shared across service-map versions so a singleton initialised through one
+/// RCU version stays visible after later registrations rebuild the map.
+type SingletonCell =
+  std::sync::Arc<tokio::sync::OnceCell<std::sync::Arc<dyn std::any::Any + Send + Sync>>>;
+
+/// Dependency injection container.
 ///
-/// Thread-safe container for managing service lifecycles and dependencies.
-/// Uses Arc internally for efficient cloning and sharing across threads.
-/// Uses tokio::sync::RwLock for async compatibility.
+/// Thread-safe: the services registry lives behind `arc_swap::ArcSwap` (PRD-272 §1.5/§3.G
+/// wait-free RCU, N_BOOK §1.5 + §23). `resolve`/`contains`/`service_count` are lock-free reads
+/// (`load`); `register` is the SOLE write site (CAS-retry `rcu`). No provider code ever runs
+/// under a container lock.
 pub struct Container {
   inner: std::sync::Arc<ContainerInner>,
 }
 
 struct ContainerInner {
-  services: tokio::sync::RwLock<std::collections::HashMap<String, ServiceEntry>>,
+  services: arc_swap::ArcSwap<indexmap::IndexMap<String, ServiceEntry>>,
 }
 
+#[derive(Clone)]
 struct ServiceEntry {
   scope: crate::container::scope::Scope,
   factory: std::sync::Arc<dyn std::any::Any + Send + Sync>,
-  /// Per-service singleton cache. Wrapped in `Arc` so it can be cloned out of the services map
-  /// (dropping the map lock) before the provider runs; `OnceCell` guarantees exactly one
-  /// initialization, has lock-free reads once populated, and never holds a container-wide lock.
-  singleton_cache:
-    std::sync::Arc<tokio::sync::OnceCell<std::sync::Arc<dyn std::any::Any + Send + Sync>>>,
+  /// Per-service singleton cache. Shared `Arc` so it survives map-version rebuilds; `OnceCell`
+  /// guarantees exactly one initialization with lock-free reads once populated.
+  singleton_cache: SingletonCell,
 }
 
 impl Container {
@@ -48,9 +54,60 @@ impl Container {
   pub fn new() -> Self {
     Self {
       inner: std::sync::Arc::new(ContainerInner {
-        services: tokio::sync::RwLock::const_new(std::collections::HashMap::new()),
+        services: arc_swap::ArcSwap::from_pointee(indexmap::IndexMap::new()),
       }),
     }
+  }
+
+  /// SOLE write site (PRD-272 §1.5, N_BOOK §23): insert an entry if the name is free, else report
+  /// already-registered. Uses CAS-retry `rcu` so concurrent registrations serialise without a
+  /// lock; the committed iteration decides `already`.
+  fn insert_service(
+    &self,
+    name: String,
+    entry: ServiceEntry,
+  ) -> crate::result::hex_result::HexResult<()> {
+    let mut already = false;
+    self.inner.services.rcu(|cur| {
+      if cur.contains_key(&name) {
+        already = true;
+        indexmap::IndexMap::clone(cur)
+      } else {
+        already = false;
+        let mut next = indexmap::IndexMap::clone(cur);
+        next.insert(name.clone(), entry.clone());
+        next
+      }
+    });
+    if already {
+      return Err(
+        crate::error::hex_error::Hexserror::validation(&format!(
+          "Service {name} already registered"
+        ))
+        .with_next_step("Use different service name or remove existing registration"),
+      );
+    }
+    Ok(())
+  }
+
+  /// Wait-free load of a service entry's resolvable parts. No lock is held past this call.
+  fn load_entry(
+    &self,
+    name: &str,
+  ) -> crate::result::hex_result::HexResult<(
+    crate::container::scope::Scope,
+    std::sync::Arc<dyn std::any::Any + Send + Sync>,
+    SingletonCell,
+  )> {
+    let services = self.inner.services.load();
+    let entry = services
+      .get(name)
+      .ok_or_else(|| crate::error::hex_error::Hexserror::not_found("Service", name))?;
+    Ok((
+      entry.scope,
+      std::sync::Arc::clone(&entry.factory),
+      std::sync::Arc::clone(&entry.singleton_cache),
+    ))
   }
 
   /// Register service with provider and scope
@@ -68,29 +125,13 @@ impl Container {
     provider: impl crate::container::provider::Provider<T> + 'static,
     scope: crate::container::scope::Scope,
   ) -> crate::result::hex_result::HexResult<()> {
-    let name = name.into();
-    let mut services = self.inner.services.write().await;
-
-    if services.contains_key(&name) {
-      return Err(
-        crate::error::hex_error::Hexserror::validation(&format!(
-          "Service {name} already registered"
-        ))
-        .with_next_step("Use different service name or remove existing registration"),
-      );
-    }
-
     let boxed_provider: Box<dyn crate::container::provider::Provider<T>> = Box::new(provider);
-    services.insert(
-      name,
-      ServiceEntry {
-        scope,
-        factory: std::sync::Arc::new(boxed_provider),
-        singleton_cache: std::sync::Arc::new(tokio::sync::OnceCell::new()),
-      },
-    );
-
-    Ok(())
+    let entry = ServiceEntry {
+      scope,
+      factory: std::sync::Arc::new(boxed_provider),
+      singleton_cache: std::sync::Arc::new(tokio::sync::OnceCell::new()),
+    };
+    self.insert_service(name.into(), entry)
   }
 
   /// Resolve service instance by name
@@ -104,21 +145,10 @@ impl Container {
     &self,
     name: &str,
   ) -> crate::result::hex_result::HexResult<std::sync::Arc<T>> {
-    // Hold the services read lock only long enough to clone the factory, scope, and singleton
-    // cache out of the map. The provider is invoked *after* the lock is dropped, so provider
-    // code that resolves other services (the natural DI pattern) can re-acquire the map lock
-    // without deadlocking, and a slow provider never blocks registration.
-    let (scope, factory, cache) = {
-      let services = self.inner.services.read().await;
-      let entry = services
-        .get(name)
-        .ok_or_else(|| crate::error::hex_error::Hexserror::not_found("Service", name))?;
-      (
-        entry.scope,
-        std::sync::Arc::clone(&entry.factory),
-        std::sync::Arc::clone(&entry.singleton_cache),
-      )
-    };
+    // Wait-free load of the entry's parts (no lock held). The provider is invoked afterward, so
+    // provider code that resolves other services (the natural DI pattern) never deadlocks and a
+    // slow provider never blocks registration.
+    let (scope, factory, cache) = self.load_entry(name)?;
 
     match scope {
       crate::container::scope::Scope::Singleton => {
@@ -154,14 +184,14 @@ impl Container {
     }
   }
 
-  /// Check if service is registered
+  /// Check if service is registered (wait-free read).
   pub async fn contains(&self, name: &str) -> bool {
-    self.inner.services.read().await.contains_key(name)
+    self.inner.services.load().contains_key(name)
   }
 
-  /// Get count of registered services
+  /// Get count of registered services (wait-free read).
   pub async fn service_count(&self) -> usize {
-    self.inner.services.read().await.len()
+    self.inner.services.load().len()
   }
 
   #[cfg(feature = "container")]
@@ -180,30 +210,14 @@ impl Container {
     provider: impl crate::container::async_provider::AsyncProvider<T> + 'static,
     scope: crate::container::scope::Scope,
   ) -> crate::result::hex_result::HexResult<()> {
-    let name = name.into();
-    let mut services = self.inner.services.write().await;
-
-    if services.contains_key(&name) {
-      return Err(
-        crate::error::hex_error::Hexserror::validation(&format!(
-          "Service {name} already registered"
-        ))
-        .with_next_step("Use different service name or remove existing registration"),
-      );
-    }
-
     let boxed_provider: Box<dyn crate::container::async_provider::AsyncProvider<T>> =
       Box::new(provider);
-    services.insert(
-      name,
-      ServiceEntry {
-        scope,
-        factory: std::sync::Arc::new(boxed_provider),
-        singleton_cache: std::sync::Arc::new(tokio::sync::OnceCell::new()),
-      },
-    );
-
-    Ok(())
+    let entry = ServiceEntry {
+      scope,
+      factory: std::sync::Arc::new(boxed_provider),
+      singleton_cache: std::sync::Arc::new(tokio::sync::OnceCell::new()),
+    };
+    self.insert_service(name.into(), entry)
   }
 
   #[cfg(feature = "container")]
@@ -219,20 +233,9 @@ impl Container {
     &self,
     name: &str,
   ) -> crate::result::hex_result::HexResult<std::sync::Arc<T>> {
-    // See `resolve`: clone what is needed out of the map under a brief read lock, then run the
-    // async provider with no container lock held. This is what makes nested async resolution
-    // (a provider awaiting `resolve_async` for a dependency) safe from deadlock.
-    let (scope, factory, cache) = {
-      let services = self.inner.services.read().await;
-      let entry = services
-        .get(name)
-        .ok_or_else(|| crate::error::hex_error::Hexserror::not_found("Service", name))?;
-      (
-        entry.scope,
-        std::sync::Arc::clone(&entry.factory),
-        std::sync::Arc::clone(&entry.singleton_cache),
-      )
-    };
+    // Wait-free load (no lock held), then run the async provider. This is what makes nested async
+    // resolution (a provider awaiting `resolve_async` for a dependency) safe from deadlock.
+    let (scope, factory, cache) = self.load_entry(name)?;
 
     match scope {
       crate::container::scope::Scope::Singleton => {
@@ -470,5 +473,39 @@ mod tests {
     );
     assert!(resolved.unwrap().is_ok());
     assert!(container.contains("late").await);
+  }
+
+  /// why: LESSON #16 — the NEW ArcSwap<IndexMap> services registry is an RCU surface and requires
+  /// a 16-OS-thread regression test. 16 threads concurrently register distinct services (CAS-retry
+  /// rcu writes) while also resolving; assert every registration lands (no lost update from the
+  /// rcu clone-and-swap) and wait-free reads never tear.
+  #[tokio::test(flavor = "multi_thread", worker_threads = 16)]
+  async fn test_arcswap_registry_16_thread_register_resolve() {
+    let container = Container::new();
+    let mut handles = std::vec::Vec::new();
+    for i in 0..16u32 {
+      let c = container.clone();
+      handles.push(tokio::spawn(async move {
+        let name = format!("svc-{i}");
+        c.register(
+          &name,
+          TestProvider { value: i as i32 },
+          crate::container::scope::Scope::Singleton,
+        )
+        .await
+        .expect("register must succeed");
+        // Wait-free read while other threads are still registering.
+        let resolved = c.resolve::<TestService>(&name).await.expect("resolve");
+        assert_eq!(resolved.value, i as i32);
+      }));
+    }
+    for h in handles {
+      h.await.expect("task must not panic");
+    }
+    // Every one of the 16 concurrent rcu registrations must be present (none lost to a race).
+    assert_eq!(container.service_count().await, 16);
+    for i in 0..16u32 {
+      assert!(container.contains(&format!("svc-{i}")).await);
+    }
   }
 }

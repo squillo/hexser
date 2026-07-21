@@ -9,6 +9,7 @@
 //! - 2026-07-20T00:00:00Z @AI: Route by envelope type to all handlers for that topic (fix last-subscription-wins misrouting); VecDeque queue with O(1) poll; enqueue only undelivered events to bound push-mode growth.
 //! - 2025-10-09T15:08:00Z @AI: Fix doc test to use trait imports for subscribe/publish methods.
 //! - 2025-10-09T14:51:00Z @AI: Initial InMemoryEventBus adapter implementation.
+//! - 2026-07-21T00:00:00Z @AI: PRD-272 §3.H — HashMap→IndexMap for deterministic iteration.
 
 /// Simple in-memory event bus for testing and development.
 ///
@@ -83,9 +84,8 @@ pub struct InMemoryEventBus<T> {
   /// Handlers keyed by topic. Each topic may have several handlers, and events are routed by
   /// the envelope's CloudEvents `type`, so subscribing to a second topic no longer starves the
   /// first (the previous single `self.topic` routing delivered only to the last subscription).
-  handlers: std::cell::RefCell<
-    std::collections::HashMap<std::string::String, std::vec::Vec<EventHandler<T>>>,
-  >,
+  handlers:
+    std::cell::RefCell<indexmap::IndexMap<std::string::String, std::vec::Vec<EventHandler<T>>>>,
   /// Legacy default-topic label retained for API compatibility (`with_topic`); routing is by
   /// envelope type, not this field.
   topic: std::string::String,
@@ -110,7 +110,7 @@ impl<T> InMemoryEventBus<T> {
   pub fn new() -> Self {
     Self {
       queue: std::cell::RefCell::new(std::collections::VecDeque::new()),
-      handlers: std::cell::RefCell::new(std::collections::HashMap::new()),
+      handlers: std::cell::RefCell::new(indexmap::IndexMap::new()),
       topic: std::string::String::from("default.events"),
     }
   }
@@ -136,7 +136,7 @@ impl<T> InMemoryEventBus<T> {
   pub fn with_topic(topic: std::string::String) -> Self {
     Self {
       queue: std::cell::RefCell::new(std::collections::VecDeque::new()),
-      handlers: std::cell::RefCell::new(std::collections::HashMap::new()),
+      handlers: std::cell::RefCell::new(indexmap::IndexMap::new()),
       topic,
     }
   }
@@ -482,6 +482,46 @@ mod tests {
     }
     bus.publish(&envelope_typed("1", "topic.x")).unwrap();
     assert_eq!(count.get(), 3, "all three handlers on topic.x must fire");
+  }
+
+  /// why: two handlers subscribed to the SAME topic, in a known order, must both fire and must
+  /// fire in registration order. `handlers` is keyed by topic in an `indexmap::IndexMap`
+  /// (PRD-272 §3.H), whose insertion-order-preserving iteration makes delivery order deterministic
+  /// rather than incidental to a `std::collections::HashMap` hash seed.
+  #[test]
+  fn test_same_topic_handlers_fire_in_registration_order() {
+    let mut bus: InMemoryEventBus<TestEvent> = InMemoryEventBus::new();
+    let order = std::rc::Rc::new(std::cell::RefCell::new(std::vec::Vec::new()));
+
+    let order_first = order.clone();
+    bus
+      .subscribe(
+        "topic.ordered",
+        std::boxed::Box::new(move |_e| {
+          order_first.borrow_mut().push("first");
+          std::result::Result::Ok(())
+        }),
+      )
+      .unwrap();
+
+    let order_second = order.clone();
+    bus
+      .subscribe(
+        "topic.ordered",
+        std::boxed::Box::new(move |_e| {
+          order_second.borrow_mut().push("second");
+          std::result::Result::Ok(())
+        }),
+      )
+      .unwrap();
+
+    bus.publish(&envelope_typed("1", "topic.ordered")).unwrap();
+
+    assert_eq!(
+      *order.borrow(),
+      std::vec!["first", "second"],
+      "handlers subscribed to the same topic must fire in registration order"
+    );
   }
 
   /// why: an event with no subscribed handler must be queued for poll-mode consumers, and an

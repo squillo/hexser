@@ -20,6 +20,10 @@ darling = "0.20"
 inventory = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+# PRD-272 §1.5/§3.G: wait-free RCU for shared-read, sole-write-site state (the architecture graph
+# hot-swap = self-programming substrate) and §3.H: deterministic iteration (IndexMap over HashMap).
+arc-swap = "1"
+indexmap = { version = "2", features = ["serde"] }
 # Library code (container/async features) uses only tokio::sync (RwLock, OnceCell). The runtime
 # features (macros, rt-multi-thread, time) are needed only by tests/examples and are added in
 # hexser's [dev-dependencies], keeping the shipped dependency lean and WASM-friendlier.

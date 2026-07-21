@@ -6,6 +6,7 @@
 //! using GraphBuilder and cannot be modified after creation.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: PRD-272 §1.5/§3.G — current() moves OnceLock→`LazyLock<ArcSwap<HexGraph>>` (wait-free RCU, self-programming hot-swap via install()/rebuild_current(), SOLE write site per N_BOOK §23); adjacency IndexMap (§3.H).
 //! - 2026-07-20T00:00:00Z @AI: Cache current() via OnceLock; BTreeMap nodes for deterministic iteration; O(degree) edges_from/edges_to via precomputed adjacency indices.
 //! - 2025-10-02T14:00:00Z @AI: Rename nodes_in_layer to nodes_by_layer and nodes_by_role to nodes_by_role for better API naming.
 //! - 2025-10-01T00:03:00Z @AI: Initial immutable HexGraph implementation for Phase 2.
@@ -47,28 +48,56 @@ pub(crate) struct GraphInner {
   pub(crate) edges: Vec<crate::graph::hex_edge::HexEdge>,
   /// Precomputed adjacency: source node id -> indices into `edges`. Lets `edges_from` return in
   /// O(degree) instead of scanning every edge (which made `to_ai_context` O(V*E)).
-  pub(crate) outgoing:
-    std::collections::HashMap<crate::graph::node_id::NodeId, std::vec::Vec<usize>>,
+  /// `IndexMap` (PRD-272 §3.H) gives deterministic iteration for byte-stable exports.
+  pub(crate) outgoing: indexmap::IndexMap<crate::graph::node_id::NodeId, std::vec::Vec<usize>>,
   /// Precomputed adjacency: target node id -> indices into `edges` (for `edges_to`).
-  pub(crate) incoming:
-    std::collections::HashMap<crate::graph::node_id::NodeId, std::vec::Vec<usize>>,
+  pub(crate) incoming: indexmap::IndexMap<crate::graph::node_id::NodeId, std::vec::Vec<usize>>,
   pub(crate) metadata: crate::graph::metadata::GraphMetadata,
 }
 
 impl HexGraph {
-  /// Get the current graph built from registered components.
+  /// The process-wide architecture graph, behind a wait-free RCU cell.
   ///
-  /// The component registry is populated at link time via `inventory` and is immutable for the
-  /// life of the process, so the graph is built once and cached; subsequent calls return a cheap
-  /// `Arc` clone rather than re-walking the whole registry. (This is why picking up newly added
-  /// components requires a restart — see the MCP `hexser/refresh` flow.)
+  /// The graph is the self-programming substrate: read on hot paths (every MCP request via
+  /// `ProjectRegistry::from_current_graph`, every AI-context export) and hot-swapped when the
+  /// program rewrites itself (`hexser/refresh` → [`HexGraph::install`]). Per N_BOOK §1.5
+  /// (wait-free RCU) + §23 (Tier 2 SOLE write site) + PRD-272 §1.5/§3.G this state MUST live
+  /// behind `arc_swap::ArcSwap`, not `OnceLock`/`RwLock` — reads are lock-free (`load_full`) and
+  /// the SOLE write site is [`HexGraph::install`]. Canon exemplar shape: `LazyLock<ArcSwap<…>>`
+  /// (PRD-272 change-log 2026-06-26).
+  fn arch() -> &'static arc_swap::ArcSwap<HexGraph> {
+    static ARCH: std::sync::LazyLock<arc_swap::ArcSwap<HexGraph>> =
+      std::sync::LazyLock::new(|| {
+        arc_swap::ArcSwap::from_pointee(
+          crate::registry::component_registry::ComponentRegistry::build_graph(),
+        )
+      });
+    &ARCH
+  }
+
+  /// Get the current architecture graph.
+  ///
+  /// Built once from the link-time `inventory` registry on first access, then returned by a
+  /// wait-free `load_full` (cheap `Arc` clone). Reflects the latest [`HexGraph::install`].
   pub fn current() -> std::sync::Arc<Self> {
-    static CURRENT: std::sync::OnceLock<std::sync::Arc<HexGraph>> = std::sync::OnceLock::new();
-    CURRENT
-      .get_or_init(|| {
-        std::sync::Arc::new(crate::registry::component_registry::ComponentRegistry::build_graph())
-      })
-      .clone()
+    Self::arch().load_full()
+  }
+
+  /// Install a new architecture graph as the current one (the SOLE write site, PRD-272 §1.5).
+  ///
+  /// This is the live self-programming hot-swap: after the program rewrites itself, install the
+  /// rebuilt graph and every subsequent `current()` sees it — no process restart required.
+  /// Writers are serialized only against each other; concurrent readers are never blocked.
+  pub fn install(graph: HexGraph) {
+    Self::arch().store(std::sync::Arc::new(graph));
+  }
+
+  /// Rebuild the graph from the current link-time registry and install it.
+  ///
+  /// Note: `inventory` is fixed at link time, so this only picks up new components after the
+  /// binary is recompiled; it is the in-process half of the `hexser/refresh` flow.
+  pub fn rebuild_current() {
+    Self::install(crate::registry::component_registry::ComponentRegistry::build_graph());
   }
 
   /// Create a new empty graph.
@@ -77,8 +106,8 @@ impl HexGraph {
       inner: std::sync::Arc::new(GraphInner {
         nodes: std::collections::BTreeMap::new(),
         edges: Vec::new(),
-        outgoing: std::collections::HashMap::new(),
-        incoming: std::collections::HashMap::new(),
+        outgoing: indexmap::IndexMap::new(),
+        incoming: indexmap::IndexMap::new(),
         metadata: crate::graph::metadata::GraphMetadata::default(),
       }),
     }
@@ -333,16 +362,68 @@ mod tests {
     )
   }
 
-  /// why: HexGraph::current() must build once and hand back the same cached Arc on later calls
-  /// (the registry is link-time-fixed), so callers in request handlers don't re-walk inventory.
+  /// why: two back-to-back `current()` loads with no intervening `install()` must return Arcs to
+  /// the same graph allocation (wait-free `load_full` of the ArcSwap), so request handlers don't
+  /// re-walk inventory. `#[serial]` keeps a concurrent `install()` from another test out of the
+  /// window between the two loads.
   #[test]
+  #[serial_test::serial(hexser_arch)]
   fn test_current_is_cached_same_arc() {
     let a = HexGraph::current();
     let b = HexGraph::current();
     assert!(
       std::sync::Arc::ptr_eq(&a, &b),
-      "current() must return the same cached Arc"
+      "current() must return the same graph Arc when nothing was installed between loads"
     );
+  }
+
+  /// why: LESSON #16 — every NEW RCU (ArcSwap) surface requires a 16-OS-thread regression test.
+  /// 16 threads hammer `current()` (wait-free reads) while one thread repeatedly `install()`s a
+  /// distinct graph; assert no torn read / no panic, every observed graph is internally
+  /// consistent, and the final `current()` reflects the last install. `#[serial]` isolates this
+  /// mutation from the identity test above.
+  #[test]
+  #[serial_test::serial(hexser_arch)]
+  fn test_arcswap_16_thread_read_during_install() {
+    // Snapshot the pre-test graph so we can restore it (other tests read the global arch).
+    let original = HexGraph::current();
+
+    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let mut readers = std::vec::Vec::new();
+    for _ in 0..16 {
+      let stop = std::sync::Arc::clone(&stop);
+      readers.push(std::thread::spawn(move || {
+        while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+          // Wait-free read; node_count() dereferences inner — a torn read would panic/segfault.
+          let g = HexGraph::current();
+          let _ = g.node_count();
+          let _ = g.edge_count();
+        }
+      }));
+    }
+
+    // Sole writer: install graphs of increasing size, so the last install is identifiable.
+    for i in 1..=64u32 {
+      let mut builder = HexGraph::builder();
+      for n in 0..i {
+        builder = builder.with_node(node(&format!("N{n}"), crate::graph::layer::Layer::Domain));
+      }
+      HexGraph::install(builder.build());
+    }
+
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    for r in readers {
+      r.join().expect("reader thread must not panic");
+    }
+
+    assert_eq!(
+      HexGraph::current().node_count(),
+      64,
+      "final current() must reflect the last install"
+    );
+
+    // Restore the original graph for any test that reads the global arch afterwards.
+    HexGraph::install((*original).clone());
   }
 
   /// why: edges_from/edges_to must return exactly the incident edges via the adjacency index,

@@ -1,3 +1,5 @@
+<!-- Revision: 2026-07-21 @AI — PRD-272 CLAIM-D1: cookbook code blocks aligned to the real API; version snippets to "0.4"; canonical-examples pointer. -->
+
 # Hexser - Zero-Boilerplate Hexagonal Architecture
 
 [![Crates.io](https://img.shields.io/crates/v/hexser.svg)](https://crates.io/crates/hexser)
@@ -14,6 +16,7 @@ The `hexser` crate provides reusable generic types and traits for implementing H
 
 - [Why hexser?](#why-hexser)
 - [Quick Start](#quick-start)
+- [Canonical, compile-tested examples](#canonical-compile-tested-examples)
 - [Feature Flags](#feature-flags)
 - [Complete Tutorial](#complete-tutorial)
 - [CQRS Pattern with hex](#part-3-cqrs-pattern-with-hex)
@@ -24,7 +27,7 @@ The `hexser` crate provides reusable generic types and traits for implementing H
 - [Advanced Patterns](#advanced-patterns)
 - [Knowledge Graph](#knowledge-graph)
 - [Static (non-dyn) DI — WASM-friendly](#static-non-dyn-di--wasm-friendly)
-- [Repository: Filter-based queries (vNext)](#repository-filter-based-queries-vnext)
+- [Repository: Filter-based queries](#repository-filter-based-queries)
 - [AI Context Export (CLI)](#ai-context-export-cli)
 - [MCP Server (Model Context Protocol)](#-mcp-server-model-context-protocol)
 - [Examples & Tutorials](#examples--tutorials)
@@ -62,7 +65,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hexser = "0.4.7"
+hexser = "0.4"
 ```
 
 Your First Hexagonal Application
@@ -137,6 +140,27 @@ That's it! You've just built a hexagonal architecture application with:
 
 ---
 
+## Canonical, compile-tested examples
+
+This README contains a lot of hand-written cookbook snippets. Most are self-contained, but a
+few (particularly the deep-dive sections further down) reference application types that aren't
+fully spelled out inline, for brevity. If a snippet here ever disagrees with the API, **the
+compiled source below is authoritative** — treat it as the source of truth over any doc drift:
+
+- **`examples/*.rs`** — built by CI on every PR (`cargo build -p hexser --all-features --examples`), so they cannot silently drift from the real API. Start with:
+  - `examples/simple_todo.rs` — minimal end-to-end app: entity, adapter, `Repository` + `QueryRepository`
+  - `examples/cqrs_pattern.rs` — `Directive`/`DirectiveHandler` and `Query`/`QueryHandler` implemented by hand (there are no `HexDirectiveHandler`/`HexQueryHandler` derives)
+  - `examples/weather_adapter.rs` — a REST adapter with full `Hexserror` error-mapping (`API_FAILURE`, `MAPPING_FAILURE`)
+  - `examples/transactional_order.rs` — a directive spanning multiple repository writes
+  - `examples/realworld_api/` — a full, separately-tested workspace member; its own `cargo test` run (from `hexser/examples/realworld_api`) is a dedicated CI job
+  - `examples/tutorial_01_hello.rs` through `tutorial_04_application.rs` (plus `tutorial_01_entity.rs`, `tutorial_02_repository.rs`) — the step-by-step tutorial code, also compiled in CI
+- **`tutorials/`** — narrated, step-by-step lessons (`01-hello-hex` through `05-graph-analysis`) that walk through the same concepts as the `tutorial_*` examples above with more explanation. Each lesson is its own small crate outside the workspace; unlike `examples/*.rs`, these are not currently part of the CI build matrix, so prefer the `examples/` versions if you ever see the two disagree.
+
+Run any example from the `hexser/` directory with `cargo run --example <name>` (see
+[Examples & Tutorials](#-examples--tutorials) below for more).
+
+---
+
 ## Feature Flags
 
 Hexser provides granular feature flags to enable only the functionality you need. This keeps compile times fast and binary sizes small, especially for WASM targets.
@@ -148,27 +172,28 @@ Enabled by default. Includes procedural macros and zero-cost static dependency i
 
 ```toml
 [dependencies]
-hexser = "0.4.7"  # Uses default features
+hexser = "0.4"  # Uses default features
 ```
 
 #### `macros`
 Enables procedural macros for deriving hexagonal architecture traits.
 
 **Provides:**
-- `#[derive(HexEntity)]` - Implement HexEntity trait for domain entities
+- `#[derive(HexEntity)]` - Implement HexEntity trait for domain entities (`Id` is taken from the struct's `id` field)
+- `#[derive(HexDomain)]` - Register a domain-layer type in the architecture graph (role defaults to `Entity`)
 - `#[derive(HexValueItem)]` - Implement HexValueItem trait with default validation (override validate() for custom logic)
-- `#[derive(HexAggregate)]` - Mark aggregate roots
-- `#[derive(HexPort)]` - Mark port traits
-- `#[derive(HexAdapter)]` - Mark adapter implementations
-- `#[derive(HexRepository)]` - Mark repository ports
-- `#[derive(HexDirective)]` - Mark command/directive types
-- `#[derive(HexQuery)]` - Mark query types
+- `#[derive(HexAggregate)]` - Implement `Aggregate` with a default no-op `check_invariants` (override for real invariants); requires the type to also implement `HexEntity`
+- `#[derive(HexPort)]` - Register a port-layer component (struct/enum; role defaults to `Repository`). Derives target structs/enums, not traits — apply it to a marker struct alongside your port trait.
+- `#[derive(HexAdapter)]` - Mark adapter implementations (implements the `Adapter` marker trait and registers the type)
+- `#[derive(HexRepository)]` - Semantic marker for repository ports; pair with `#[derive(HexPort)]` (adds no trait impl or registration of its own)
+- `#[derive(HexDirective)]` - Implement `Directive` with a default no-op `validate` (`Ok(())`) and register the type; implement `Directive` manually instead if you need real validation logic
+- `#[derive(HexQuery)]` - Register a query type in the architecture graph
 
 **Dependencies:** `hexser_macros`
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.7", default-features = false, features = ["macros"] }
+hexser = { version = "0.4", default-features = false, features = ["macros"] }
 ```
 
 #### `static-di`
@@ -183,7 +208,7 @@ Zero-cost, WASM-friendly static dependency injection. No runtime overhead, no dy
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.7", features = ["static-di"] }
+hexser = { version = "0.4", features = ["static-di"] }
 ```
 
 **Example** (see the `hex_static!` macro and `StaticContainer<T>` for the real API):
@@ -210,7 +235,7 @@ Enables AI context export functionality for exposing architecture metadata to AI
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.7", features = ["ai"] }
+hexser = { version = "0.4", features = ["ai"] }
 ```
 
 **Usage:**
@@ -236,7 +261,7 @@ Model Context Protocol server implementation for serving architecture data via J
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.7", features = ["mcp"] }
+hexser = { version = "0.4", features = ["mcp"] }
 ```
 
 **Usage:**
@@ -255,7 +280,7 @@ dependencies. (Dedicated async port traits are planned; see the issue tracker.)
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.7", features = ["async"] }
+hexser = { version = "0.4", features = ["async"] }
 ```
 
 #### `visualization`
@@ -270,7 +295,7 @@ Enables graph visualization and export capabilities.
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.7", features = ["visualization"] }
+hexser = { version = "0.4", features = ["visualization"] }
 ```
 
 #### `container`
@@ -287,7 +312,7 @@ Dynamic dependency injection container with async support. **Not enabled by defa
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.7", features = ["container"] }
+hexser = { version = "0.4", features = ["container"] }
 ```
 
 #### `full`
@@ -297,7 +322,7 @@ Enables all features: `ai`, `mcp`, `async`, `macros`, `visualization`, `containe
 
 ```toml
 [dependencies]
-hexser = { version = "0.4.7", features = ["full"] }
+hexser = { version = "0.4", features = ["full"] }
 ```
 
 ### Binary Targets
@@ -336,25 +361,25 @@ cargo run --bin hex-mcp-server --features mcp
 #### Minimal (no default features)
 ```toml
 [dependencies]
-hexser = { version = "0.4.7", default-features = false }
+hexser = { version = "0.4", default-features = false }
 ```
 
 #### WASM-optimized
 ```toml
 [dependencies]
-hexser = { version = "0.4.7", default-features = false, features = ["macros", "static-di"] }
+hexser = { version = "0.4", default-features = false, features = ["macros", "static-di"] }
 ```
 
 #### AI-enabled with async
 ```toml
 [dependencies]
-hexser = { version = "0.4.7", features = ["ai", "async", "visualization"] }
+hexser = { version = "0.4", features = ["ai", "async", "visualization"] }
 ```
 
 #### Full development setup
 ```toml
 [dependencies]
-hexser = { version = "0.4.7", features = ["full"] }
+hexser = { version = "0.4", features = ["full"] }
 ```
 
 ---
@@ -401,7 +426,7 @@ Entities - Things with identity:
 ```rust
 use hexser::prelude::*;
 
-#[derive(Entity)]
+#[derive(HexEntity)]
 struct Order {
   id: OrderId,
   customer_id: CustomerId,
@@ -476,7 +501,9 @@ Ports define the contracts between your domain and the outside world.
 Repositories - Persistence abstraction:
 
 ```rust
-#[derive(HexPort)]
+// Note: derives apply to structs/enums, not traits — do not put a derive on the trait.
+// To register this port in the architecture graph, derive on a marker struct instead:
+// `#[derive(HexPort, HexRepository)] struct OrderRepositoryPort;`
 trait OrderRepository: Repository<Order> {
   fn find_by_customer(&self, customer_id: &CustomerId)
       -> HexResult<Vec<Order>>;
@@ -488,7 +515,8 @@ trait OrderRepository: Repository<Order> {
 Use Cases - Business operations:
 
 ```rust
-#[derive(HexPort)]
+// Note: derives apply to structs/enums, not traits — do not put a derive on the trait.
+// Register with a marker struct: `#[derive(HexPort)] struct PlaceOrderPort;`
 trait PlaceOrder: UseCase<PlaceOrderInput, PlaceOrderOutput> {}
 
 struct PlaceOrderInput {
@@ -504,7 +532,8 @@ struct PlaceOrderOutput {
 Queries - Read operations (CQRS):
 
 ```rust
-#[derive(HexPort)]
+// Note: derives apply to structs/enums, not traits — do not put a derive on the trait.
+// Register with a marker struct: `#[derive(HexPort)] struct OrderHistoryPort;`
 trait OrderHistory: Query<OrderHistoryParams, Vec<OrderView>> {}
 
 struct OrderHistoryParams {
@@ -578,10 +607,16 @@ struct OrderMapper;
 
 impl Mapper<Order, DbOrderRow> for OrderMapper {
   fn map(&self, order: Order) -> HexResult<DbOrderRow> {
+    // No `From<serde_json::Error> for Hexserror` exists, so map the error explicitly
+    // rather than relying on a bare `?`.
+    let items_json = serde_json::to_string(&order.items).map_err(|e| {
+      Hexserror::adapter(hexser::error::codes::adapter::MAPPING_FAILURE, "Failed to serialize items")
+        .with_source(e)
+    })?;
     Ok(DbOrderRow {
       id: order.id.to_string(),
       customer_id: order.customer_id.to_string(),
-      items_json: serde_json::to_string(&order.items)?,
+      items_json,
       status: order.status.to_string(),
     })
   }
@@ -594,13 +629,17 @@ The application layer coordinates domain logic and ports.
 Directive (Write Operation):
 
 ```rust
-#[derive(HexDirective)]
+// Note: `#[derive(HexDirective)]` implements `Directive::validate` as an always-`Ok(())`
+// no-op and registers the type in the graph. When you need real validation logic, implement
+// `Directive` directly instead (an inherent `fn validate` of the same name would silently
+// shadow the derived trait method for direct calls, while trait-object dispatch would still
+// see the no-op) — see `examples/cqrs_pattern.rs` for the canonical pattern.
 struct PlaceOrderDirective {
     customer_id: CustomerId,
     items: Vec<OrderItem>,
 }
 
-impl PlaceOrderDirective {
+impl Directive for PlaceOrderDirective {
   fn validate(&self) -> HexResult<()> {
     if self.items.is_empty() {
       return Err(Hexserror::validation("Items cannot be empty"));
@@ -611,14 +650,17 @@ impl PlaceOrderDirective {
 ```
 
 Directive Handler:
+
+There is no `HexDirectiveHandler` derive — `DirectiveHandler<D>` is a plain trait (see
+`hexser::application::DirectiveHandler`); implement it directly, as `examples/cqrs_pattern.rs` does:
+
 ```rust
-#[derive(HexDirectiveHandler)]
 struct PlaceOrderHandler {
   order_repo: Box<dyn OrderRepository>,
   payment_port: Box<dyn PaymentPort>,
 }
 
-impl PlaceOrderHandler {
+impl DirectiveHandler<PlaceOrderDirective> for PlaceOrderHandler {
   fn handle(&self, directive: PlaceOrderDirective) -> HexResult<()> {
     // Validate
     directive.validate()?;
@@ -642,13 +684,14 @@ impl PlaceOrderHandler {
 
 Query Handler:
 
+Likewise, there is no `HexQueryHandler` derive — implement `QueryHandler<Q, R>` directly:
+
 ```rust
-#[derive(HexQueryHandler)]
 struct OrderHistoryHandler {
   query_repo: Box<dyn OrderQueryRepository>,
 }
 
-impl OrderHistoryHandler {
+impl QueryHandler<OrderHistoryParams, Vec<OrderView>> for OrderHistoryHandler {
   fn handle(&self, params: OrderHistoryParams) -> HexResult<Vec<OrderView>> {
     self.query_repo.get_order_history(
         &params.customer_id,
@@ -662,12 +705,16 @@ impl OrderHistoryHandler {
 
 5. Infrastructure Layer - Your Technology
    Infrastructure provides the concrete technology implementations.
+
+`Config` is an empty marker trait (`hexser::infrastructure::Config`) with no derive macro; implement it directly:
+
 ```rust
-#[derive(HexConfig)]
 struct DatabaseConfig {
   connection_string: String,
   pool_size: u32,
 }
+
+impl Config for DatabaseConfig {}
 
 impl DatabaseConfig {
   fn create_pool(&self) -> PgPool {
@@ -685,26 +732,29 @@ hexser supports Command Query Responsibility Segregation (CQRS) out of the box.
 Write Side (Directives):
 
 ```rust
-// Directive represents intent to change state
-#[derive(HexDirective)]
+// Directive represents intent to change state.
+// Note: `#[derive(HexDirective)]` implements `Directive::validate` as an always-`Ok(())`
+// no-op; since real validation is needed here, implement `Directive` directly instead of
+// deriving it (an inherent `fn validate` of the same name would silently shadow the derived
+// trait method) — see `examples/cqrs_pattern.rs` for the canonical pattern.
 struct UpdateUserEmail {
   user_id: UserId,
   new_email: Email,
 }
 
-impl UpdateUserEmail {
+impl Directive for UpdateUserEmail {
   fn validate(&self) -> HexResult<()> {
     self.new_email.validate()
   }
 }
 
-// Handler executes the directive
-#[derive(HexDirectiveHandler)]
+// Handler executes the directive. There is no `HexDirectiveHandler` derive —
+// `DirectiveHandler<D>` is a plain trait; implement it directly.
 struct UpdateUserEmailHandler {
   repo: Box<dyn UserRepository>,
 }
 
-impl UpdateUserEmailHandler {
+impl DirectiveHandler<UpdateUserEmail> for UpdateUserEmailHandler {
   fn handle(&self, directive: UpdateUserEmail) -> HexResult<()> {
     let mut user = self.repo.find_by_id(&directive.user_id)?
       .ok_or_else(|| Hexserror::not_found("User", &directive.user_id))?;
@@ -726,13 +776,13 @@ struct FindUserByEmail {
   email: String,
 }
 
-// Handler executes the query
-#[derive(HexQueryHandler)]
+// Handler executes the query. There is no `HexQueryHandler` derive —
+// `QueryHandler<Q, R>` is a plain trait; implement it directly.
 struct FindUserByEmailHandler {
   query_repo: Box<dyn UserQueryRepository>,
 }
 
-impl FindUserByEmailHandler {
+impl QueryHandler<FindUserByEmail, Option<UserView>> for FindUserByEmailHandler {
   fn handle(&self, query: FindUserByEmail)
   -> HexResult<Option<UserView>> {
     self.query_repo.find_by_email(&query.email)
@@ -905,9 +955,13 @@ impl Application for RobustApp {
     }
 
     fn initialize(&mut self) -> HexResult<()> {
+        // There is no `Hexserror::infrastructure` constructor — only
+        // domain/port/adapter/validation/not_found/conflict exist. Infrastructure-level
+        // failures (config, external resources) map to the adapter layer.
         self.config.load()
-            .map_err(|e| Hexserror::infrastructure(
-                "Failed to load configuration"
+            .map_err(|e| Hexserror::adapter(
+                hexser::error::codes::io::IO_FAILURE,
+                "Failed to load configuration",
             ).with_source(e))?;
         
         Ok(())
@@ -1064,9 +1118,9 @@ fn test_create_user_handler() {
 
 ### Part 5: Error Handling
 
-hexser provides rich, actionable, code-first errors with automatic source location and layering support. Prefer the new macro-based constructors and error codes over manual struct construction.
+hexser provides rich, actionable, code-first errors with automatic source location and layering support. Prefer the `Hexserror::{domain,port,adapter,validation,not_found,conflict}` constructor functions and error codes over manual struct construction.
 
-Preferred: macro + code + guidance
+Preferred: constructor + code + guidance
 
 ```rust
 fn validate_order(order: &Order) -> HexResult<()> {
@@ -1078,7 +1132,6 @@ fn validate_order(order: &Order) -> HexResult<()> {
         )
         .with_next_steps(&["Add at least one item to the order"]) // actionable guidance
         .with_suggestions(&["order.add_item(item)", "order.items.push(item)"]) // quick fixes
-        .with_more_info("https://docs.rs/hexser/latest/hexser/error/codes/domain")
     );
   }
   Ok(())
@@ -1116,14 +1169,14 @@ let port_err = hexser::error::hex_error::Hexserror::port(
     "User service timed out"
 ).with_suggestion("Increase timeout or retry later");
 
-// Adapter errors (infra failures). The underlying cause is folded into the message; for full
-// source chaining, construct the layer error directly (e.g. AdapterError::new(..).with_source(e)).
+// Adapter errors (infra failures). `.with_source(e)` attaches the underlying cause directly
+// on the Hexserror (no need to construct the layer error struct by hand for this).
 fn fetch_from_api(url: &str) -> HexResult<String> {
     let resp = std::fs::read_to_string(url)
         .map_err(|ioe| hexser::error::hex_error::Hexserror::adapter(
             hexser::error::codes::io::IO_FAILURE, // or codes::adapter::API_FAILURE for real HTTP
-            &format!("Failed to fetch resource: {}", ioe),
-        ))?;
+            "Failed to fetch resource",
+        ).with_source(ioe))?;
     Ok(resp)
 }
 ```
@@ -1163,8 +1216,9 @@ fn ensure_user_exists(id: &str) -> HexResult<()> {
 
 Notes
 - All hexser errors implement std::error::Error and expose code, message, next_steps, suggestions, and location.
-- Build errors with the `Hexserror::{domain,port,adapter,validation,not_found,conflict}` constructors and the `.with_next_step(s)` / `.with_suggestion(s)` builders, using constants from `hexser::error::codes::*`.
-- For full source-error chaining, construct the layer error struct directly (e.g. `AdapterError::new(code, msg).with_source(err)`) and wrap it in the matching `Hexserror` variant.
+- Build errors with the `Hexserror::{domain,port,adapter,validation,not_found,conflict}` constructors and the `.with_next_step(s)` / `.with_suggestion(s)` builders, using constants from `hexser::error::codes::*`. These builders work on every variant (Domain/Port/Adapter/Validation/NotFound/Conflict).
+- `.with_source(err)` is also available directly on `Hexserror` and forwards to the wrapped Domain/Port/Adapter error (Validation/NotFound/Conflict have no source field and are returned unchanged).
+- `with_more_info(url)` and `with_location(..)` are only exposed on the layer error structs themselves (`DomainError`/`PortError`/`AdapterError`, via the `RichError` trait), not on the `Hexserror` enum. If you need a documentation URL, construct the layer struct directly and wrap it, e.g. `Hexserror::Domain(Box::new(hexser::error::domain_error::DomainError::new(code, msg).with_more_info(url)))`.
 
 #### Security: Controlling Source Location in Serialized Errors
 
@@ -1230,7 +1284,7 @@ Domain Layer:
 ```rust
 use hexser::prelude::*;
 
-#[derive(Clone, Entity)]
+#[derive(Clone, HexEntity)]
 struct Todo {
   id: TodoId,
   title: String,
@@ -1251,7 +1305,9 @@ impl TodoId {
 Ports Layer:
 
 ```rust
-#[derive(HexPort)]
+// Note: derives apply to structs/enums, not traits — do not put a derive on the trait.
+// To register this port in the architecture graph, derive on a marker struct instead:
+// `#[derive(HexPort, HexRepository)] struct TodoRepositoryPort;`
 trait TodoRepository: Repository<Todo> {
     fn find_active(&self) -> HexResult<Vec<Todo>>;
     fn find_completed(&self) -> HexResult<Vec<Todo>>;
@@ -1294,13 +1350,16 @@ impl TodoRepository for InMemoryTodoRepository {
 Application Layer:
 
 ```rust
-#[derive(HexDirective)]
+// Note: `#[derive(HexDirective)]` implements `Directive::validate` as an always-`Ok(())`
+// no-op; since real validation is needed here, implement `Directive` directly instead of
+// deriving it (an inherent `fn validate` of the same name would silently shadow the derived
+// trait method) — see `examples/cqrs_pattern.rs` for the canonical pattern.
 struct CreateTodoDirective {
     title: String,
     description: String,
 }
 
-impl CreateTodoDirective {
+impl Directive for CreateTodoDirective {
     fn validate(&self) -> HexResult<()> {
         if self.title.is_empty() {
             return Err(Hexserror::validation_field("Title cannot be empty", "title"));
@@ -1309,12 +1368,13 @@ impl CreateTodoDirective {
     }
 }
 
-#[derive(HexDirectiveHandler)]
+// There is no `HexDirectiveHandler` derive — `DirectiveHandler<D>` is a plain trait;
+// implement it directly.
 struct CreateTodoHandler {
     repo: Box<dyn TodoRepository>,
 }
 
-impl CreateTodoHandler {
+impl DirectiveHandler<CreateTodoDirective> for CreateTodoHandler {
     fn handle(&self, directive: CreateTodoDirective) -> HexResult<()> {
         directive.validate()?;
 
@@ -1337,7 +1397,9 @@ impl CreateTodoHandler {
 Event Sourcing
 
 ```rust
-#[derive(HexAggregate)]
+// `Aggregate` requires `HexEntity` as a supertrait, so both must be derived (or implemented)
+// together — `#[derive(HexAggregate)]` alone does not imply `HexEntity`.
+#[derive(HexEntity, HexAggregate)]
 struct OrderAggregate {
   id: OrderId,
   uncommitted_events: Vec<Box<dyn DomainEvent>>,
@@ -1437,7 +1499,7 @@ hexser/
 ├── error/               [Rich Error Types]
 │   └── Hexserror         - Actionable errors
 │
-└── graph/               [Introspection - Phase 2+]
+└── graph/               [Introspection]
     ├── Layer            - Architectural layers
     ├── Role             - Component roles
     ├── Relationship     - Component connections
@@ -1512,7 +1574,7 @@ Add to your project via workspace path:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "../hexser_potions", version = "0.4.7" }
+hexser_potions = { path = "../hexser_potions", version = "0.4" }
 ```
 
 Then in code:
@@ -1563,14 +1625,18 @@ WASM guidance:
 
 ---
 
-## Repository: Filter-based queries (vNext)
+## Repository: Filter-based queries
 
-We are migrating the repository port away from id-centric methods (find_by_id/find_all) toward a generic, filter-oriented API that better models your domain while staying storage-agnostic. The new QueryRepository trait introduces domain-owned Filter and SortKey types plus FindOptions for sorting and pagination.
+As of v0.4, the repository port moved away from id-centric methods (`find_by_id`/`find_all`)
+toward a generic, filter-oriented API that better models your domain while staying
+storage-agnostic. The `QueryRepository` trait introduces domain-owned `Filter` and `SortKey`
+types plus `FindOptions` for sorting and pagination; `Repository<T>` itself is now save-only.
 
 Highlights:
 - Define small Filter and SortKey enums/structs in your domain
 - Use find_one for unique lookups and find for lists with sorting/pagination
-- Legacy methods are still available but deprecated; prefer the new API
+- The old id-centric methods (`find_by_id`/`find_all`) were removed in v0.4, not deprecated —
+  use the `QueryRepository` methods below instead (see Migration tips)
 
 Example:
 
@@ -1578,7 +1644,7 @@ Example:
 use hexser::prelude::*;
 use hexser::ports::repository::{QueryRepository, FindOptions, Sort, Direction};
 
-#[derive(Entity, Clone, Debug)]
+#[derive(HexEntity, Clone, Debug)]
 struct User { id: String, email: String, created_at: u64 }
 
 // Domain-owned query types
@@ -1592,7 +1658,9 @@ enum UserFilter {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum UserSortKey { CreatedAt, Email }
 
-#[derive(Default)]
+// Clone is needed because the "6) Delete by filter" example below calls `.clone()` to avoid
+// taking `repo` by exclusive reference in a doc snippet that only has a shared `&repo` in scope.
+#[derive(Default, Clone)]
 struct InMemoryUserRepository { users: Vec<User> }
 
 impl Repository<User> for InMemoryUserRepository {
@@ -1643,7 +1711,7 @@ Migration tips:
 - find_all() -> find(&Filter::All, FindOptions::default())
 - Add sorting/pagination via FindOptions { sort, limit, offset }
 
-For more details, see MIGRATION_GUIDE.md and docs/core-concepts.md.
+For more details, see MIGRATION_GUIDE.md and docs/src/core-concepts.md.
 
 ### v0.4 QueryRepository Examples (5+)
 
@@ -1760,7 +1828,10 @@ The exported `AIContext` JSON includes detailed component information:
 - `is_public`: Visibility flag
 - `is_async`: Async flag
 
-**Current Status:** The `methods` field is included in the JSON schema and ready for use. Currently populated as an empty array; future enhancement will extract method information via rustdoc JSON output or source code parsing to provide complete API documentation to AI models.
+**Current Status:** The `methods` field is populated with hardcoded signatures for the core
+hexser traits (`Repository`/`QueryRepository`, `Directive`, `Query`), keyed off the component's
+`role`; components with other roles currently get an empty array. Full extraction via rustdoc
+JSON output or source code parsing (to cover arbitrary user-defined trait methods) is planned.
 
 **Example ComponentInfo with methods:**
 ```json
@@ -2012,7 +2083,9 @@ Hexser includes a complete example of a REST-based adapter using `reqwest::block
 ### Domain Model
 
 ```rust
-// Domain: Forecast value object (in hexser::domain::forecast)
+// Domain: Forecast value object. This is an application-defined type, not part of hexser
+// itself — hexser has no `domain::forecast` module. See `examples/weather_adapter.rs` for
+// the full, self-contained, compiled version (including the `new` constructor and getters).
 pub struct Forecast {
     city: String,
     temperature_c: f64,
@@ -2024,7 +2097,8 @@ pub struct Forecast {
 ### Port Definition
 
 ```rust
-// Port: WeatherPort trait (in hexser::ports::weather_port)
+// Port: WeatherPort trait. Also application-defined — hexser has no `ports::weather_port`
+// module; this is a plain trait you define in your own crate.
 pub trait WeatherPort {
     fn get_forecast(&self, city: &str) -> HexResult<Forecast>;
 }
@@ -2065,8 +2139,15 @@ impl WeatherPort for RestWeatherAdapter {
                 .with_next_steps(&["Verify API endpoint", "Check network"])
             })?;
         
+        // Read the response body, mapping any error (no `From<reqwest::Error> for Hexserror`
+        // exists, so `?` alone won't compile here — map_err explicitly, as above).
+        let body = response.text().map_err(|e| {
+            Hexserror::adapter(codes::adapter::MAPPING_FAILURE, "Failed to read response body")
+                .with_source(e)
+        })?;
+
         // Deserialize JSON with error mapping (MAPPING_FAILURE)
-        let api_response: ApiWeatherResponse = serde_json::from_str(&response.text()?)
+        let api_response: ApiWeatherResponse = serde_json::from_str(&body)
             .map_err(|e| {
                 Hexserror::adapter(
                     codes::adapter::MAPPING_FAILURE,
@@ -2116,32 +2197,49 @@ trait SessionPort {
 
 ### Step 2: Implement Database Adapter
 
+hexser's `Repository`/`QueryRepository` methods are synchronous (there is no built-in async
+port trait yet — see [Feature Flags > `async`](#async)), so a bare `.await` inside `save` or
+`find_by_username` below would not compile. Bridge an async driver like sqlx with a Tokio
+runtime handle instead:
+
 ```rust
 // Concrete PostgreSQL adapter
 struct PostgresUserRepository {
     pool: sqlx::PgPool,
+    runtime: tokio::runtime::Handle,
 }
 
 impl Repository<User> for PostgresUserRepository {
     fn save(&mut self, user: User) -> HexResult<()> {
-        // Execute INSERT/UPDATE via sqlx
-        sqlx::query!("INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4)",
-            user.id, user.username, user.email, user.password_hash)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| Hexserror::adapter(codes::adapter::DB_WRITE_FAILURE, "Failed to save user")
-                .with_source(e))?;
+        // Execute INSERT/UPDATE via sqlx, blocking on the async call from this sync method.
+        self.runtime.block_on(
+            sqlx::query!("INSERT INTO users (id, username, email, password_hash) VALUES ($1, $2, $3, $4)",
+                user.id, user.username, user.email, user.password_hash)
+                .execute(&self.pool)
+        )
+        .map_err(|e| Hexserror::adapter(codes::adapter::DB_WRITE_FAILURE, "Failed to save user")
+            .with_source(e))?;
         Ok(())
     }
 }
 
 impl UserRepository for PostgresUserRepository {
     fn find_by_username(&self, username: &str) -> HexResult<Option<User>> {
-        sqlx::query_as!(User, "SELECT * FROM users WHERE username = $1", username)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| Hexserror::adapter(codes::adapter::DB_READ_FAILURE, "Query failed")
-                .with_source(e))
+        self.runtime.block_on(
+            sqlx::query_as!(User, "SELECT * FROM users WHERE username = $1", username)
+                .fetch_optional(&self.pool)
+        )
+        .map_err(|e| Hexserror::adapter(codes::adapter::DB_READ_FAILURE, "Query failed")
+            .with_source(e))
+    }
+
+    fn find_by_email(&self, email: &str) -> HexResult<Option<User>> {
+        self.runtime.block_on(
+            sqlx::query_as!(User, "SELECT * FROM users WHERE email = $1", email)
+                .fetch_optional(&self.pool)
+        )
+        .map_err(|e| Hexserror::adapter(codes::adapter::DB_READ_FAILURE, "Query failed")
+            .with_source(e))
     }
 }
 ```
@@ -2173,7 +2271,9 @@ impl SessionPort for RedisSessionAdapter {
     }
     
     fn validate_session(&self, token: &str) -> HexResult<Option<String>> {
-        let mut conn = self.client.get_connection()?;
+        let mut conn = self.client.get_connection()
+            .map_err(|e| Hexserror::adapter(codes::adapter::CONNECTION_FAILURE, "Redis unavailable")
+                .with_source(e))?;
         let user_id: Option<String> = redis::cmd("GET")
             .arg(format!("session:{}", token))
             .query(&mut conn)
@@ -2183,7 +2283,9 @@ impl SessionPort for RedisSessionAdapter {
     }
     
     fn revoke_session(&self, token: &str) -> HexResult<()> {
-        let mut conn = self.client.get_connection()?;
+        let mut conn = self.client.get_connection()
+            .map_err(|e| Hexserror::adapter(codes::adapter::CONNECTION_FAILURE, "Redis unavailable")
+                .with_source(e))?;
         redis::cmd("DEL")
             .arg(format!("session:{}", token))
             .query(&mut conn)
@@ -2206,7 +2308,10 @@ struct AppContext {
 impl AppContext {
     fn new_production(db_pool: sqlx::PgPool, redis_client: redis::Client) -> Self {
         Self {
-            user_repo: Box::new(PostgresUserRepository { pool: db_pool }),
+            user_repo: Box::new(PostgresUserRepository {
+                pool: db_pool,
+                runtime: tokio::runtime::Handle::current(),
+            }),
             session_port: Box::new(RedisSessionAdapter { client: redis_client }),
         }
     }
@@ -2221,14 +2326,22 @@ When a directive involves multiple repository operations that must succeed or fa
 
 ### Port Definitions
 
+hexser's own port traits (`Repository`, `QueryRepository`, ...) are synchronous; there is no
+built-in async port trait yet (see [Feature Flags > `async`](#async)). These example ports are
+your own trait definitions, so they are free to be `async fn` — but note that a native
+`async fn` in a trait is not `dyn`-compatible, so a `Box<dyn ProductRepository>` (used below)
+requires the `async-trait` crate, which the `async` feature flag adds as a dependency:
+
 ```rust
 // Ports accepting a transaction context
+#[async_trait::async_trait]
 trait ProductRepository {
-    fn decrement_stock(&self, tx: &mut PgTransaction, product_id: &str, qty: u32) -> HexResult<()>;
+    async fn decrement_stock(&self, tx: &mut PgTransaction, product_id: &str, qty: u32) -> HexResult<()>;
 }
 
+#[async_trait::async_trait]
 trait OrderRepository {
-    fn create_order(&self, tx: &mut PgTransaction, order: Order) -> HexResult<()>;
+    async fn create_order(&self, tx: &mut PgTransaction, order: Order) -> HexResult<()>;
 }
 
 trait EventBus {
@@ -2294,6 +2407,7 @@ impl ProcessOrderHandler {
 ```rust
 struct PostgresProductRepository;
 
+#[async_trait::async_trait]
 impl ProductRepository for PostgresProductRepository {
     async fn decrement_stock(&self, tx: &mut PgTransaction<'_>, product_id: &str, qty: u32) -> HexResult<()> {
         let rows_affected = sqlx::query!(
@@ -2327,9 +2441,14 @@ When data must be fetched from multiple sources (e.g., SQL for core profile, NoS
 
 ### Port Definition
 
+Like the transactional example above, this is your own port trait (not one of hexser's), and
+since the composite adapter below needs `async fn`, the trait must be `#[async_trait::async_trait]`
+for `find_by_id` to be both `async` and usable as it is here:
+
 ```rust
+#[async_trait::async_trait]
 trait ProfileRepository {
-    fn find_by_id(&self, user_id: &str) -> HexResult<Profile>;
+    async fn find_by_id(&self, user_id: &str) -> HexResult<Profile>;
 }
 ```
 
@@ -2352,6 +2471,7 @@ impl CompositeProfileRepository {
     }
 }
 
+#[async_trait::async_trait]
 impl ProfileRepository for CompositeProfileRepository {
     async fn find_by_id(&self, user_id: &str) -> HexResult<Profile> {
         // Check cache first

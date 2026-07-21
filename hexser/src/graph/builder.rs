@@ -6,6 +6,7 @@
 //! invalid relationships are detected.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: PRD-272 §3.H — adjacency indices use IndexMap for deterministic iteration.
 //! - 2026-07-20T00:00:00Z @AI: build() now uses BTreeMap, precomputes adjacency indices, and records NodeId collisions in metadata instead of silently dropping a node.
 //! - 2025-10-02T12:30:00Z @AI: Add add_node and add_edge alias methods.
 //! - 2025-10-01T00:03:00Z @AI: Initial GraphBuilder implementation for Phase 2.
@@ -113,15 +114,11 @@ impl GraphBuilder {
       }
     }
 
-    // Build adjacency indices sized to the edge count (no incremental reallocation).
-    let mut outgoing: std::collections::HashMap<
-      crate::graph::node_id::NodeId,
-      std::vec::Vec<usize>,
-    > = std::collections::HashMap::new();
-    let mut incoming: std::collections::HashMap<
-      crate::graph::node_id::NodeId,
-      std::vec::Vec<usize>,
-    > = std::collections::HashMap::new();
+    // Build adjacency indices. `IndexMap` (PRD-272 §3.H) keeps deterministic iteration order.
+    let mut outgoing: indexmap::IndexMap<crate::graph::node_id::NodeId, std::vec::Vec<usize>> =
+      indexmap::IndexMap::new();
+    let mut incoming: indexmap::IndexMap<crate::graph::node_id::NodeId, std::vec::Vec<usize>> =
+      indexmap::IndexMap::new();
     for (index, edge) in self.edges.iter().enumerate() {
       outgoing.entry(*edge.source()).or_default().push(index);
       incoming.entry(*edge.target()).or_default().push(index);

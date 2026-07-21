@@ -6,6 +6,7 @@
 //! copied when graphs are constructed.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: PRD-272 §3.H — attributes map uses IndexMap for deterministic iteration (warnings surface in insertion order).
 //! - 2026-07-21T00:00:00Z @AI: current_timestamp no longer unwraps duration_since (best-effort 0 on a pre-epoch clock) — removes a panic path from the universal construction path.
 //! - 2026-07-20T00:00:00Z @AI: Add add_warning/warnings to record non-fatal construction warnings (e.g. NodeId collisions) in attributes.
 //! - 2025-10-01T00:03:00Z @AI: Initial metadata types for Phase 2.
@@ -26,7 +27,7 @@ pub struct GraphMetadata {
   pub description: String,
 
   /// Additional custom metadata.
-  pub attributes: std::collections::HashMap<String, String>,
+  pub attributes: indexmap::IndexMap<String, String>,
 }
 
 impl GraphMetadata {
@@ -36,7 +37,7 @@ impl GraphMetadata {
       created_at: Self::current_timestamp(),
       version: 1,
       description: String::from(description),
-      attributes: std::collections::HashMap::new(),
+      attributes: indexmap::IndexMap::new(),
     }
   }
 
@@ -46,7 +47,7 @@ impl GraphMetadata {
       created_at: Self::current_timestamp(),
       version,
       description: String::from(description),
-      attributes: std::collections::HashMap::new(),
+      attributes: indexmap::IndexMap::new(),
     }
   }
 

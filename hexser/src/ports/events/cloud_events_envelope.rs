@@ -8,6 +8,7 @@
 //!
 //! Revision History
 //! - 2025-10-09T14:51:00Z @AI: Initial CloudEventsEnvelope implementation for CloudEvents v1.0 compliance.
+//! - 2026-07-21T00:00:00Z @AI: PRD-272 §3.H — HashMap→IndexMap for deterministic iteration.
 
 /// CloudEvents v1.0 specification version constant.
 pub const CLOUDEVENTS_SPEC_VERSION: &str = "1.0";
@@ -34,7 +35,7 @@ pub const CLOUDEVENTS_SPEC_VERSION: &str = "1.0";
 /// - `data`: The actual event payload (generic type T)
 ///
 /// **EXTENSIONS:**
-/// - `extensions`: HashMap for vendor-specific attributes
+/// - `extensions`: IndexMap (insertion-order-preserving) for vendor-specific attributes
 ///
 /// # Type Parameter
 ///
@@ -77,7 +78,7 @@ pub const CLOUDEVENTS_SPEC_VERSION: &str = "1.0";
 ///     data: std::option::Option::Some(event),
 ///     datacontenttype: std::option::Option::Some(std::string::String::from("application/json")),
 ///     dataschema: std::option::Option::None,
-///     extensions: std::collections::HashMap::new(),
+///     extensions: indexmap::IndexMap::new(),
 /// };
 ///
 /// // Verify required attributes
@@ -151,7 +152,10 @@ pub struct CloudEventsEnvelope<T> {
   ///
   /// Keys MUST NOT start with `ce-` (reserved for CloudEvents).
   /// Common extensions: `traceparent`, `correlationid`, `tenantid`
-  pub extensions: std::collections::HashMap<std::string::String, std::string::String>,
+  ///
+  /// Uses `indexmap::IndexMap` (not `std::collections::HashMap`) so that iteration and
+  /// serialization order match insertion order deterministically (PRD-272 §3.H).
+  pub extensions: indexmap::IndexMap<std::string::String, std::string::String>,
 }
 
 impl<T> CloudEventsEnvelope<T> {
@@ -198,7 +202,7 @@ impl<T> CloudEventsEnvelope<T> {
       subject: std::option::Option::None,
       time: std::option::Option::None,
       data: std::option::Option::None,
-      extensions: std::collections::HashMap::new(),
+      extensions: indexmap::IndexMap::new(),
     }
   }
 
@@ -261,7 +265,7 @@ impl<T> CloudEventsEnvelope<T> {
       subject: std::option::Option::Some(subject),
       time: std::option::Option::None,
       data: std::option::Option::Some(event),
-      extensions: std::collections::HashMap::new(),
+      extensions: indexmap::IndexMap::new(),
     }
   }
 
@@ -655,6 +659,41 @@ mod tests {
     std::assert_eq!(
       envelope.get_extension("nonexistent"),
       std::option::Option::None
+    );
+  }
+
+  /// why: `extensions` is `indexmap::IndexMap` specifically so that serialized JSON preserves
+  /// insertion order (PRD-272 §3.H) instead of the arbitrary/hash order
+  /// `std::collections::HashMap` would produce. Keys are chosen so alphabetical order would
+  /// disagree with insertion order, so this only passes if insertion order is actually honored.
+  #[test]
+  #[cfg(feature = "serde")]
+  fn test_extensions_serialize_in_insertion_order() {
+    let mut envelope: CloudEventsEnvelope<std::string::String> = CloudEventsEnvelope::new(
+      std::string::String::from("evt-001"),
+      std::string::String::from("/test/source"),
+      std::string::String::from("com.test.event"),
+    );
+
+    envelope
+      .add_extension(
+        std::string::String::from("zzz_first"),
+        std::string::String::from("1"),
+      )
+      .unwrap();
+    envelope
+      .add_extension(
+        std::string::String::from("aaa_second"),
+        std::string::String::from("2"),
+      )
+      .unwrap();
+
+    let json = serde_json::to_string(&envelope.extensions).unwrap();
+    let first_pos = json.find("zzz_first").unwrap();
+    let second_pos = json.find("aaa_second").unwrap();
+    std::assert!(
+      first_pos < second_pos,
+      "extensions must serialize in insertion order, not key-sorted order: {json}"
     );
   }
 }

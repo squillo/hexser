@@ -15,6 +15,10 @@ documentation = "https://docs.rs/hexser"
 
 [dependencies]
 inventory = { workspace = true }
+# PRD-272 §1.5 wait-free RCU (architecture-graph hot-swap) and §3.H deterministic iteration.
+# Core (always compiled): the graph is not feature-gated.
+arc-swap = { workspace = true }
+indexmap = { workspace = true }
 hexser_macros = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
