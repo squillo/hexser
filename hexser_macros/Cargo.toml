@@ -1,6 +1,6 @@
 [package]
 name = "hexser_macros"
-version = "0.4.7"
+version = "0.5.0"
 edition = "2024"
 rust-version = "1.85"
 authors = ["N Lang Team"]
