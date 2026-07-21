@@ -53,6 +53,6 @@ mod tests {
   #[test]
   fn test_source_location_display() {
     let loc = SourceLocation::new("src/main.rs", 100, 5);
-    assert_eq!(format!("{}", loc), "src/main.rs:100:5");
+    assert_eq!(format!("{loc}"), "src/main.rs:100:5");
   }
 }

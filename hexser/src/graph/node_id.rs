@@ -119,7 +119,7 @@ mod tests {
   #[test]
   fn test_node_id_display() {
     let id = NodeId::from_name("test");
-    let display = format!("{}", id);
+    let display = format!("{id}");
     assert!(display.starts_with("NodeId("));
   }
 }

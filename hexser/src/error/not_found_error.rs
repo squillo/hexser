@@ -101,15 +101,15 @@ impl std::fmt::Display for NotFoundError {
       write!(f, "\nNext Step: Verify {} ID and existence", self.resource)?;
     } else {
       for step in &self.next_steps {
-        write!(f, "\nNext Step: {}", step)?;
+        write!(f, "\nNext Step: {step}")?;
       }
     }
     for suggestion in &self.suggestions {
-      write!(f, "\nSuggestion: {}", suggestion)?;
+      write!(f, "\nSuggestion: {suggestion}")?;
     }
 
     if let Some(ref location) = self.location {
-      write!(f, "\nSource: {}", location)?;
+      write!(f, "\nSource: {location}")?;
     }
 
     Ok(())
@@ -133,7 +133,7 @@ mod tests {
   #[test]
   fn test_not_found_error_display() {
     let err = NotFoundError::new("Order", "abc-123");
-    let display = format!("{}", err);
+    let display = format!("{err}");
     assert!(display.contains("Order"));
     assert!(display.contains("abc-123"));
     assert!(display.contains(crate::error::codes::resource::NOT_FOUND));
@@ -149,7 +149,7 @@ mod tests {
       .with_next_step("Verify the ID")
       .with_suggestion("call users.list() to see valid ids");
 
-    let display = format!("{}", err);
+    let display = format!("{err}");
     assert!(display.contains("Verify the ID"));
     assert!(display.contains("call users.list()"));
 

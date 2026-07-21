@@ -54,8 +54,7 @@ mod serde_tests {
 
     std::assert!(
       !json.contains("src/domain.rs") && !json.contains("100"),
-      "Location should be excluded by default for security. JSON: {}",
-      json
+      "Location should be excluded by default for security. JSON: {json}"
     );
   }
 
@@ -76,8 +75,7 @@ mod serde_tests {
 
     std::assert!(
       json.contains("src/domain.rs") && json.contains("100"),
-      "Location should be included when env var is set. JSON: {}",
-      json
+      "Location should be included when env var is set. JSON: {json}"
     );
 
     unsafe {
@@ -102,8 +100,7 @@ mod serde_tests {
 
     std::assert!(
       !json.contains("src/validation.rs") && !json.contains("50"),
-      "Location should be excluded by default. JSON: {}",
-      json
+      "Location should be excluded by default. JSON: {json}"
     );
   }
 
@@ -124,8 +121,7 @@ mod serde_tests {
 
     std::assert!(
       json.contains("src/validation.rs") && json.contains("50"),
-      "Location should be included when env var is true. JSON: {}",
-      json
+      "Location should be included when env var is true. JSON: {json}"
     );
 
     unsafe {
@@ -149,8 +145,7 @@ mod serde_tests {
 
     std::assert!(
       !json.contains("src/repo.rs") && !json.contains("200"),
-      "Location should be excluded by default. JSON: {}",
-      json
+      "Location should be excluded by default. JSON: {json}"
     );
   }
 
@@ -171,8 +166,7 @@ mod serde_tests {
 
     std::assert!(
       json.contains("src/repo.rs") && json.contains("200"),
-      "Location should be included when env var is TRUE. JSON: {}",
-      json
+      "Location should be included when env var is TRUE. JSON: {json}"
     );
 
     unsafe {
@@ -197,8 +191,7 @@ mod serde_tests {
 
     std::assert!(
       !json.contains("src/service.rs") && !json.contains("75"),
-      "Location should be excluded by default. JSON: {}",
-      json
+      "Location should be excluded by default. JSON: {json}"
     );
   }
 
@@ -219,8 +212,7 @@ mod serde_tests {
 
     std::assert!(
       json.contains("src/service.rs") && json.contains("75"),
-      "Location should be included when env var is set. JSON: {}",
-      json
+      "Location should be included when env var is set. JSON: {json}"
     );
 
     unsafe {
@@ -243,8 +235,7 @@ mod serde_tests {
 
     std::assert!(
       json.contains("E_DOM_002") && json.contains("Error without location"),
-      "Error without location should serialize normally. JSON: {}",
-      json
+      "Error without location should serialize normally. JSON: {json}"
     );
   }
 

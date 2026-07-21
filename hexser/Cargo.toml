@@ -2,12 +2,15 @@
 name = "hexser"
 version = "0.4.7"
 edition = "2024"
+rust-version = "1.85"
 authors = ["N Lang Team"]
 description = "Zero-boilerplate hexagonal architecture with graph-based introspection"
 license = "MIT OR Apache-2.0"
 keywords = ["hexagonal", "architecture", "ports", "adapters", "ddd"]
 categories = ["development-tools", "data-structures"]
-repository = "https://github.com/squillo/hexser/hex"
+repository = "https://github.com/squillo/hexser"
+homepage = "https://github.com/squillo/hexser"
+documentation = "https://docs.rs/hexser"
 
 
 [dependencies]
@@ -20,7 +23,9 @@ async-trait = { workspace = true, optional = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
-tokio = { workspace = true }
+# Tests use #[tokio::test] / #[tokio::main], which need the runtime features that the shipped
+# dependency (workspace default = just "sync") deliberately omits.
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

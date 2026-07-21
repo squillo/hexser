@@ -117,7 +117,7 @@ impl WeatherPort for RestWeatherAdapter {
       return Result::Err(
         hexser::error::hex_error::Hexserror::adapter(
           hexser::error::codes::adapter::API_FAILURE,
-          &format!("Weather API returned error status {}", status),
+          &format!("Weather API returned error status {status}"),
         )
         .with_next_step("Check API documentation for error codes"),
       );

@@ -2,10 +2,13 @@
 name = "hexser_macros"
 version = "0.4.7"
 edition = "2024"
+rust-version = "1.85"
 authors = ["N Lang Team"]
 description = "Procedural macros for the hexser hexagonal architecture crate"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/squillo/hexser/hexser_macros"
+repository = "https://github.com/squillo/hexser"
+homepage = "https://github.com/squillo/hexser"
+documentation = "https://docs.rs/hexser_macros"
 
 [lib]
 proc-macro = true

@@ -202,10 +202,18 @@ and lint-clean verification:
 Separate audit doc: `PRDs/PERF_MEMORY_AUDIT_260720.md` (runtime footprint already right at
 scale; declined micro-opts recorded with rationale).
 
+- **PR-9** tooling/packaging (landed): fixed repo URLs + MSRV/homepage/documentation metadata;
+  pinned the toolchain to stable 1.88 and dropped the nightly-only rustfmt options (fmt now
+  identical stable/nightly); reworked CI to read the toolchain file and add push-on-main,
+  a feature matrix (no-default + each feature), doctest coverage, an examples-build job, a
+  realworld_api job (regenerated its stale lock — 89 tests pass), cargo-deny + dependabot;
+  trimmed workspace tokio to `sync` (runtime features → hexser dev-deps); removed the stale
+  member-level `hexser/Cargo.lock` and the four orphaned/never-compiled `graph/{query,analysis,
+  validation,intent}.rs` files (25 KB of dead code that shipped in the tarball, M18/M23);
+  refreshed CHANGELOG + PUBLISHING.
+
 ## Remaining
 
-- **PR-9** tooling/packaging: fix repo URLs, pin toolchain (D6), CI feature matrix + doctests +
-  push trigger, realworld_api CI job, cargo-deny/dependabot, CHANGELOG/PUBLISHING refresh.
 - **README follow-up (tracked, not done):** the crate README is ~2450 lines of largely
   untested illustrative code. PR-8 fixed the high-severity Quick Start (compile-guarded) and
   the specific fictional-API sections, and made `.with_source`/the swapped-macro cookbook valid,

@@ -16,7 +16,7 @@ fn build_graph(n: usize) -> hexser::graph::hex_graph::HexGraph {
   let mut builder = hexser::graph::builder::GraphBuilder::new();
   for i in 0..n {
     builder = builder.with_node(hexser::graph::hex_node::HexNode::new(
-      hexser::graph::node_id::NodeId::from_name(&format!("N{}", i)),
+      hexser::graph::node_id::NodeId::from_name(&format!("N{i}")),
       hexser::graph::layer::Layer::Domain,
       hexser::graph::role::Role::Entity,
       "Node",
@@ -25,7 +25,7 @@ fn build_graph(n: usize) -> hexser::graph::hex_graph::HexGraph {
   }
   for i in 0..n.saturating_sub(1) {
     builder = builder.with_edge(hexser::graph::hex_edge::HexEdge::new(
-      hexser::graph::node_id::NodeId::from_name(&format!("N{}", i)),
+      hexser::graph::node_id::NodeId::from_name(&format!("N{i}")),
       hexser::graph::node_id::NodeId::from_name(&format!("N{}", i + 1)),
       hexser::graph::relationship::Relationship::Depends,
     ));

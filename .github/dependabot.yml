@@ -1,0 +1,21 @@
+# Dependabot: weekly dependency and GitHub Actions update PRs.
+#
+# Revision History
+# - 2026-07-21T00:00:00Z @AI: Initial dependabot config for cargo + github-actions.
+
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      cargo-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

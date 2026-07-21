@@ -127,6 +127,6 @@ mod tests {
   #[test]
   fn test_role_display() {
     let role = Role::Entity;
-    assert_eq!(format!("{}", role), "Entity");
+    assert_eq!(format!("{role}"), "Entity");
   }
 }

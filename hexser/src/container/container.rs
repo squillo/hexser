@@ -74,8 +74,7 @@ impl Container {
     if services.contains_key(&name) {
       return Err(
         crate::error::hex_error::Hexserror::validation(&format!(
-          "Service {} already registered",
-          name
+          "Service {name} already registered"
         ))
         .with_next_step("Use different service name or remove existing registration"),
       );
@@ -187,8 +186,7 @@ impl Container {
     if services.contains_key(&name) {
       return Err(
         crate::error::hex_error::Hexserror::validation(&format!(
-          "Service {} already registered",
-          name
+          "Service {name} already registered"
         ))
         .with_next_step("Use different service name or remove existing registration"),
       );

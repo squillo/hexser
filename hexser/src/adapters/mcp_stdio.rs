@@ -135,7 +135,7 @@ impl McpStdioServer {
         std::result::Result::Err(e) => {
           return std::result::Result::Err(crate::Hexserror::adapter(
             "E_MCP_STDIN",
-            &format!("Failed to read from stdin: {}", e),
+            &format!("Failed to read from stdin: {e}"),
           ));
         }
       };
@@ -166,7 +166,7 @@ impl McpStdioServer {
       std::result::Result::Err(e) => {
         return std::option::Option::Some(crate::domain::mcp::JsonRpcResponse::error(
           serde_json::Value::Null,
-          crate::domain::mcp::JsonRpcError::parse_error(format!("Invalid JSON: {}", e)),
+          crate::domain::mcp::JsonRpcError::parse_error(format!("Invalid JSON: {e}")),
         ));
       }
     };
@@ -177,8 +177,7 @@ impl McpStdioServer {
         return std::option::Option::Some(crate::domain::mcp::JsonRpcResponse::error(
           serde_json::Value::Null,
           crate::domain::mcp::JsonRpcError::invalid_request(format!(
-            "Invalid JSON-RPC request: {}",
-            e
+            "Invalid JSON-RPC request: {e}"
           )),
         ));
       }
@@ -207,23 +206,23 @@ impl McpStdioServer {
       std::result::Result::Err(e) => {
         return std::result::Result::Err(crate::Hexserror::adapter(
           "E_MCP_SERIALIZE",
-          &format!("Failed to serialize response: {}", e),
+          &format!("Failed to serialize response: {e}"),
         ));
       }
     };
 
     use std::io::Write;
-    if let std::result::Result::Err(e) = writeln!(stdout, "{}", json) {
+    if let std::result::Result::Err(e) = writeln!(stdout, "{json}") {
       return std::result::Result::Err(crate::Hexserror::adapter(
         "E_MCP_STDOUT",
-        &format!("Failed to write to stdout: {}", e),
+        &format!("Failed to write to stdout: {e}"),
       ));
     }
 
     if let std::result::Result::Err(e) = stdout.flush() {
       return std::result::Result::Err(crate::Hexserror::adapter(
         "E_MCP_FLUSH",
-        &format!("Failed to flush stdout: {}", e),
+        &format!("Failed to flush stdout: {e}"),
       ));
     }
 
@@ -260,7 +259,7 @@ impl McpStdioServer {
       .map_err(|e| {
         crate::Hexserror::adapter(
           "E_MCP_COMPILE",
-          &format!("Failed to execute cargo build: {}", e),
+          &format!("Failed to execute cargo build: {e}"),
         )
       })?;
 
@@ -304,7 +303,7 @@ impl McpStdioServer {
         std::result::Result::Err(e) => {
           return std::result::Result::Err(crate::Hexserror::adapter(
             "E_MCP_COMPILE",
-            &format!("Failed to wait for cargo build: {}", e),
+            &format!("Failed to wait for cargo build: {e}"),
           ));
         }
       }
@@ -351,22 +350,20 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
     for (project_name, _config) in self.registry.iter() {
       // Add context resource for this project
       resources.push(crate::domain::mcp::Resource {
-        uri: std::format!("hexser://{}/context", project_name),
-        name: std::format!("{} Architecture Context", project_name),
+        uri: std::format!("hexser://{project_name}/context"),
+        name: std::format!("{project_name} Architecture Context"),
         description: std::option::Option::Some(std::format!(
-          "Machine-readable architecture context for {} project",
-          project_name
+          "Machine-readable architecture context for {project_name} project"
         )),
         mime_type: std::option::Option::Some(std::string::String::from("application/json")),
       });
 
       // Add pack resource for this project
       resources.push(crate::domain::mcp::Resource {
-        uri: std::format!("hexser://{}/pack", project_name),
-        name: std::format!("{} Agent Pack", project_name),
+        uri: std::format!("hexser://{project_name}/pack"),
+        name: std::format!("{project_name} Agent Pack"),
         description: std::option::Option::Some(std::format!(
-          "Comprehensive agent pack (architecture + guidelines + docs) for {} project",
-          project_name
+          "Comprehensive agent pack (architecture + guidelines + docs) for {project_name} project"
         )),
         mime_type: std::option::Option::Some(std::string::String::from("application/json")),
       });
@@ -377,13 +374,13 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
 
   fn read_resource(&self, uri: &str) -> crate::HexResult<crate::domain::mcp::ResourceContent> {
     let (project_name, resource_type) = Self::parse_uri(uri).ok_or_else(|| {
-      crate::Hexserror::adapter("E_MCP_INVALID_URI", &format!("Invalid URI format: {}", uri))
+      crate::Hexserror::adapter("E_MCP_INVALID_URI", &format!("Invalid URI format: {uri}"))
     })?;
 
     let project = self.registry.get(&project_name).ok_or_else(|| {
       crate::Hexserror::adapter(
         "E_MCP_PROJECT_NOT_FOUND",
-        &format!("Project not found: {}", project_name),
+        &format!("Project not found: {project_name}"),
       )
     })?;
 
@@ -411,7 +408,7 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
       }
       _ => std::result::Result::Err(crate::Hexserror::adapter(
         "E_MCP_RESOURCE_NOT_FOUND",
-        &format!("Unknown resource type: {}", resource_type),
+        &format!("Unknown resource type: {resource_type}"),
       )),
     }
   }
@@ -449,8 +446,7 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
               return crate::domain::mcp::JsonRpcResponse::error(
                 id,
                 crate::domain::mcp::JsonRpcError::invalid_request(format!(
-                  "Invalid initialize params: {}",
-                  e
+                  "Invalid initialize params: {e}"
                 )),
               );
             }
@@ -473,8 +469,7 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
                 return crate::domain::mcp::JsonRpcResponse::error(
                   id,
                   crate::domain::mcp::JsonRpcError::internal_error(format!(
-                    "Serialization error: {}",
-                    e
+                    "Serialization error: {e}"
                   )),
                 );
               }
@@ -483,7 +478,7 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
           }
           std::result::Result::Err(e) => crate::domain::mcp::JsonRpcResponse::error(
             id,
-            crate::domain::mcp::JsonRpcError::internal_error(format!("{}", e)),
+            crate::domain::mcp::JsonRpcError::internal_error(format!("{e}")),
           ),
         }
       }
@@ -495,8 +490,7 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
               return crate::domain::mcp::JsonRpcResponse::error(
                 id,
                 crate::domain::mcp::JsonRpcError::internal_error(format!(
-                  "Serialization error: {}",
-                  e
+                  "Serialization error: {e}"
                 )),
               );
             }
@@ -505,7 +499,7 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
         }
         std::result::Result::Err(e) => crate::domain::mcp::JsonRpcResponse::error(
           id,
-          crate::domain::mcp::JsonRpcError::internal_error(format!("{}", e)),
+          crate::domain::mcp::JsonRpcError::internal_error(format!("{e}")),
         ),
       },
       "resources/read" => {
@@ -547,8 +541,7 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
                 return crate::domain::mcp::JsonRpcResponse::error(
                   id,
                   crate::domain::mcp::JsonRpcError::internal_error(format!(
-                    "Serialization error: {}",
-                    e
+                    "Serialization error: {e}"
                   )),
                 );
               }
@@ -557,7 +550,7 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
           }
           std::result::Result::Err(e) => crate::domain::mcp::JsonRpcResponse::error(
             id,
-            crate::domain::mcp::JsonRpcError::internal_error(format!("{}", e)),
+            crate::domain::mcp::JsonRpcError::internal_error(format!("{e}")),
           ),
         }
       }
@@ -569,8 +562,7 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
               return crate::domain::mcp::JsonRpcResponse::error(
                 id,
                 crate::domain::mcp::JsonRpcError::invalid_request(format!(
-                  "Invalid refresh params: {}",
-                  e
+                  "Invalid refresh params: {e}"
                 )),
               );
             }
@@ -591,15 +583,12 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
             std::result::Result::Ok(v) => crate::domain::mcp::JsonRpcResponse::success(id, v),
             std::result::Result::Err(e) => crate::domain::mcp::JsonRpcResponse::error(
               id,
-              crate::domain::mcp::JsonRpcError::internal_error(format!(
-                "Serialization error: {}",
-                e
-              )),
+              crate::domain::mcp::JsonRpcError::internal_error(format!("Serialization error: {e}")),
             ),
           },
           std::result::Result::Err(e) => crate::domain::mcp::JsonRpcResponse::error(
             id,
-            crate::domain::mcp::JsonRpcError::internal_error(format!("{}", e)),
+            crate::domain::mcp::JsonRpcError::internal_error(format!("{e}")),
           ),
         }
       }

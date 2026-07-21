@@ -76,10 +76,10 @@ impl GraphMetadata {
       .count();
     self
       .attributes
-      .insert(std::format!("warning.{}", index), message);
+      .insert(std::format!("warning.{index}"), message);
   }
 
-  /// Collect the construction warnings recorded via [`add_warning`], in insertion order.
+  /// Collect the construction warnings recorded via [`Self::add_warning`], in insertion order.
   pub fn warnings(&self) -> std::vec::Vec<&String> {
     let mut keyed: std::vec::Vec<(usize, &String)> = self
       .attributes

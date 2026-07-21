@@ -97,6 +97,6 @@ mod tests {
   #[test]
   fn test_relationship_display() {
     let rel = Relationship::Implements;
-    assert_eq!(format!("{}", rel), "Implements");
+    assert_eq!(format!("{rel}"), "Implements");
   }
 }

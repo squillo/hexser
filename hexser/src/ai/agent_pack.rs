@@ -11,7 +11,7 @@
 //! resilient to missing optional docs.
 //!
 //! Revision History
-//! - 2026-07-21T00:00:00Z @AI: to_json now returns HexResult<String> (was stringly-typed Result<String,String> re-wrapped at every call site).
+//! - 2026-07-21T00:00:00Z @AI: to_json now returns `HexResult<String>` (was stringly-typed `Result<String,String>` re-wrapped at every call site).
 //! - 2025-10-06T18:14:00Z @AI: Introduce AgentPack aggregator with defaults and JSON serialization.
 
 #[cfg(feature = "ai")]
@@ -118,7 +118,7 @@ impl AgentPack {
     serde_json::to_string(self).map_err(|e| {
       crate::error::hex_error::Hexserror::adapter(
         crate::error::codes::adapter::MAPPING_FAILURE,
-        &format!("Failed to serialize AgentPack to JSON: {}", e),
+        &format!("Failed to serialize AgentPack to JSON: {e}"),
       )
     })
   }

@@ -1,19 +1,19 @@
-# Super efficient GitHub Actions workflow for PR testing
+# CI for the hexser workspace.
 #
-# This workflow runs on all pull requests and provides:
-# - Fast feedback through parallel jobs
-# - Efficient caching to minimize build times
-# - Comprehensive testing across all workspace members
-# - Code quality checks (format, clippy)
-# - Feature flag validation
-# - Artifact storage for binaries, docs, and reports
+# Toolchain is read from rust-toolchain.toml (single source of truth — no stable/nightly
+# split-brain). The shipped crate (lib + bins) is held to zero clippy/doc warnings; examples
+# and test fixtures (which legitimately print and carry illustrative unused fields) must compile
+# and pass but are not style-gated.
 #
 # Revision History
+# - 2026-07-21T00:00:00Z @AI: Rework CI — read toolchain from rust-toolchain.toml, add push-on-main + feature-matrix + doctest coverage + realworld example + cargo-deny; scope clippy -D warnings to lib+bins.
 # - 2025-10-09T08:27:00Z @AI: Add artifact storage for binaries, documentation, and clippy reports.
 
-name: PR Tests
+name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -22,98 +22,49 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  # Job 1: Check code formatting (fastest feedback)
+  # Fastest feedback: formatting.
   format:
     name: Format Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - run: cargo fmt --all -- --check
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt
-
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-  # Job 2: Run clippy for linting (runs in parallel with tests)
+  # Clippy on the shipped crate (library + binaries) with warnings denied.
   clippy:
-    name: Clippy Lints
+    name: Clippy (lib + bins)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          components: clippy
+          cache-key: clippy
+      - run: cargo clippy --workspace --all-features --lib --bins -- -D warnings
 
-      - name: Cache Rust dependencies
-        uses: swatinem/rust-cache@v2
-        with:
-          shared-key: "clippy"
-
-      - name: Run clippy on all targets
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
-
-      - name: Run clippy with JSON output for artifact
-        run: cargo clippy --workspace --all-targets --all-features --message-format=json -- -D warnings > clippy-report.json
-        continue-on-error: true
-
-      - name: Upload clippy results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: clippy-results
-          path: clippy-report.json
-          retention-days: 14
-
-  # Job 3: Test with default features (common usage scenario)
+  # Tests with default features. No --all-targets, so doctests run.
   test-default:
-    name: Test (Default Features)
+    name: Test (default features)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust dependencies
-        uses: swatinem/rust-cache@v2
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          shared-key: "test-default"
+          cache-key: test-default
+      - run: cargo test --workspace
 
-      - name: Run tests with default features
-        run: cargo test --workspace --all-targets
-
-  # Job 4: Test with all features enabled (comprehensive coverage)
+  # Tests with all features (unit + integration + doctests). Also builds the shipped binaries.
   test-all-features:
-    name: Test (All Features)
+    name: Test (all features)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust dependencies
-        uses: swatinem/rust-cache@v2
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          shared-key: "test-all-features"
-
-      - name: Run tests with all features
-        run: cargo test --workspace --all-targets --all-features
-
-      - name: Build all binaries
-        run: cargo build --workspace --all-features --bins --release
-
-      - name: Upload built binaries
-        uses: actions/upload-artifact@v4
+          cache-key: test-all-features
+      - run: cargo test --workspace --all-features
+      - run: cargo build --workspace --all-features --bins --release
+      - uses: actions/upload-artifact@v4
         if: success()
         with:
           name: binaries
@@ -124,31 +75,67 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-  # Job 5: Check documentation builds
+  # Feature matrix: no-default-features and each feature in isolation. This is what would have
+  # caught the visualization-off stack overflow.
+  feature-matrix:
+    name: Feature Matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache-key: feature-matrix
+      - run: cargo check -p hexser --no-default-features
+      - run: cargo check -p hexser --no-default-features --features macros
+      - run: cargo check -p hexser --no-default-features --features serde
+      - run: cargo check -p hexser --no-default-features --features static-di
+      - run: cargo check -p hexser --no-default-features --features ai
+      - run: cargo check -p hexser --no-default-features --features mcp
+      - run: cargo check -p hexser --no-default-features --features visualization
+      - run: cargo check -p hexser --no-default-features --features async
+      - run: cargo check -p hexser --no-default-features --features container
+      - run: cargo check -p hexser --all-features
+
+  # Examples must compile (they legitimately print, so they are not clippy -D gated).
+  examples:
+    name: Examples build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache-key: examples
+      - run: cargo build -p hexser --all-features --examples
+
+  # The flagship realworld_api example is an isolated workspace; build + test it explicitly.
+  realworld-example:
+    name: Realworld example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache-key: realworld
+      - run: cargo test
+        working-directory: hexser/examples/realworld_api
+
+  # Documentation builds with warnings denied.
   docs:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust dependencies
-        uses: swatinem/rust-cache@v2
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          shared-key: "docs"
-
-      - name: Check documentation
-        run: cargo doc --workspace --all-features --no-deps
+          cache-key: docs
+      - run: cargo doc --workspace --all-features --no-deps
         env:
           RUSTDOCFLAGS: -D warnings
 
-      - name: Upload documentation
-        uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: documentation
-          path: target/doc/
-          retention-days: 14
+  # Supply-chain: advisory + license/ban checks.
+  cargo-deny:
+    name: cargo-deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2

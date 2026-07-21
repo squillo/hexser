@@ -100,7 +100,7 @@ impl std::fmt::Display for ConflictError {
     write!(f, "Error [{}]: {}", self.code, self.message)?;
 
     if let Some(ref id) = self.existing_id {
-      write!(f, " (existing ID: {})", id)?;
+      write!(f, " (existing ID: {id})")?;
     }
 
     if self.next_steps.is_empty() {
@@ -110,15 +110,15 @@ impl std::fmt::Display for ConflictError {
       )?;
     } else {
       for step in &self.next_steps {
-        write!(f, "\nNext Step: {}", step)?;
+        write!(f, "\nNext Step: {step}")?;
       }
     }
     for suggestion in &self.suggestions {
-      write!(f, "\nSuggestion: {}", suggestion)?;
+      write!(f, "\nSuggestion: {suggestion}")?;
     }
 
     if let Some(ref location) = self.location {
-      write!(f, "\nSource: {}", location)?;
+      write!(f, "\nSource: {location}")?;
     }
 
     Ok(())
@@ -150,7 +150,7 @@ mod tests {
   fn test_conflict_error_display() {
     let err = ConflictError::new("Email already registered").with_existing_id("123");
 
-    let display = format!("{}", err);
+    let display = format!("{err}");
     assert!(display.contains("Email already registered"));
     assert!(display.contains("123"));
   }

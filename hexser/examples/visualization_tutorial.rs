@@ -67,7 +67,7 @@ fn main() -> hexser::HexResult<()> {
   println!("\nTo use:");
   println!("  Copy to markdown:");
   println!("  ```mermaid");
-  println!("  {}", mermaid.lines().nth(0).unwrap());
+  println!("  {}", mermaid.lines().next().unwrap());
   println!("  ...");
   println!("  ```");
 

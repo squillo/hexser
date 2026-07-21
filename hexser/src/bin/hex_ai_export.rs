@@ -24,6 +24,6 @@ fn main() -> hexser::HexResult<()> {
   let json = context.to_json()?;
 
   // Print to stdout for downstream tooling.
-  std::println!("{}", json);
+  std::println!("{json}");
   std::result::Result::Ok(())
 }

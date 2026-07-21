@@ -40,7 +40,7 @@ mod graph_construction {
     let adapter_id = hexser::graph::NodeId::from_name("Adapter");
 
     let entity = hexser::graph::HexNode::new(
-      entity_id.clone(),
+      entity_id,
       hexser::graph::Layer::Domain,
       hexser::graph::Role::Entity,
       "User",
@@ -48,7 +48,7 @@ mod graph_construction {
     );
 
     let repo = hexser::graph::HexNode::new(
-      repo_id.clone(),
+      repo_id,
       hexser::graph::Layer::Port,
       hexser::graph::Role::Repository,
       "UserRepo",
@@ -56,24 +56,18 @@ mod graph_construction {
     );
 
     let adapter = hexser::graph::HexNode::new(
-      adapter_id.clone(),
+      adapter_id,
       hexser::graph::Layer::Adapter,
       hexser::graph::Role::Adapter,
       "PgUserRepo",
       "adapters",
     );
 
-    let edge1 = hexser::graph::HexEdge::new(
-      repo_id.clone(),
-      entity_id.clone(),
-      hexser::graph::Relationship::Depends,
-    );
+    let edge1 =
+      hexser::graph::HexEdge::new(repo_id, entity_id, hexser::graph::Relationship::Depends);
 
-    let edge2 = hexser::graph::HexEdge::new(
-      adapter_id.clone(),
-      repo_id.clone(),
-      hexser::graph::Relationship::Implements,
-    );
+    let edge2 =
+      hexser::graph::HexEdge::new(adapter_id, repo_id, hexser::graph::Relationship::Implements);
 
     let graph = hexser::graph::GraphBuilder::new()
       .with_nodes(vec![entity, repo, adapter])
@@ -152,7 +146,7 @@ mod graph_queries {
     let target2_id = hexser::graph::NodeId::from_name("Target2");
 
     let source = hexser::graph::HexNode::new(
-      source_id.clone(),
+      source_id,
       hexser::graph::Layer::Domain,
       hexser::graph::Role::Entity,
       "Source",
@@ -160,7 +154,7 @@ mod graph_queries {
     );
 
     let target1 = hexser::graph::HexNode::new(
-      target1_id.clone(),
+      target1_id,
       hexser::graph::Layer::Domain,
       hexser::graph::Role::Entity,
       "Target1",
@@ -168,24 +162,18 @@ mod graph_queries {
     );
 
     let target2 = hexser::graph::HexNode::new(
-      target2_id.clone(),
+      target2_id,
       hexser::graph::Layer::Domain,
       hexser::graph::Role::Entity,
       "Target2",
       "domain",
     );
 
-    let edge1 = hexser::graph::HexEdge::new(
-      source_id.clone(),
-      target1_id,
-      hexser::graph::Relationship::Depends,
-    );
+    let edge1 =
+      hexser::graph::HexEdge::new(source_id, target1_id, hexser::graph::Relationship::Depends);
 
-    let edge2 = hexser::graph::HexEdge::new(
-      source_id.clone(),
-      target2_id,
-      hexser::graph::Relationship::Depends,
-    );
+    let edge2 =
+      hexser::graph::HexEdge::new(source_id, target2_id, hexser::graph::Relationship::Depends);
 
     let graph = hexser::graph::GraphBuilder::new()
       .with_nodes(vec![source, target1, target2])
@@ -203,7 +191,7 @@ mod graph_queries {
     let target_id = hexser::graph::NodeId::from_name("Target");
 
     let source1 = hexser::graph::HexNode::new(
-      source1_id.clone(),
+      source1_id,
       hexser::graph::Layer::Adapter,
       hexser::graph::Role::Adapter,
       "Source1",
@@ -211,7 +199,7 @@ mod graph_queries {
     );
 
     let source2 = hexser::graph::HexNode::new(
-      source2_id.clone(),
+      source2_id,
       hexser::graph::Layer::Adapter,
       hexser::graph::Role::Adapter,
       "Source2",
@@ -219,7 +207,7 @@ mod graph_queries {
     );
 
     let target = hexser::graph::HexNode::new(
-      target_id.clone(),
+      target_id,
       hexser::graph::Layer::Port,
       hexser::graph::Role::Repository,
       "Target",
@@ -228,13 +216,13 @@ mod graph_queries {
 
     let edge1 = hexser::graph::HexEdge::new(
       source1_id,
-      target_id.clone(),
+      target_id,
       hexser::graph::Relationship::Implements,
     );
 
     let edge2 = hexser::graph::HexEdge::new(
       source2_id,
-      target_id.clone(),
+      target_id,
       hexser::graph::Relationship::Implements,
     );
 
@@ -255,7 +243,7 @@ mod graph_validation {
     let node_id = hexser::graph::NodeId::from_name("Node");
 
     let node = hexser::graph::HexNode::new(
-      node_id.clone(),
+      node_id,
       hexser::graph::Layer::Domain,
       hexser::graph::Role::Entity,
       "Entity",

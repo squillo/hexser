@@ -30,9 +30,12 @@ Notes
 ## 2) Versioning and consistency
 
 Current versions (as committed):
-- hexser_macros: 0.4.0
-- hexser: 0.4.0 (depends on hexser_macros = "0.4.0")
-- hexser_potions: 0.4.0 (depends on hexser = "0.4.0")
+- hexser_macros: 0.4.7
+- hexser: 0.4.7 (depends on hexser_macros = "0.4.7")
+- hexser_potions: 0.4.7 (depends on hexser = "0.4.7")
+
+Note: dependency versions are unified at the workspace level (`[workspace.dependencies]` in the
+root `Cargo.toml`), so bump them there.
 
 When bumping versions in the future:
 - Update each crate's `Cargo.toml` `[package] version`.

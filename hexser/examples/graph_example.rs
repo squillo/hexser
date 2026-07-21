@@ -18,7 +18,7 @@ fn main() -> hexser::HexResult<()> {
 
   // Create nodes
   let user_entity = hexser::graph::HexNode::new(
-    user_entity_id.clone(),
+    user_entity_id,
     hexser::graph::Layer::Domain,
     hexser::graph::Role::Entity,
     "User",
@@ -26,7 +26,7 @@ fn main() -> hexser::HexResult<()> {
   );
 
   let user_repo_port = hexser::graph::HexNode::new(
-    user_repo_port_id.clone(),
+    user_repo_port_id,
     hexser::graph::Layer::Port,
     hexser::graph::Role::Repository,
     "UserRepository",
@@ -34,7 +34,7 @@ fn main() -> hexser::HexResult<()> {
   );
 
   let pg_adapter = hexser::graph::HexNode::new(
-    pg_adapter_id.clone(),
+    pg_adapter_id,
     hexser::graph::Layer::Adapter,
     hexser::graph::Role::Adapter,
     "PostgresUserRepository",
@@ -42,7 +42,7 @@ fn main() -> hexser::HexResult<()> {
   );
 
   let create_directive = hexser::graph::HexNode::new(
-    create_directive_id.clone(),
+    create_directive_id,
     hexser::graph::Layer::Application,
     hexser::graph::Role::Directive,
     "CreateUserDirective",
@@ -50,7 +50,7 @@ fn main() -> hexser::HexResult<()> {
   );
 
   let directive_handler = hexser::graph::HexNode::new(
-    directive_handler_id.clone(),
+    directive_handler_id,
     hexser::graph::Layer::Application,
     hexser::graph::Role::DirectiveHandler,
     "CreateUserHandler",
@@ -59,26 +59,26 @@ fn main() -> hexser::HexResult<()> {
 
   // Create edges
   let repo_depends_on_entity = hexser::graph::HexEdge::new(
-    user_repo_port_id.clone(),
-    user_entity_id.clone(),
+    user_repo_port_id,
+    user_entity_id,
     hexser::graph::Relationship::Depends,
   );
 
   let adapter_implements_port = hexser::graph::HexEdge::new(
-    pg_adapter_id.clone(),
-    user_repo_port_id.clone(),
+    pg_adapter_id,
+    user_repo_port_id,
     hexser::graph::Relationship::Implements,
   );
 
   let handler_invokes_directive = hexser::graph::HexEdge::new(
-    directive_handler_id.clone(),
-    create_directive_id.clone(),
+    directive_handler_id,
+    create_directive_id,
     hexser::graph::Relationship::Invokes,
   );
 
   let handler_depends_on_repo = hexser::graph::HexEdge::new(
-    directive_handler_id.clone(),
-    user_repo_port_id.clone(),
+    directive_handler_id,
+    user_repo_port_id,
     hexser::graph::Relationship::Depends,
   );
 

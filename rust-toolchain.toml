@@ -1,2 +1,6 @@
+# Pinned to stable: the workspace is edition 2024 (stable since Rust 1.85) and uses no unstable
+# features, so nightly is unnecessary. Pinning stable keeps local builds reproducible and
+# matching CI (which previously ran stable while this file floated nightly).
 [toolchain]
-channel = "nightly"
+channel = "1.88.0"
+components = ["rustfmt", "clippy"]

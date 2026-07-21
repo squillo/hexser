@@ -137,7 +137,7 @@ impl HexGraph {
     std::fs::write(path, content).map_err(|e| {
       crate::error::hex_error::Hexserror::adapter(
         crate::error::codes::io::IO_FAILURE,
-        &format!("Failed to write file: {}", e),
+        &format!("Failed to write file: {e}"),
       )
       .with_next_step("Check file path and permissions")
       .with_suggestion("Verify directory exists and is writable")
@@ -201,7 +201,7 @@ impl HexGraph {
     ] {
       let count = self.nodes_by_layer(layer).len();
       if count > 0 {
-        println!("  {:?}: {}", layer, count);
+        println!("  {layer:?}: {count}");
       }
     }
   }

@@ -239,11 +239,7 @@ impl ProfileRepository for CompositeProfileRepository {
       }
       std::result::Result::Err(e) => {
         // NoSQL source failed; log warning and use defaults (degrade gracefully)
-        std::eprintln!(
-          "Warning: Failed to fetch preferences for {}: {}",
-          user_id,
-          e
-        );
+        std::eprintln!("Warning: Failed to fetch preferences for {user_id}: {e}");
         Preferences::default()
       }
     };

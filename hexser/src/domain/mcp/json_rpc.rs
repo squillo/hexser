@@ -188,7 +188,7 @@ impl JsonRpcError {
 
   /// Creates a method not found error (-32601).
   pub fn method_not_found(method: String) -> Self {
-    JsonRpcError::new(-32601, format!("Method not found: {}", method), None)
+    JsonRpcError::new(-32601, format!("Method not found: {method}"), None)
   }
 
   /// Creates an internal error (-32603).

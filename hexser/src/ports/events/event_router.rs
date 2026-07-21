@@ -147,7 +147,7 @@ mod tests {
       }
 
       let domain = parts[1];
-      let topic = format!("{}.events", domain);
+      let topic = format!("{domain}.events");
       std::result::Result::Ok(topic)
     }
 
@@ -171,12 +171,12 @@ mod tests {
       }
 
       let entity = parts[2];
-      let topic = format!("{}.events", entity);
+      let topic = format!("{entity}.events");
       std::result::Result::Ok(topic)
     }
 
     fn resolve_subject(&self, aggregate_id: &str) -> std::option::Option<std::string::String> {
-      let subject = format!("aggregate:{}", aggregate_id);
+      let subject = format!("aggregate:{aggregate_id}");
       std::option::Option::Some(subject)
     }
   }

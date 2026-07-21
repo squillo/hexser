@@ -130,7 +130,7 @@ fn main() {
   )
   .unwrap()
   .len();
-  println!("  Total todos: {}", total);
+  println!("  Total todos: {total}");
   println!("  Active todos: {}", repo.find_active().unwrap().len());
   println!("  Completed: {}", repo.count_completed().unwrap());
 

@@ -20,6 +20,6 @@ fn main() -> hexser::HexResult<()> {
 
   let json = pack.to_json()?;
 
-  std::println!("{}", json);
+  std::println!("{json}");
   std::result::Result::Ok(())
 }

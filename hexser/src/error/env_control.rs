@@ -70,7 +70,7 @@ mod tests {
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
     }
-    std::assert_eq!(should_include_source_location(), false);
+    assert!(!should_include_source_location());
   }
 
   /// why: "1" is the documented opt-in value and must enable inclusion.
@@ -80,7 +80,7 @@ mod tests {
     unsafe {
       std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "1");
     }
-    std::assert_eq!(should_include_source_location(), true);
+    assert!(should_include_source_location());
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
     }
@@ -93,7 +93,7 @@ mod tests {
     unsafe {
       std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "true");
     }
-    std::assert_eq!(should_include_source_location(), true);
+    assert!(should_include_source_location());
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
     }
@@ -106,7 +106,7 @@ mod tests {
     unsafe {
       std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "TRUE");
     }
-    std::assert_eq!(should_include_source_location(), true);
+    assert!(should_include_source_location());
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
     }
@@ -120,7 +120,7 @@ mod tests {
     unsafe {
       std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "false");
     }
-    std::assert_eq!(should_include_source_location(), false);
+    assert!(!should_include_source_location());
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
     }
@@ -135,7 +135,7 @@ mod tests {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
     }
     let location: Option<crate::error::source_location::SourceLocation> = None;
-    std::assert_eq!(should_skip_location(&location), true);
+    assert!(should_skip_location(&location));
   }
 
   /// why: a present location must still be skipped when inclusion is disabled (default),
@@ -150,7 +150,7 @@ mod tests {
     let location = Some(crate::error::source_location::SourceLocation::new(
       "test.rs", 1, 1,
     ));
-    std::assert_eq!(should_skip_location(&location), true);
+    assert!(should_skip_location(&location));
   }
 
   /// why: a present location must be serialized (not skipped) only when inclusion is
@@ -165,7 +165,7 @@ mod tests {
     let location = Some(crate::error::source_location::SourceLocation::new(
       "test.rs", 1, 1,
     ));
-    std::assert_eq!(should_skip_location(&location), false);
+    assert!(!should_skip_location(&location));
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
     }

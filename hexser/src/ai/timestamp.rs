@@ -29,15 +29,7 @@ fn format_rfc3339_utc(secs: u64) -> std::string::String {
   let minute = (time_of_day % 3_600) / 60;
   let second = time_of_day % 60;
   let (year, month, day) = civil_from_days(days);
-  std::format!(
-    "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
-    year,
-    month,
-    day,
-    hour,
-    minute,
-    second
-  )
+  std::format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}Z")
 }
 
 /// Converts a count of days since 1970-01-01 into a `(year, month, day)` civil date.
@@ -89,9 +81,9 @@ mod tests {
   #[test]
   fn test_now_is_well_formed() {
     let ts = now_rfc3339();
-    std::assert!(ts.ends_with('Z'), "must be UTC (Z): {}", ts);
-    std::assert!(ts.starts_with("20"), "expected a 21st-century year: {}", ts);
-    std::assert_eq!(ts.len(), 20, "YYYY-MM-DDTHH:MM:SSZ is 20 chars: {}", ts);
+    std::assert!(ts.ends_with('Z'), "must be UTC (Z): {ts}");
+    std::assert!(ts.starts_with("20"), "expected a 21st-century year: {ts}");
+    std::assert_eq!(ts.len(), 20, "YYYY-MM-DDTHH:MM:SSZ is 20 chars: {ts}");
     // The date and time separators must be where RFC3339 requires them.
     std::assert_eq!(&ts[4..5], "-");
     std::assert_eq!(&ts[10..11], "T");

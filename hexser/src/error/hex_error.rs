@@ -208,12 +208,12 @@ impl Hexserror {
 impl std::fmt::Display for Hexserror {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::Domain(err) => write!(f, "{}", err),
-      Self::Port(err) => write!(f, "{}", err),
-      Self::Adapter(err) => write!(f, "{}", err),
-      Self::Validation(err) => write!(f, "{}", err),
-      Self::NotFound(err) => write!(f, "{}", err),
-      Self::Conflict(err) => write!(f, "{}", err),
+      Self::Domain(err) => write!(f, "{err}"),
+      Self::Port(err) => write!(f, "{err}"),
+      Self::Adapter(err) => write!(f, "{err}"),
+      Self::Validation(err) => write!(f, "{err}"),
+      Self::NotFound(err) => write!(f, "{err}"),
+      Self::Conflict(err) => write!(f, "{err}"),
     }
   }
 }
@@ -263,7 +263,7 @@ mod tests {
   #[test]
   fn test_error_display() {
     let err = Hexserror::validation("Test message");
-    let display = format!("{}", err);
+    let display = format!("{err}");
     assert!(display.contains("Test message"));
   }
 
@@ -359,7 +359,7 @@ mod tests {
     } else {
       panic!("expected NotFound");
     }
-    assert!(format!("{}", err).contains("Verify the ID and try again"));
+    assert!(format!("{err}").contains("Verify the ID and try again"));
   }
 
   /// why: Hexserror::with_source must attach the cause to layer variants so `source()` walks

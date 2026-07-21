@@ -108,14 +108,14 @@ impl std::fmt::Display for ValidationError {
     }
 
     for step in &self.next_steps {
-      write!(f, "\nNext Step: {}", step)?;
+      write!(f, "\nNext Step: {step}")?;
     }
     for suggestion in &self.suggestions {
-      write!(f, "\nSuggestion: {}", suggestion)?;
+      write!(f, "\nSuggestion: {suggestion}")?;
     }
 
     if let Some(ref location) = self.location {
-      write!(f, "\nSource: {}", location)?;
+      write!(f, "\nSource: {location}")?;
     }
 
     Ok(())
@@ -147,7 +147,7 @@ mod tests {
   fn test_validation_error_display() {
     let err = ValidationError::new("E_HEX_300", "Required field missing").with_field("username");
 
-    let display = format!("{}", err);
+    let display = format!("{err}");
     assert!(display.contains("username"));
     assert!(display.contains("E_HEX_300"));
   }

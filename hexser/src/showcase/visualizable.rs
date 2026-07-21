@@ -73,7 +73,7 @@ impl Visualizable for crate::graph::hex_graph::HexGraph {
     ] {
       let nodes = self.nodes_by_layer(layer);
       if !nodes.is_empty() {
-        output.push_str(&format!("\n{:?} Layer:\n", layer));
+        output.push_str(&format!("\n{layer:?} Layer:\n"));
         for node in nodes {
           output.push_str(&format!("  └─ {}\n", node.type_name));
         }
