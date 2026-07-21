@@ -6,6 +6,8 @@
 //! invalid relationships are detected.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: PRD-272 §3.H — adjacency indices use IndexMap for deterministic iteration.
+//! - 2026-07-20T00:00:00Z @AI: build() now uses BTreeMap, precomputes adjacency indices, and records NodeId collisions in metadata instead of silently dropping a node.
 //! - 2025-10-02T12:30:00Z @AI: Add add_node and add_edge alias methods.
 //! - 2025-10-01T00:03:00Z @AI: Initial GraphBuilder implementation for Phase 2.
 
@@ -88,20 +90,50 @@ impl GraphBuilder {
 
   /// Build the immutable graph.
   ///
-  /// Consumes the builder and returns a HexGraph. Validates that all
-  /// edges reference existing nodes.
+  /// Consumes the builder and returns a HexGraph, precomputing the outgoing/incoming adjacency
+  /// indices so edge queries are O(degree). If two distinct types produce the same `NodeId`
+  /// (a hash collision), the collision is recorded in the graph metadata rather than silently
+  /// dropping one node.
   pub fn build(self) -> crate::graph::hex_graph::HexGraph {
-    let mut node_map = std::collections::HashMap::new();
+    let mut node_map = std::collections::BTreeMap::new();
+    let mut collisions: std::vec::Vec<std::string::String> = std::vec::Vec::new();
 
     for node in self.nodes {
-      node_map.insert(node.id().clone(), node);
+      let id = *node.id();
+      let type_name = std::string::String::from(node.type_name());
+      if let std::option::Option::Some(prev) = node_map.insert(id, node) {
+        // Two different types hashed to the same NodeId; keep the later one but record it so the
+        // collision is observable instead of a silently missing component.
+        if prev.type_name() != type_name {
+          collisions.push(std::format!(
+            "NodeId collision between `{}` and `{}`",
+            prev.type_name(),
+            type_name
+          ));
+        }
+      }
     }
 
-    let metadata = crate::graph::metadata::GraphMetadata::new(&self.description);
+    // Build adjacency indices. `IndexMap` (PRD-272 §3.H) keeps deterministic iteration order.
+    let mut outgoing: indexmap::IndexMap<crate::graph::node_id::NodeId, std::vec::Vec<usize>> =
+      indexmap::IndexMap::new();
+    let mut incoming: indexmap::IndexMap<crate::graph::node_id::NodeId, std::vec::Vec<usize>> =
+      indexmap::IndexMap::new();
+    for (index, edge) in self.edges.iter().enumerate() {
+      outgoing.entry(*edge.source()).or_default().push(index);
+      incoming.entry(*edge.target()).or_default().push(index);
+    }
+
+    let mut metadata = crate::graph::metadata::GraphMetadata::new(&self.description);
+    for collision in collisions {
+      metadata.add_warning(collision);
+    }
 
     let inner = std::sync::Arc::new(crate::graph::hex_graph::GraphInner {
       nodes: node_map,
       edges: self.edges,
+      outgoing,
+      incoming,
       metadata,
     });
 
@@ -238,5 +270,54 @@ mod tests {
 
     let builder = GraphBuilder::new().with_edge(edge);
     assert!(builder.validate().is_err());
+  }
+
+  /// why: when two distinct types map to the same NodeId, build() must keep one node AND record
+  /// a metadata warning, rather than silently dropping a component with no trace. Forced here by
+  /// giving two nodes with different type_names the same explicit NodeId.
+  #[test]
+  fn test_build_records_nodeid_collision_warning() {
+    let shared_id = crate::graph::node_id::NodeId::from_name("Shared");
+    let node_a = crate::graph::hex_node::HexNode::new(
+      shared_id,
+      crate::graph::layer::Layer::Domain,
+      crate::graph::role::Role::Entity,
+      "TypeA",
+      "domain",
+    );
+    let node_b = crate::graph::hex_node::HexNode::new(
+      shared_id,
+      crate::graph::layer::Layer::Domain,
+      crate::graph::role::Role::Entity,
+      "TypeB",
+      "domain",
+    );
+
+    let graph = GraphBuilder::new().with_nodes(vec![node_a, node_b]).build();
+
+    // Only one survives the id collision, but the collision is observable in metadata.
+    assert_eq!(graph.node_count(), 1);
+    let warnings = graph.metadata().warnings();
+    assert_eq!(warnings.len(), 1, "collision must be recorded once");
+    assert!(warnings[0].contains("TypeA") && warnings[0].contains("TypeB"));
+  }
+
+  /// why: identical type_names sharing an id (the same component re-registered) is NOT a real
+  /// collision and must not produce a spurious warning.
+  #[test]
+  fn test_build_no_warning_for_same_type_reinsertion() {
+    let id = crate::graph::node_id::NodeId::from_name("Same");
+    let mk = || {
+      crate::graph::hex_node::HexNode::new(
+        id,
+        crate::graph::layer::Layer::Domain,
+        crate::graph::role::Role::Entity,
+        "SameType",
+        "domain",
+      )
+    };
+    let graph = GraphBuilder::new().with_nodes(vec![mk(), mk()]).build();
+    assert_eq!(graph.node_count(), 1);
+    assert!(graph.metadata().warnings().is_empty());
   }
 }

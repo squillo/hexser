@@ -5,6 +5,7 @@
 //! custom validation logic is needed.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Fully-qualify generated paths (::hexser::, ::std::) for hygiene.
 //! - 2025-10-09T11:03:00Z @AI: Initial HexValueItem derive implementation.
 
 /// Derive HexValueItem for a type
@@ -15,11 +16,11 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
   let expanded = quote::quote! {
-      impl #impl_generics hexser::domain::HexValueItem for #name #ty_generics #where_clause {
-          fn validate(&self) -> hexser::result::hex_result::HexResult<()> {
-              std::result::Result::Ok(())
-          }
+    impl #impl_generics ::hexser::domain::HexValueItem for #name #ty_generics #where_clause {
+      fn validate(&self) -> ::hexser::result::hex_result::HexResult<()> {
+        ::std::result::Result::Ok(())
       }
+    }
   };
 
   proc_macro::TokenStream::from(expanded)

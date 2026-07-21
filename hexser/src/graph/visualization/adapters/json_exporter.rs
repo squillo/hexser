@@ -8,6 +8,12 @@
 /// JSON format exporter
 pub struct JsonExporter;
 
+impl std::default::Default for JsonExporter {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl JsonExporter {
   /// Create new JSON exporter
   pub fn new() -> Self {
@@ -66,7 +72,7 @@ impl crate::graph::visualization::ports::format_exporter::FormatExporter for Jso
     };
 
     serde_json::to_string_pretty(&d3_graph).map_err(move |e| {
-      let msg = format!("JSON serialization failed: {}", e);
+      let msg = format!("JSON serialization failed: {e}");
       crate::error::hex_error::Hexserror::adapter("E_HEX_VIZ_001", msg.as_str())
     })
   }

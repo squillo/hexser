@@ -11,6 +11,12 @@ pub struct MermaidExporter {
   pub direction: String,
 }
 
+impl std::default::Default for MermaidExporter {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl MermaidExporter {
   /// Create new Mermaid exporter
   pub fn new() -> Self {
@@ -50,7 +56,7 @@ impl crate::graph::visualization::ports::format_exporter::FormatExporter for Mer
       ));
     }
 
-    output.push_str("\n");
+    output.push('\n');
 
     for edge in &visual_graph.edges {
       let source_id = Self::sanitize_node_id(&edge.source);

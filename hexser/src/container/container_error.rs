@@ -71,12 +71,11 @@ impl std::fmt::Display for ContainerError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       Self::ServiceNotFound { service_name } => {
-        write!(f, "Service not found: {}", service_name)?;
+        write!(f, "Service not found: {service_name}")?;
         write!(f, "\nNext Steps: Register the service before resolving")?;
         write!(
           f,
-          "\nSuggestion: container.register::<{}>(provider, scope)?",
-          service_name
+          "\nSuggestion: container.register::<{service_name}>(provider, scope)?"
         )
       }
       Self::CircularDependency { cycle } => {
@@ -94,7 +93,7 @@ impl std::fmt::Display for ContainerError {
         service_name,
         reason,
       } => {
-        write!(f, "Provider failed for {}: {}", service_name, reason)?;
+        write!(f, "Provider failed for {service_name}: {reason}")?;
         write!(
           f,
           "\nNext Steps: Check provider implementation and dependencies"
@@ -105,7 +104,7 @@ impl std::fmt::Display for ContainerError {
         )
       }
       Self::DuplicateRegistration { service_name } => {
-        write!(f, "Service already registered: {}", service_name)?;
+        write!(f, "Service already registered: {service_name}")?;
         write!(
           f,
           "\nNext Steps: Remove duplicate registration or use different service name"

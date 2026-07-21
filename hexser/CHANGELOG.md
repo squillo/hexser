@@ -1,4 +1,39 @@
-## [Unreleased]
+## [0.5.0] - 2026-07-21
+
+### Hardening pass (2026-07)
+
+Correctness / reliability:
+- Fixed a stack overflow when the `visualization` feature is off (the default): `Visualizable`
+  for `HexGraph` recursed into itself.
+- MCP server now handles id-less JSON-RPC notifications per spec (no spurious error response),
+  returns the correct -32700/-32600 error codes, and runs `hexser/refresh` builds with a
+  timeout and bounded stderr.
+- `#[derive(HexDirective)]` no longer emits an unresolved `inventory::submit!`; `#[derive(HexQuery)]`
+  now registers in the graph; derives work on generic types and error clearly on misuse.
+- The DI `Container` no longer holds locks across user provider code (deadlock fix; singletons
+  use `OnceCell`).
+- `InMemoryEventBus` routes by event type to all handlers for a topic (was last-subscription-wins),
+  uses a `VecDeque`, and bounds push-mode queue growth.
+- Rich-error guidance (`with_next_step`/`with_suggestion`) is retained on all error variants and
+  `Hexserror::with_source` is now available; `QueryRepository::delete_where`'s default errors
+  instead of silently returning `Ok(0)`.
+
+API / docs:
+- Re-exported the v0.4 read API (`QueryRepository`, `FindOptions`, `Sort`, `Direction`) from the
+  crate root and prelude.
+- `AIContext::to_json` / `AgentPack::to_json` now return `HexResult<String>`.
+- Added an explicit `serde` feature; rewrote the crate docs and README Quick Start against the
+  real API (now guarded by a compiled test).
+
+Performance / footprint:
+- `HexGraph::current()` is cached; graph edge queries use a precomputed adjacency index; node
+  iteration is deterministic (`BTreeMap`).
+- Removed the `chrono` dependency (std-only RFC3339 timestamp) and trimmed `syn`/`tokio`
+  features, reducing downstream compile time and binary size.
+
+Tooling:
+- Pinned the toolchain to stable, fixed crate metadata (repository URLs, MSRV), and reworked CI
+  (feature matrix, doctests, realworld example, cargo-deny, push-on-main).
 
 ### Phase 5: Visualization & Export (Completed)
 - Hexagonal architecture for visualization system

@@ -1,38 +1,32 @@
 //! Implementation of #[derive(HexPort)] macro.
 //!
-//! For traits, generates a companion meta struct that implements Registrable.
-//! For structs, marks them as port layer types.
+//! Marks a port type (struct/enum) as a port-layer component and registers it in the
+//! architecture graph. The port's `Role` defaults to `Repository` but can be overridden
+//! with `#[hex(role = "InputPort")]` (or any `Role` variant).
+//!
+//! Note: derives apply to structs/enums, not traits. To register a trait-based port, apply
+//! this derive to a marker struct representing the port.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Parse #[hex(role = "...")] override; use shared codegen; validate target; fully-qualified paths.
 //! - 2025-10-02T00:00:00Z @AI: Initial HexPort derive implementation.
 
 /// Derive HexPort for a type
 pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let input = syn::parse_macro_input!(input as syn::DeriveInput);
 
-  let name = &input.ident;
-  let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+  if let Err(e) = crate::common::validation::validate_struct_or_enum(&input) {
+    return e.to_compile_error().into();
+  }
 
-  let expanded = quote::quote! {
-      impl #impl_generics hexser::registry::Registrable for #name #ty_generics #where_clause {
-          fn node_info() -> hexser::registry::NodeInfo {
-              hexser::registry::NodeInfo {
-                  layer: hexser::graph::Layer::Port,
-                  role: hexser::graph::Role::Repository,
-                  type_name: std::any::type_name::<Self>(),
-                  module_path: std::module_path!(),
-              }
-          }
+  let role = crate::common::codegen::role_override(&input.attrs)
+    .unwrap_or_else(|| quote::quote!(::hexser::graph::Role::Repository));
 
-          fn dependencies() -> std::vec::Vec<hexser::graph::NodeId> {
-              std::vec::Vec::new()
-          }
-      }
-
-      hexser::inventory::submit! {
-          hexser::registry::ComponentEntry::new::<#name #ty_generics>()
-      }
-  };
+  let expanded = crate::common::codegen::registrable_and_submit(
+    &input,
+    quote::quote!(::hexser::graph::Layer::Port),
+    role,
+  );
 
   proc_macro::TokenStream::from(expanded)
 }

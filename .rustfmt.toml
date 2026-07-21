@@ -1,4 +1,5 @@
-indent_style = "Block"
+# Only stable rustfmt options, so `cargo fmt` behaves identically on stable and nightly.
+# (indent_style = "Block" was the default anyway; imports_granularity is moot because the
+# project convention avoids `use` statements.)
 tab_spaces = 2
-imports_granularity = "Crate"
 edition = "2024"

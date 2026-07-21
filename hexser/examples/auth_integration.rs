@@ -211,11 +211,11 @@ fn main() -> hexser::result::hex_result::HexResult<()> {
 
   // Create session
   let token = session_adapter.create_session(&user.id, 3600)?;
-  std::println!("   ✓ Session created: {} (TTL: 3600s)", token);
+  std::println!("   ✓ Session created: {token} (TTL: 3600s)");
 
   // Validate session
   let validated = session_adapter.validate_session(&token)?;
-  std::println!("   ✓ Session validated: user_id = {:?}", validated);
+  std::println!("   ✓ Session validated: user_id = {validated:?}");
 
   // Revoke session
   session_adapter.revoke_session(&token)?;

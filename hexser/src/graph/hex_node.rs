@@ -201,7 +201,7 @@ mod tests {
       "test::domain",
     );
 
-    let display = format!("{}", node);
+    let display = format!("{node}");
     assert!(display.contains("TestEntity"));
     assert!(display.contains("Entity"));
     assert!(display.contains("Domain"));

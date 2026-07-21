@@ -129,7 +129,7 @@ impl ProductRepository for InMemoryProductRepository {
     product_id: &str,
     qty: u32,
   ) -> hexser::result::hex_result::HexResult<()> {
-    tx.log_operation(std::format!("decrement_stock({}, {})", product_id, qty));
+    tx.log_operation(std::format!("decrement_stock({product_id}, {qty})"));
     let mut stock = self.stock.lock().unwrap();
     let current = stock.get(product_id).copied().unwrap_or(0);
     if current < qty {

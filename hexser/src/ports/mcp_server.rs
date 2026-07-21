@@ -69,7 +69,7 @@ pub trait McpServer {
   ///
   /// Result containing refresh status or error
   fn refresh_project(
-    &mut self,
+    &self,
     request: crate::domain::mcp::RefreshRequest,
   ) -> crate::HexResult<crate::domain::mcp::RefreshResult>;
 

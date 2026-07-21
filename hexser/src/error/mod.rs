@@ -5,22 +5,21 @@
 //! guidance. Uses trait-based approach for layer errors to eliminate duplication.
 //! Structured for both human and AI consumption.
 //!
-//! # Macros
+//! # Constructing errors
 //!
-//! Error construction macros automatically capture source location:
+//! Build rich errors with the `Hexserror` constructors and builder methods:
 //!
-//! ```rust,ignore
-//! use hexser::{hex_domain_error, error::codes};
+//! ```rust
+//! use hexser::error::hex_error::Hexserror;
+//! use hexser::error::codes;
 //!
-//! let err = hex_domain_error!(
-//!     codes::domain::INVARIANT_VIOLATION,
-//!     "Order must have items",
-//!     next_steps: ["Add at least one item"],
-//!     suggestions: ["order.add_item(item)"]
-//! );
+//! let err = Hexserror::domain(codes::domain::INVARIANT_VIOLATION, "Order must have items")
+//!     .with_next_step("Add at least one item")
+//!     .with_suggestion("order.add_item(item)");
 //! ```
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Replace docs for the removed error macros with the real Hexserror constructor API.
 //! - 2025-10-09T21:51:00Z @AI: Add env_control module for conditional source location serialization.
 //! - 2025-10-06T03:00:00Z @AI: Add error construction macros for Phase 2.
 //! - 2025-10-06T01:00:00Z @AI: Add RichError trait and LayerError generic for Phase 1.

@@ -125,7 +125,7 @@ fn main() {
 }
 
 fn visualize_layer(graph: &HexGraph, layer: Layer, title: &str) {
-  println!("\n{}", title);
+  println!("\n{title}");
   let nodes: Vec<_> = graph.nodes_by_layer(layer).into_iter().collect();
 
   if nodes.is_empty() {
@@ -147,12 +147,12 @@ fn print_ascii_architecture(graph: &HexGraph) {
   println!(
     r#"
         ┌────────────────────────────────────┐
-        │      Application Layer ({:2})        │
+        │      Application Layer ({app_count:2})        │
         │   [Directives, Queries]            │
         └───────────┬────────────────────────┘
                     │
         ┌───────────▼────────────────────────┐
-        │         Port Layer ({:2})            │
+        │         Port Layer ({port_count:2})            │
         │    [Repository Interfaces]         │
         └───────────┬────────────────────────┘
                     │
@@ -160,10 +160,9 @@ fn print_ascii_architecture(graph: &HexGraph) {
             │       │       │
         ┌───▼──┐ ┌──▼──┐ ┌──▼────┐
         │Domain│ │Adapt│ │Infrast│
-        │ ({:2}) │ │ ({:2})│ │  (0)  │
+        │ ({domain_count:2}) │ │ ({adapter_count:2})│ │  (0)  │
         └──────┘ └─────┘ └───────┘
-    "#,
-    app_count, port_count, domain_count, adapter_count
+    "#
   );
 }
 
@@ -173,19 +172,19 @@ fn health_check(graph: &HexGraph) {
   let adapter_count = graph.nodes_by_layer(Layer::Adapter).len();
 
   if domain_count > 0 {
-    println!("✅ Domain layer present ({} entities)", domain_count);
+    println!("✅ Domain layer present ({domain_count} entities)");
   } else {
     println!("⚠️  No domain entities found");
   }
 
   if port_count > 0 {
-    println!("✅ Port layer present ({} ports)", port_count);
+    println!("✅ Port layer present ({port_count} ports)");
   } else {
     println!("⚠️  No ports defined");
   }
 
   if adapter_count > 0 {
-    println!("✅ Adapter layer present ({} adapters)", adapter_count);
+    println!("✅ Adapter layer present ({adapter_count} adapters)");
   } else {
     println!("⚠️  No adapters implemented");
   }

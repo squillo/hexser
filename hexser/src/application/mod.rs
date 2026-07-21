@@ -12,6 +12,9 @@
 //! - 2025-10-01T00:01:00Z @AI: Renamed Command to Directive for better intent representation.
 //! - 2025-10-01T00:00:00Z @AI: Initial Phase 1 application module structure.
 
+// One-concept-per-file layout: the `Application` trait lives in application.rs, so the
+// submodule shares the layer module's name by design.
+#[allow(clippy::module_inception)]
 pub mod application;
 pub mod directive;
 pub mod directive_handler;

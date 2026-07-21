@@ -9,6 +9,9 @@
 //! - 2025-10-02T20:30:00Z @AI: Add async provider support for Phase 6.2.
 //! - 2025-10-02T20:00:00Z @AI: Initial Phase 6 container module implementation.
 
+// One-concept-per-file layout: the `Container` type lives in container.rs, so the
+// submodule shares the module's name by design.
+#[allow(clippy::module_inception)]
 pub mod container;
 pub mod container_error;
 pub mod provider;

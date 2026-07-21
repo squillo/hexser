@@ -370,7 +370,7 @@ mod error_integration {
     .with_next_step("Add at least one item")
     .with_suggestion("order.add_item(item)");
 
-    let display = format!("{}", err);
+    let display = format!("{err}");
     assert!(display.contains("E_HEX_001"));
     assert!(display.contains("Next Steps"));
   }

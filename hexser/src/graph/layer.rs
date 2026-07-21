@@ -81,6 +81,6 @@ mod tests {
   #[test]
   fn test_layer_display() {
     let layer = Layer::Domain;
-    assert_eq!(format!("{}", layer), "Domain");
+    assert_eq!(format!("{layer}"), "Domain");
   }
 }

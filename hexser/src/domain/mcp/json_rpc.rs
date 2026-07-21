@@ -5,20 +5,25 @@
 //! Supports both method calls with parameters and notification messages.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Make request `id` optional so JSON-RPC 2.0 notifications (id-less) deserialize; add is_notification/response_id/notification helpers.
 //! - 2025-10-08T23:35:00Z @AI: Initial JSON-RPC 2.0 protocol types.
 
 /// JSON-RPC 2.0 request structure.
 ///
-/// Represents a method call from client to server. Contains method name,
-/// optional parameters (as JSON value), and request ID for correlation.
+/// Represents a method call or notification from client to server. Contains method name,
+/// optional parameters (as JSON value), and an optional request ID for correlation.
 /// The jsonrpc field must always be "2.0" per specification.
+///
+/// A request with no `id` is a *notification*: per JSON-RPC 2.0 the server processes it but
+/// MUST NOT send a response. The MCP handshake relies on this (`notifications/initialized`).
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct JsonRpcRequest {
   /// JSON-RPC protocol version, must be "2.0"
   pub jsonrpc: String,
 
-  /// Request identifier for correlation with response
-  pub id: serde_json::Value,
+  /// Request identifier for correlation with response. Absent for notifications.
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub id: Option<serde_json::Value>,
 
   /// Method name to invoke
   pub method: String,
@@ -29,7 +34,7 @@ pub struct JsonRpcRequest {
 }
 
 impl JsonRpcRequest {
-  /// Creates a new JSON-RPC request with the given method and parameters.
+  /// Creates a new JSON-RPC method-call request (with an id) with the given method and parameters.
   ///
   /// # Arguments
   ///
@@ -43,10 +48,31 @@ impl JsonRpcRequest {
   pub fn new(id: serde_json::Value, method: String, params: Option<serde_json::Value>) -> Self {
     JsonRpcRequest {
       jsonrpc: String::from("2.0"),
-      id,
+      id: Some(id),
       method,
       params,
     }
+  }
+
+  /// Creates a JSON-RPC notification (no id). The server must not reply to it.
+  pub fn notification(method: String, params: Option<serde_json::Value>) -> Self {
+    JsonRpcRequest {
+      jsonrpc: String::from("2.0"),
+      id: None,
+      method,
+      params,
+    }
+  }
+
+  /// Returns true if this request is a notification (has no id) and must not be responded to.
+  pub fn is_notification(&self) -> bool {
+    self.id.is_none()
+  }
+
+  /// The id to echo in a response, defaulting to JSON `null` when absent (per JSON-RPC 2.0,
+  /// error responses to requests whose id could not be determined use `null`).
+  pub fn response_id(&self) -> serde_json::Value {
+    self.id.clone().unwrap_or(serde_json::Value::Null)
   }
 }
 
@@ -162,7 +188,7 @@ impl JsonRpcError {
 
   /// Creates a method not found error (-32601).
   pub fn method_not_found(method: String) -> Self {
-    JsonRpcError::new(-32601, format!("Method not found: {}", method), None)
+    JsonRpcError::new(-32601, format!("Method not found: {method}"), None)
   }
 
   /// Creates an internal error (-32603).
@@ -175,6 +201,7 @@ impl JsonRpcError {
 mod tests {
   use super::*;
 
+  /// why: a normal method call carries an id and must round-trip; guards the common request path.
   #[test]
   fn test_json_rpc_request_serialization() {
     let req = JsonRpcRequest::new(
@@ -186,6 +213,26 @@ mod tests {
     let json = serde_json::to_string(&req).unwrap();
     std::assert!(json.contains("\"jsonrpc\":\"2.0\""));
     std::assert!(json.contains("\"method\":\"initialize\""));
+    std::assert!(!req.is_notification());
+  }
+
+  /// why: the MCP handshake sends an id-less `notifications/initialized`; it must deserialize
+  /// (previously `id` was required, so every real client session failed to parse it) and be
+  /// recognized as a notification so the server does not reply.
+  #[test]
+  fn test_notification_deserializes_and_is_recognized() {
+    let raw = r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#;
+    let req: JsonRpcRequest = serde_json::from_str(raw).expect("notification must deserialize");
+    std::assert!(req.is_notification());
+    std::assert_eq!(req.response_id(), serde_json::Value::Null);
+  }
+
+  /// why: a notification serializes without an `id` field (JSON-RPC 2.0 requires its absence).
+  #[test]
+  fn test_notification_serialization_omits_id() {
+    let req = JsonRpcRequest::notification(String::from("notifications/initialized"), None);
+    let json = serde_json::to_string(&req).unwrap();
+    std::assert!(!json.contains("\"id\""));
   }
 
   #[test]

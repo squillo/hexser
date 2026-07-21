@@ -6,8 +6,10 @@
 //! and delivered synchronously without persistence.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Route by envelope type to all handlers for that topic (fix last-subscription-wins misrouting); VecDeque queue with O(1) poll; enqueue only undelivered events to bound push-mode growth.
 //! - 2025-10-09T15:08:00Z @AI: Fix doc test to use trait imports for subscribe/publish methods.
 //! - 2025-10-09T14:51:00Z @AI: Initial InMemoryEventBus adapter implementation.
+//! - 2026-07-21T00:00:00Z @AI: PRD-272 §3.H — HashMap→IndexMap for deterministic iteration.
 
 /// Simple in-memory event bus for testing and development.
 ///
@@ -47,9 +49,10 @@
 /// let mut bus: hexser::adapters::InMemoryEventBus<TestEvent> =
 ///     hexser::adapters::InMemoryEventBus::new();
 ///
-/// // Subscribe to events (requires EventSubscriber trait in scope)
+/// // Subscribe to events (requires EventSubscriber trait in scope). The topic is the
+/// // CloudEvents `type`, i.e. the event's `event_type()` — here "com.test.event".
 /// bus.subscribe(
-///     "test.events",
+///     "com.test.event",
 ///     std::boxed::Box::new(|_envelope| {
 ///         // Handle event
 ///         std::result::Result::Ok(())
@@ -69,14 +72,22 @@
 ///
 /// bus.publish(&envelope).unwrap();
 /// ```
+/// Boxed synchronous handler invoked with each delivered event on a topic.
+type EventHandler<T> =
+  std::boxed::Box<dyn Fn(crate::ports::events::CloudEventsEnvelope<T>) -> crate::HexResult<()>>;
+
 pub struct InMemoryEventBus<T> {
-  queue: std::cell::RefCell<std::vec::Vec<crate::ports::events::CloudEventsEnvelope<T>>>,
-  handlers: std::cell::RefCell<
-    std::collections::HashMap<
-      std::string::String,
-      std::boxed::Box<dyn Fn(crate::ports::events::CloudEventsEnvelope<T>) -> crate::HexResult<()>>,
-    >,
-  >,
+  /// Events published with no matching handler, awaiting `poll()`. A `VecDeque` gives O(1)
+  /// FIFO dequeue (vs. the previous `Vec::remove(0)` which was O(n) per poll).
+  queue:
+    std::cell::RefCell<std::collections::VecDeque<crate::ports::events::CloudEventsEnvelope<T>>>,
+  /// Handlers keyed by topic. Each topic may have several handlers, and events are routed by
+  /// the envelope's CloudEvents `type`, so subscribing to a second topic no longer starves the
+  /// first (the previous single `self.topic` routing delivered only to the last subscription).
+  handlers:
+    std::cell::RefCell<indexmap::IndexMap<std::string::String, std::vec::Vec<EventHandler<T>>>>,
+  /// Legacy default-topic label retained for API compatibility (`with_topic`); routing is by
+  /// envelope type, not this field.
   topic: std::string::String,
 }
 
@@ -98,8 +109,8 @@ impl<T> InMemoryEventBus<T> {
   /// ```
   pub fn new() -> Self {
     Self {
-      queue: std::cell::RefCell::new(std::vec::Vec::new()),
-      handlers: std::cell::RefCell::new(std::collections::HashMap::new()),
+      queue: std::cell::RefCell::new(std::collections::VecDeque::new()),
+      handlers: std::cell::RefCell::new(indexmap::IndexMap::new()),
       topic: std::string::String::from("default.events"),
     }
   }
@@ -124,8 +135,8 @@ impl<T> InMemoryEventBus<T> {
   /// ```
   pub fn with_topic(topic: std::string::String) -> Self {
     Self {
-      queue: std::cell::RefCell::new(std::vec::Vec::new()),
-      handlers: std::cell::RefCell::new(std::collections::HashMap::new()),
+      queue: std::cell::RefCell::new(std::collections::VecDeque::new()),
+      handlers: std::cell::RefCell::new(indexmap::IndexMap::new()),
       topic,
     }
   }
@@ -178,13 +189,34 @@ where
     envelope.validate()?;
     envelope.validate_time_format()?;
 
-    // Add to queue
-    self.queue.borrow_mut().push(envelope.clone());
+    // Route by the envelope's CloudEvents `type`, falling back to this bus's default topic when
+    // the envelope carries no type. Invoke every handler subscribed to the resolved topic.
+    // (`self.handlers.borrow()` here is a shared borrow; a handler that re-enters `publish`
+    // takes another shared borrow, which is fine — only `subscribe`, which takes `&mut self`,
+    // borrows mutably.)
+    let route = if envelope.r#type.is_empty() {
+      self.topic.as_str()
+    } else {
+      envelope.r#type.as_str()
+    };
+    let delivered = {
+      let handlers = self.handlers.borrow();
+      match handlers.get(route) {
+        std::option::Option::Some(topic_handlers) if !topic_handlers.is_empty() => {
+          for handler in topic_handlers {
+            handler(envelope.clone())?;
+          }
+          true
+        }
+        _ => false,
+      }
+    };
 
-    // Invoke handlers for this topic
-    let handlers = self.handlers.borrow();
-    if let std::option::Option::Some(handler) = handlers.get(&self.topic) {
-      handler(envelope.clone())?;
+    // Queue only events that no handler consumed, so a subscribe+publish (push-mode) user does
+    // not accumulate an unbounded backlog they never drain; poll-mode users (no handlers) still
+    // get every event queued.
+    if !delivered {
+      self.queue.borrow_mut().push_back(envelope.clone());
     }
 
     std::result::Result::Ok(())
@@ -212,23 +244,21 @@ where
       dyn Fn(crate::ports::events::CloudEventsEnvelope<T>) -> crate::HexResult<()>,
     >,
   ) -> crate::HexResult<()> {
+    // Append to this topic's handler list (multiple handlers per topic are supported). Do NOT
+    // mutate a bus-wide "current topic" — that was the source of the last-subscription-wins bug.
     self
       .handlers
       .borrow_mut()
-      .insert(std::string::String::from(topic), handler);
-    self.topic = std::string::String::from(topic);
+      .entry(std::string::String::from(topic))
+      .or_default()
+      .push(handler);
     std::result::Result::Ok(())
   }
 
   fn poll(
     &mut self,
   ) -> crate::HexResult<std::option::Option<crate::ports::events::CloudEventsEnvelope<T>>> {
-    let mut queue = self.queue.borrow_mut();
-    if queue.is_empty() {
-      std::result::Result::Ok(std::option::Option::None)
-    } else {
-      std::result::Result::Ok(std::option::Option::Some(queue.remove(0)))
-    }
+    std::result::Result::Ok(self.queue.borrow_mut().pop_front())
   }
 }
 
@@ -343,6 +373,8 @@ mod tests {
     std::assert_eq!(bus.queue_size(), 0);
   }
 
+  /// why: a handler subscribed to an event's type must fire when a matching envelope is
+  /// published (the base delivery contract). The topic is the CloudEvents `type`.
   #[test]
   fn test_subscribe_and_handler_invoked() {
     let mut bus: InMemoryEventBus<TestEvent> = InMemoryEventBus::new();
@@ -352,7 +384,7 @@ mod tests {
 
     bus
       .subscribe(
-        "default.events",
+        "com.test.event.created",
         std::boxed::Box::new(move |_envelope| {
           invoked_clone.store(true, std::sync::atomic::Ordering::SeqCst);
           std::result::Result::Ok(())
@@ -373,6 +405,145 @@ mod tests {
 
     bus.publish(&envelope).unwrap();
     std::assert!(invoked.load(std::sync::atomic::Ordering::SeqCst));
+  }
+
+  /// Build an envelope and stamp it with an explicit CloudEvents `type` (topic).
+  fn envelope_typed(id: &str, ty: &str) -> crate::ports::events::CloudEventsEnvelope<TestEvent> {
+    let mut env = crate::ports::events::CloudEventsEnvelope::from_domain_event(
+      std::string::String::from(id),
+      std::string::String::from("/test/source"),
+      TestEvent {
+        id: std::string::String::from(id),
+        value: std::string::String::from("v"),
+      },
+    );
+    env.r#type = std::string::String::from(ty);
+    env
+  }
+
+  /// why: subscribing to a second topic must not starve the first — the exact
+  /// last-subscription-wins misrouting bug (M28/M33). Each topic's handler must fire only for
+  /// its own event type.
+  #[test]
+  fn test_multiple_topics_route_independently() {
+    let mut bus: InMemoryEventBus<TestEvent> = InMemoryEventBus::new();
+
+    let a = std::rc::Rc::new(std::cell::Cell::new(0));
+    let b = std::rc::Rc::new(std::cell::Cell::new(0));
+    let a_c = a.clone();
+    let b_c = b.clone();
+
+    bus
+      .subscribe(
+        "topic.a",
+        std::boxed::Box::new(move |_e| {
+          a_c.set(a_c.get() + 1);
+          std::result::Result::Ok(())
+        }),
+      )
+      .unwrap();
+    bus
+      .subscribe(
+        "topic.b",
+        std::boxed::Box::new(move |_e| {
+          b_c.set(b_c.get() + 1);
+          std::result::Result::Ok(())
+        }),
+      )
+      .unwrap();
+
+    bus.publish(&envelope_typed("1", "topic.a")).unwrap();
+    bus.publish(&envelope_typed("2", "topic.b")).unwrap();
+    bus.publish(&envelope_typed("3", "topic.a")).unwrap();
+
+    assert_eq!(a.get(), 2, "topic.a handler must fire for its two events");
+    assert_eq!(b.get(), 1, "topic.b handler must fire for its one event");
+    // All events were delivered to a handler, so nothing should be queued.
+    assert_eq!(bus.queue_size(), 0);
+  }
+
+  /// why: multiple handlers on the same topic must all be invoked (a second subscribe to a
+  /// topic previously replaced the first via HashMap::insert).
+  #[test]
+  fn test_multiple_handlers_same_topic_all_fire() {
+    let mut bus: InMemoryEventBus<TestEvent> = InMemoryEventBus::new();
+    let count = std::rc::Rc::new(std::cell::Cell::new(0));
+    for _ in 0..3 {
+      let c = count.clone();
+      bus
+        .subscribe(
+          "topic.x",
+          std::boxed::Box::new(move |_e| {
+            c.set(c.get() + 1);
+            std::result::Result::Ok(())
+          }),
+        )
+        .unwrap();
+    }
+    bus.publish(&envelope_typed("1", "topic.x")).unwrap();
+    assert_eq!(count.get(), 3, "all three handlers on topic.x must fire");
+  }
+
+  /// why: two handlers subscribed to the SAME topic, in a known order, must both fire and must
+  /// fire in registration order. `handlers` is keyed by topic in an `indexmap::IndexMap`
+  /// (PRD-272 §3.H), whose insertion-order-preserving iteration makes delivery order deterministic
+  /// rather than incidental to a `std::collections::HashMap` hash seed.
+  #[test]
+  fn test_same_topic_handlers_fire_in_registration_order() {
+    let mut bus: InMemoryEventBus<TestEvent> = InMemoryEventBus::new();
+    let order = std::rc::Rc::new(std::cell::RefCell::new(std::vec::Vec::new()));
+
+    let order_first = order.clone();
+    bus
+      .subscribe(
+        "topic.ordered",
+        std::boxed::Box::new(move |_e| {
+          order_first.borrow_mut().push("first");
+          std::result::Result::Ok(())
+        }),
+      )
+      .unwrap();
+
+    let order_second = order.clone();
+    bus
+      .subscribe(
+        "topic.ordered",
+        std::boxed::Box::new(move |_e| {
+          order_second.borrow_mut().push("second");
+          std::result::Result::Ok(())
+        }),
+      )
+      .unwrap();
+
+    bus.publish(&envelope_typed("1", "topic.ordered")).unwrap();
+
+    assert_eq!(
+      *order.borrow(),
+      std::vec!["first", "second"],
+      "handlers subscribed to the same topic must fire in registration order"
+    );
+  }
+
+  /// why: an event with no subscribed handler must be queued for poll-mode consumers, and an
+  /// event that a handler consumed must NOT accumulate in the queue (bounds push-mode growth).
+  #[test]
+  fn test_undelivered_events_queue_delivered_events_do_not() {
+    let mut bus: InMemoryEventBus<TestEvent> = InMemoryEventBus::new();
+    bus
+      .subscribe(
+        "topic.handled",
+        std::boxed::Box::new(|_e| std::result::Result::Ok(())),
+      )
+      .unwrap();
+
+    bus.publish(&envelope_typed("1", "topic.handled")).unwrap();
+    bus
+      .publish(&envelope_typed("2", "topic.unhandled"))
+      .unwrap();
+
+    assert_eq!(bus.queue_size(), 1, "only the unhandled event is queued");
+    let polled = bus.poll().unwrap().expect("one queued event");
+    assert_eq!(polled.r#type, "topic.unhandled");
   }
 
   #[test]

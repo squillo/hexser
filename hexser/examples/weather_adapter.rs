@@ -109,7 +109,7 @@ impl WeatherPort for RestWeatherAdapter {
       .with_source(e)
       .with_next_steps(&["Verify API endpoint", "Check network connectivity"])
       .with_suggestion("Ensure the API URL is correct and reachable");
-      hexser::error::hex_error::Hexserror::Adapter(adapter_err)
+      hexser::error::hex_error::Hexserror::Adapter(std::boxed::Box::new(adapter_err))
     })?;
 
     if !response.status().is_success() {
@@ -117,7 +117,7 @@ impl WeatherPort for RestWeatherAdapter {
       return Result::Err(
         hexser::error::hex_error::Hexserror::adapter(
           hexser::error::codes::adapter::API_FAILURE,
-          &format!("Weather API returned error status {}", status),
+          &format!("Weather API returned error status {status}"),
         )
         .with_next_step("Check API documentation for error codes"),
       );
@@ -129,7 +129,7 @@ impl WeatherPort for RestWeatherAdapter {
         "Failed to read response body",
       )
       .with_source(e);
-      hexser::error::hex_error::Hexserror::Adapter(adapter_err)
+      hexser::error::hex_error::Hexserror::Adapter(std::boxed::Box::new(adapter_err))
     })?;
 
     let api_response: ApiWeatherResponse = serde_json::from_str(&body).map_err(|e| {
@@ -139,7 +139,7 @@ impl WeatherPort for RestWeatherAdapter {
       )
       .with_source(e)
       .with_next_step("Verify API response structure matches expected schema");
-      hexser::error::hex_error::Hexserror::Adapter(adapter_err)
+      hexser::error::hex_error::Hexserror::Adapter(std::boxed::Box::new(adapter_err))
     })?;
 
     Forecast::new(
@@ -155,7 +155,7 @@ impl WeatherPort for RestWeatherAdapter {
       )
       .with_source(e)
       .with_next_step("Ensure API returns valid city and condition fields");
-      hexser::error::hex_error::Hexserror::Adapter(adapter_err)
+      hexser::error::hex_error::Hexserror::Adapter(std::boxed::Box::new(adapter_err))
     })
   }
 }

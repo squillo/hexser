@@ -1,6 +1,6 @@
 //! Generic layer error implementation.
 //!
-//! Provides LayerError<L> generic struct that implements RichError trait.
+//! Provides `LayerError<L>` generic struct that implements RichError trait.
 //! Uses phantom marker types to distinguish between different architectural layers
 //! while sharing implementation. Eliminates code duplication across layer-specific errors.
 //!
@@ -145,7 +145,7 @@ impl<L: std::fmt::Debug> std::fmt::Display for LayerError<L> {
         write!(f, " {}", self.next_steps[0])?;
       } else {
         for step in &self.next_steps {
-          write!(f, "\n  - {}", step)?;
+          write!(f, "\n  - {step}")?;
         }
       }
     }
@@ -156,17 +156,17 @@ impl<L: std::fmt::Debug> std::fmt::Display for LayerError<L> {
         write!(f, " {}", self.suggestions[0])?;
       } else {
         for suggestion in &self.suggestions {
-          write!(f, "\n  - {}", suggestion)?;
+          write!(f, "\n  - {suggestion}")?;
         }
       }
     }
 
     if let Some(ref url) = self.more_info_url {
-      write!(f, "\nMore: {}", url)?;
+      write!(f, "\nMore: {url}")?;
     }
 
     if let Some(ref location) = self.location {
-      write!(f, "\nSource: {}", location)?;
+      write!(f, "\nSource: {location}")?;
     }
 
     Ok(())
@@ -217,7 +217,7 @@ mod tests {
   fn test_error_display() {
     let err = LayerError::<DomainLayer>::new("E_HEX_001", "Test").with_next_step("Fix it");
 
-    let display = format!("{}", err);
+    let display = format!("{err}");
     assert!(display.contains("E_HEX_001"));
     assert!(display.contains("Next Steps"));
   }

@@ -3,7 +3,7 @@
 //! Learn to visualize your hexagonal architecture using hex's
 //! built-in export capabilities.
 //!
-//! Run with: cargo run --example visualization_tutorial
+//! Run with: cargo run --example visualization_tutorial --features visualization
 
 fn main() -> hexser::HexResult<()> {
   use hexser::showcase::visualizable::Visualizable;
@@ -67,7 +67,7 @@ fn main() -> hexser::HexResult<()> {
   println!("\nTo use:");
   println!("  Copy to markdown:");
   println!("  ```mermaid");
-  println!("  {}", mermaid.lines().nth(0).unwrap());
+  println!("  {}", mermaid.lines().next().unwrap());
   println!("  ...");
   println!("  ```");
 

@@ -66,7 +66,7 @@ mod tests {
   fn test_domain_error_display() {
     let err = DomainError::new("E_HEX_001", "Test error").with_next_step("Do this");
 
-    let display = format!("{}", err);
+    let display = format!("{err}");
     assert!(display.contains("E_HEX_001"));
     assert!(display.contains("Test error"));
     assert!(display.contains("Next Steps"));

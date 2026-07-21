@@ -6,6 +6,7 @@
 //! E_HEX_XXX where XXX is a three-digit number.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: Add port::NOT_IMPLEMENTED and adapter DB_WRITE/READ/CONNECTION_FAILURE codes (used by delete_where default and README examples).
 //! - 2025-10-01T00:02:00Z @AI: Initial error code registry for Phase 1.
 
 /// Domain layer error codes (E_HEX_001 - E_HEX_099).
@@ -48,6 +49,13 @@ pub mod port {
   /// Occurs when a port operation times out.
   /// Resolution: Increase timeout or check port responsiveness.
   pub const PORT_TIMEOUT: &str = "E_HEX_102";
+
+  /// Port operation not implemented by the adapter.
+  ///
+  /// Occurs when a defaulted port method (e.g. `QueryRepository::delete_where`) is called on an
+  /// adapter that has not overridden it.
+  /// Resolution: Implement the operation on the adapter, or avoid calling it.
+  pub const NOT_IMPLEMENTED: &str = "E_HEX_103";
 }
 
 /// Adapter layer error codes (E_HEX_200 - E_HEX_299).
@@ -69,6 +77,24 @@ pub mod adapter {
   /// Occurs when mapping between representations fails.
   /// Resolution: Verify data structure compatibility.
   pub const MAPPING_FAILURE: &str = "E_HEX_202";
+
+  /// Database write failure.
+  ///
+  /// Occurs when persisting data to a backing store fails.
+  /// Resolution: Check store availability, permissions, and constraints.
+  pub const DB_WRITE_FAILURE: &str = "E_HEX_203";
+
+  /// Database read failure.
+  ///
+  /// Occurs when reading data from a backing store fails.
+  /// Resolution: Check store availability and the query.
+  pub const DB_READ_FAILURE: &str = "E_HEX_204";
+
+  /// Generic connection failure to an external resource.
+  ///
+  /// Occurs when a connection to an external service (cache, queue, etc.) cannot be established.
+  /// Resolution: Check connectivity and service availability.
+  pub const CONNECTION_FAILURE: &str = "E_HEX_205";
 }
 
 /// Validation error codes (E_HEX_300 - E_HEX_399).

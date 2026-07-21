@@ -1,9 +1,11 @@
 //! Implementation of #[derive(HexAdapter)] macro.
 //!
-//! Automatically implements Registrable and detects implemented traits
-//! to generate relationship edges.
+//! Implements Registrable, marks the type as an `Adapter`, and registers it in the
+//! architecture graph. The role defaults to `Adapter` and can be overridden with
+//! `#[hex(role = "Mapper")]`.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Parse #[hex(role = "...")] override; use shared codegen; fully-qualified paths; generics-safe.
 //! - 2025-10-02T00:00:00Z @AI: Initial HexAdapter derive implementation.
 
 /// Derive HexAdapter for a type
@@ -17,27 +19,19 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let name = &input.ident;
   let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
+  let role = crate::common::codegen::role_override(&input.attrs)
+    .unwrap_or_else(|| quote::quote!(::hexser::graph::Role::Adapter));
+
+  let registration = crate::common::codegen::registrable_and_submit(
+    &input,
+    quote::quote!(::hexser::graph::Layer::Adapter),
+    role,
+  );
+
   let expanded = quote::quote! {
-      impl #impl_generics hexser::registry::Registrable for #name #ty_generics #where_clause {
-          fn node_info() -> hexser::registry::NodeInfo {
-              hexser::registry::NodeInfo {
-                  layer: hexser::graph::Layer::Adapter,
-                  role: hexser::graph::Role::Adapter,
-                  type_name: std::any::type_name::<Self>(),
-                  module_path: std::module_path!(),
-              }
-          }
+    #registration
 
-          fn dependencies() -> std::vec::Vec<hexser::graph::NodeId> {
-              std::vec::Vec::new()
-          }
-      }
-
-      impl #impl_generics hexser::adapters::Adapter for #name #ty_generics #where_clause {}
-
-      hexser::inventory::submit! {
-          hexser::registry::ComponentEntry::new::<#name #ty_generics>()
-      }
+    impl #impl_generics ::hexser::adapters::Adapter for #name #ty_generics #where_clause {}
   };
 
   proc_macro::TokenStream::from(expanded)

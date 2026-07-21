@@ -57,7 +57,7 @@ impl<'a> ContextBuilder<'a> {
       constraints,
       suggestions,
       metadata: super::ai_context::ContextMetadata {
-        generated_at: chrono::Utc::now().to_rfc3339(),
+        generated_at: crate::ai::timestamp::now_rfc3339(),
         hex_version: String::from(env!("CARGO_PKG_VERSION")),
         total_components: self.graph.node_count(),
         total_relationships: self.graph.edge_count(),
@@ -108,7 +108,7 @@ impl<'a> ContextBuilder<'a> {
     self
       .graph
       .edges()
-      .into_iter()
+      .iter()
       .map(|edge| {
         let is_valid = self.validate_relationship(edge);
         super::ai_context::RelationshipInfo {

@@ -6,6 +6,7 @@
 //! rustdoc JSON integration is implemented.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: PRD-272 CLAIM-D2 (finding L45): add test_repository_signatures_do_not_drift, a drift guard asserting the hardcoded Repository/QueryRepository method names returned by extract_methods_for_type match the real trait method names in ports::repository (save; find_one, find, exists, count, delete_where). No production logic changed.
 //! - 2025-10-10T20:44:00Z @AI: Initial implementation with Repository, Directive, and Query trait methods.
 
 /// Extracts method information for a component type based on its role.
@@ -251,6 +252,42 @@ mod tests {
     // Justification: Graceful handling of unsupported roles
     let methods = super::extract_methods_for_type("TestEntity", "Entity");
     std::assert_eq!(methods.len(), 0);
+  }
+
+  /// why: method_extractor hardcodes Repository/QueryRepository method names as string
+  /// literals (see repository_trait_methods above); if the real traits in
+  /// hexser/src/ports/repository.rs ever add, remove, or rename a method, nothing about the
+  /// compiler stops these hardcoded strings from silently drifting out of sync with the
+  /// actual trait surface. This test hardcodes the real method names as read directly from
+  /// ports/repository.rs (Repository::save; QueryRepository::find_one, find, exists, count,
+  /// delete_where) and fails loudly if the extractor's output ever stops containing one of
+  /// them.
+  #[test]
+  fn test_repository_signatures_do_not_drift() {
+    // Real method names, read directly from hexser/src/ports/repository.rs:
+    // - trait Repository<T>: save
+    // - trait QueryRepository<T>: find_one, find, exists, count, delete_where
+    let real_repository_method_names: std::vec::Vec<&str> = vec![
+      "save",
+      "find_one",
+      "find",
+      "exists",
+      "count",
+      "delete_where",
+    ];
+
+    let methods = super::extract_methods_for_type("TestRepository", "Repository");
+    let extracted_names: std::vec::Vec<&str> = methods.iter().map(|m| m.name.as_str()).collect();
+
+    for real_name in real_repository_method_names {
+      std::assert!(
+        extracted_names.contains(&real_name),
+        "method_extractor::repository_trait_methods is missing or has misnamed method '{}', \
+         which exists on Repository/QueryRepository in ports/repository.rs — update \
+         method_extractor.rs to match",
+        real_name
+      );
+    }
   }
 
   #[test]

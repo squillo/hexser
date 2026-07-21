@@ -125,8 +125,8 @@ mod tests {
     let target = crate::graph::node_id::NodeId::from_name("Target");
 
     let edge = HexEdge::new(
-      source.clone(),
-      target.clone(),
+      source,
+      target,
       crate::graph::relationship::Relationship::Depends,
     );
 
@@ -159,8 +159,8 @@ mod tests {
     let target = crate::graph::node_id::NodeId::from_name("Target");
 
     let edge = HexEdge::new(
-      source.clone(),
-      target.clone(),
+      source,
+      target,
       crate::graph::relationship::Relationship::Implements,
     );
 
@@ -179,7 +179,7 @@ mod tests {
       crate::graph::relationship::Relationship::Implements,
     );
 
-    let display = format!("{}", edge);
+    let display = format!("{edge}");
     assert!(display.contains("Implements"));
     assert!(display.contains("-->"));
   }

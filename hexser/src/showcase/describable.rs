@@ -81,12 +81,14 @@ pub trait PrettyPrint {
 }
 
 impl PrettyPrint for std::sync::Arc<crate::graph::hex_graph::HexGraph> {
+  // Intentional stdout diagnostic for CLI/inspection use; no logging facade is shipped.
+  #[allow(clippy::disallowed_macros)]
   fn pretty_print(&self) {
     println!("{}", self.describe());
   }
 }
 
-/// Extension methods for Arc<HexGraph>
+/// Extension methods for `Arc<HexGraph>`
 pub trait ArcGraphExt {
   /// Get nodes by layer
   fn nodes_by_layer(

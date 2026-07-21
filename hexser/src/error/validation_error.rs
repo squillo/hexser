@@ -5,6 +5,7 @@
 //! Includes field-specific context and actionable guidance.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: Add next_steps/suggestions storage + builders so Hexserror guidance builders no longer silently drop input on this variant.
 //! - 2025-10-09T21:51:00Z @AI: Add conditional source location serialization via env_control.
 //! - 2025-10-09T21:22:00Z @AI: Add Serde support for rich errors.
 //! - 2025-10-09T09:56:00Z @AI: Remove unused Display and Formatter imports per NO use STATEMENTS rule.
@@ -20,6 +21,18 @@ pub struct ValidationError {
   pub message: String,
   /// Optional field name that failed validation
   pub field: Option<String>,
+  /// Actionable next steps for resolving the error
+  #[cfg_attr(
+    feature = "serde",
+    serde(default, skip_serializing_if = "Vec::is_empty")
+  )]
+  pub next_steps: Vec<String>,
+  /// Concrete suggestions (e.g. example fixes)
+  #[cfg_attr(
+    feature = "serde",
+    serde(default, skip_serializing_if = "Vec::is_empty")
+  )]
+  pub suggestions: Vec<String>,
   /// Optional source code location
   #[cfg_attr(
     feature = "serde",
@@ -35,6 +48,8 @@ impl ValidationError {
       code: code.into(),
       message: message.into(),
       field: None,
+      next_steps: Vec::new(),
+      suggestions: Vec::new(),
       location: None,
     }
   }
@@ -42,6 +57,34 @@ impl ValidationError {
   /// Add field name (builder pattern)
   pub fn with_field(mut self, field: impl Into<String>) -> Self {
     self.field = Some(field.into());
+    self
+  }
+
+  /// Add an actionable next step (builder pattern)
+  pub fn with_next_step(mut self, step: impl Into<String>) -> Self {
+    self.next_steps.push(step.into());
+    self
+  }
+
+  /// Add multiple next steps (builder pattern)
+  pub fn with_next_steps(mut self, steps: &[&str]) -> Self {
+    self
+      .next_steps
+      .extend(steps.iter().map(|s| String::from(*s)));
+    self
+  }
+
+  /// Add a suggestion (builder pattern)
+  pub fn with_suggestion(mut self, suggestion: impl Into<String>) -> Self {
+    self.suggestions.push(suggestion.into());
+    self
+  }
+
+  /// Add multiple suggestions (builder pattern)
+  pub fn with_suggestions(mut self, suggestions: &[&str]) -> Self {
+    self
+      .suggestions
+      .extend(suggestions.iter().map(|s| String::from(*s)));
     self
   }
 
@@ -64,8 +107,15 @@ impl std::fmt::Display for ValidationError {
       write!(f, "Error [{}]: {}", self.code, self.message)?;
     }
 
+    for step in &self.next_steps {
+      write!(f, "\nNext Step: {step}")?;
+    }
+    for suggestion in &self.suggestions {
+      write!(f, "\nSuggestion: {suggestion}")?;
+    }
+
     if let Some(ref location) = self.location {
-      write!(f, "\nSource: {}", location)?;
+      write!(f, "\nSource: {location}")?;
     }
 
     Ok(())
@@ -97,7 +147,7 @@ mod tests {
   fn test_validation_error_display() {
     let err = ValidationError::new("E_HEX_300", "Required field missing").with_field("username");
 
-    let display = format!("{}", err);
+    let display = format!("{err}");
     assert!(display.contains("username"));
     assert!(display.contains("E_HEX_300"));
   }

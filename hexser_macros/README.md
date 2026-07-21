@@ -57,9 +57,39 @@ at your option.
 
 ---
 
+## Derive macros
+
+All are re-exported from `hexser` (and its prelude) under the `macros` feature, so use
+`hexser::HexDomain` etc. rather than depending on this crate directly.
+
+| Derive | Effect | Registered role |
+|--------|--------|-----------------|
+| `HexDomain` | `Registrable` + graph registration | `Entity` (override: `#[hex(role = "…")]`) |
+| `HexPort` | `Registrable` + graph registration | `Repository` (override: `#[hex(role = "InputPort")]`) |
+| `HexAdapter` | `Registrable` + `Adapter` marker + registration | `Adapter` (override via `#[hex(role)]`) |
+| `HexDirective` | `Directive` impl + registration | `Directive` |
+| `HexQuery` | `Registrable` + registration | `Query` |
+| `HexEntity` | `HexEntity` impl (`Id` from the `id` field) | — |
+| `HexValueItem` | `HexValueItem` impl (default validation) | — |
+| `HexAggregate` | `Aggregate` impl (default invariant check) | — |
+| `HexRepository` | Semantic marker (pair with `HexPort`) | — |
+
+Notes:
+- Derives apply to structs/enums, not traits.
+- Generic types compile (the `Registrable` impl is generated with a `Self: 'static` bound),
+  but they are not auto-registered in the inventory graph — register a concrete alias instead.
+- `HexEntity` on a struct without an `id` field is a compile error (choose the `Id` explicitly).
+
 ## Knowledge Graph (high level)
 
 - hexser_macros
-  - provides: derive/attribute macros used by `hexser`
+  - modules:
+    - `derive` — the nine derive implementations above
+    - `common::codegen` — shared `Registrable` + `inventory::submit!` code generation and
+      `#[hex(role = "…")]` parsing
+    - `common::validation` — target validation (struct/enum only)
+  - provides: derive macros used by `hexser`
   - consumed by: `hexser` (compile time)
   - typical user dependency: `hexser` (not this crate directly)
+  - tests: `hexser/tests/derive_registration_test.rs` (runtime graph registration),
+    `hexser/tests/macro_tests.rs` (derive usage), `hexser/tests/trybuild_ui.rs` (compile-fail)

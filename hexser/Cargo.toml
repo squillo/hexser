@@ -1,37 +1,53 @@
 [package]
 name = "hexser"
-version = "0.4.7"
+version = "0.5.0"
 edition = "2024"
+rust-version = "1.85"
 authors = ["N Lang Team"]
 description = "Zero-boilerplate hexagonal architecture with graph-based introspection"
 license = "MIT OR Apache-2.0"
 keywords = ["hexagonal", "architecture", "ports", "adapters", "ddd"]
 categories = ["development-tools", "data-structures"]
-repository = "https://github.com/squillo/hexser/hex"
+repository = "https://github.com/squillo/hexser"
+homepage = "https://github.com/squillo/hexser"
+documentation = "https://docs.rs/hexser"
 
 
 [dependencies]
 inventory = { workspace = true }
+# PRD-272 §1.5 wait-free RCU (architecture-graph hot-swap) and §3.H deterministic iteration.
+# Core (always compiled): the graph is not feature-gated.
+arc-swap = { workspace = true }
+indexmap = { workspace = true }
 hexser_macros = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
-chrono = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 async-trait = { workspace = true, optional = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }
-tokio = { workspace = true }
+# Tests use #[tokio::test] / #[tokio::main], which need the runtime features that the shipped
+# dependency (workspace default = just "sync") deliberately omits.
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
+serial_test = { workspace = true }
+trybuild = { workspace = true }
+criterion = { workspace = true }
 
 [features]
 # Enable macros and static (non-dyn) DI by default. The dyn container remains opt-in.
 default = ["macros", "static-di"]
 macros = ["hexser_macros"]
-ai = ["chrono", "serde", "serde_json"]
+# Rich-error Serialize/Deserialize. Enable this alone to serialize `Hexserror` (e.g. in an API
+# response) without pulling in the heavier `ai`/`visualization` surfaces. Serialization of
+# source locations is additionally gated at runtime by the HEXSER_INCLUDE_SOURCE_LOCATION env
+# var (unset/false hides file paths; "1"/"true" includes them).
+serde = ["dep:serde"]
+ai = ["serde", "serde_json"]
 mcp = ["ai", "serde", "serde_json"]
 async = ["tokio", "async-trait"]
 visualization = ["serde", "serde_json"]
@@ -55,6 +71,19 @@ required-features = ["ai"]
 name = "hex-mcp-server"
 path = "src/bin/hex_mcp_server.rs"
 required-features = ["mcp"]
+
+# The visualization tutorial exercises DOT/Mermaid/JSON export, which require the
+# `visualization` feature; gating it here keeps `cargo run --example` honest.
+[[example]]
+name = "visualization_tutorial"
+path = "examples/visualization_tutorial.rs"
+required-features = ["visualization"]
+
+[[bench]]
+name = "graph_benches"
+path = "benches/graph_benches.rs"
+harness = false
+required-features = ["ai"]
 
 [package.metadata.docs.rs]
 all-features = true
