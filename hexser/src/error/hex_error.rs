@@ -6,6 +6,7 @@
 //! and suggestions for remediation. Designed for both humans and AI agents.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: Add Hexserror::with_source forwarding to layer variants (makes the documented source-chaining builder real).
 //! - 2026-07-21T00:00:00Z @AI: Forward with_next_step(s)/with_suggestion(s) to Validation/NotFound/Conflict variants (was silently dropped on those).
 //! - 2026-07-20T00:00:00Z @AI: Box variant payloads to shrink Hexserror (fixes clippy::result_large_err across the crate); enum is now pointer-sized.
 //! - 2025-10-09T21:22:00Z @AI: Add Serde support for rich errors.
@@ -189,6 +190,19 @@ impl Hexserror {
       other => other,
     }
   }
+
+  /// Attach an underlying cause (builder pattern).
+  ///
+  /// Applies to the layer variants (Domain/Port/Adapter), which carry a source chain. The
+  /// Validation/NotFound/Conflict variants have no source field and are returned unchanged.
+  pub fn with_source(self, source: impl std::error::Error + Send + Sync + 'static) -> Self {
+    match self {
+      Self::Domain(err) => Self::Domain(std::boxed::Box::new(err.with_source(source))),
+      Self::Port(err) => Self::Port(std::boxed::Box::new(err.with_source(source))),
+      Self::Adapter(err) => Self::Adapter(std::boxed::Box::new(err.with_source(source))),
+      other => other,
+    }
+  }
 }
 
 impl std::fmt::Display for Hexserror {
@@ -346,6 +360,15 @@ mod tests {
       panic!("expected NotFound");
     }
     assert!(format!("{}", err).contains("Verify the ID and try again"));
+  }
+
+  /// why: Hexserror::with_source must attach the cause to layer variants so `source()` walks
+  /// the chain — the README documents this pattern pervasively, so it must actually work.
+  #[test]
+  fn test_with_source_attaches_cause_on_layer_variant() {
+    let inner = std::io::Error::new(std::io::ErrorKind::NotFound, "boom");
+    let err = Hexserror::adapter("E_HEX_200", "db down").with_source(inner);
+    assert!(err.source().is_some());
   }
 
   /// why: guidance builders must retain input on Validation and Conflict variants too, closing

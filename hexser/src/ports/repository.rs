@@ -6,6 +6,7 @@
 //! aggregates and typically provide CRUD operations plus domain-specific queries.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: delete_where default now errors (E_HEX_103) instead of silently returning Ok(0) — an unimplemented delete no longer masquerades as success.
 //! - 2025-10-01T00:00:00Z @AI: Initial Repository trait definition with generic entity type.
 //! - 2025-10-06T00:00:00Z @AI: Introduced filter-based generic query API (separate QueryRepository trait), sorting and pagination.
 //! - 2025-10-06T17:22:00Z @AI: Tests: add justifications; remove super import; fully qualify paths per no-use rule.
@@ -92,9 +93,19 @@ where
   }
 
   /// Delete by filter; returns number of removed entities.
+  ///
+  /// The default implementation returns an error rather than silently succeeding: a no-op
+  /// default that returned `Ok(0)` was indistinguishable from "nothing matched", so an adapter
+  /// that forgot to implement deletion would report success while deleting nothing. Adapters
+  /// that support deletion must override this.
   fn delete_where(&mut self, _filter: &Self::Filter) -> crate::result::hex_result::HexResult<u64> {
-    // Default no-op for backward compatibility in simple adapters.
-    Ok(0)
+    Err(
+      crate::error::hex_error::Hexserror::port(
+        crate::error::codes::port::NOT_IMPLEMENTED,
+        "delete_where is not implemented by this adapter",
+      )
+      .with_next_step("Implement QueryRepository::delete_where for this adapter"),
+    )
   }
 }
 
@@ -287,5 +298,42 @@ mod tests {
     )
     .unwrap();
     assert!(none.is_none());
+  }
+
+  struct NoDeleteRepo;
+
+  impl crate::ports::repository::QueryRepository<TestEntity> for NoDeleteRepo {
+    type Filter = TestFilter;
+    type SortKey = TestSortKey;
+
+    fn find_one(
+      &self,
+      _filter: &Self::Filter,
+    ) -> crate::result::hex_result::HexResult<Option<TestEntity>> {
+      Ok(None)
+    }
+
+    fn find(
+      &self,
+      _filter: &Self::Filter,
+      _options: crate::ports::repository::FindOptions<Self::SortKey>,
+    ) -> crate::result::hex_result::HexResult<Vec<TestEntity>> {
+      Ok(Vec::new())
+    }
+    // delete_where intentionally NOT overridden.
+  }
+
+  /// why: an adapter that does not implement delete_where must surface an error, not silently
+  /// report success (Ok(0)) — a caller must be able to tell "not supported" from "nothing
+  /// matched".
+  #[test]
+  fn test_delete_where_default_errors_when_unimplemented() {
+    let mut repo = NoDeleteRepo;
+    let result =
+      <NoDeleteRepo as crate::ports::repository::QueryRepository<TestEntity>>::delete_where(
+        &mut repo,
+        &TestFilter::All,
+      );
+    assert!(result.is_err(), "unimplemented delete_where must error");
   }
 }

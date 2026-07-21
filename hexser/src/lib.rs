@@ -1,15 +1,14 @@
 //! Zero-boilerplate hexagonal architecture with graph-based introspection.
 //!
-//! The `hex` crate provides reusable types and traits for implementing
-//! Hexagonal Architecture (Ports and Adapters) with automatic graph construction,
-//! intent inference, and architectural validation. This is Phase 1: Core Foundation,
-//! providing the foundational traits, types, and error handling.
-//! Future phases will add graph construction, derive macros, and analysis capabilities.
+//! `hexser` provides reusable traits and types for building applications with Hexagonal
+//! Architecture (Ports and Adapters). Components you derive are automatically registered into
+//! an in-memory architecture graph you can query, validate, visualize, and export for AI
+//! agents — no manual wiring.
 //!
 //! # Architecture Layers
 //!
 //! - **Domain**: Core business logic (`HexEntity`, `HexValueItem`, `Aggregate`)
-//! - **Ports**: Interface definitions (`Repository`, `UseCase`, `Query`)
+//! - **Ports**: Interface definitions (`Repository`, `QueryRepository`, `UseCase`, `Query`)
 //! - **Adapters**: Port implementations (`Adapter`, `Mapper`)
 //! - **Application**: Use case orchestration (`Directive`, `DirectiveHandler`)
 //! - **Infrastructure**: External concerns (`Config`)
@@ -19,37 +18,45 @@
 //! ```rust
 //! use hexser::prelude::*;
 //!
-//! // Define a domain entity
+//! // A domain entity: derive HexEntity (Id is taken from the `id` field) and HexDomain to
+//! // register it in the architecture graph.
+//! #[derive(HexEntity, HexDomain)]
 //! struct User {
 //!     id: String,
 //!     email: String,
 //! }
 //!
-//! impl HexEntity for User {
-//!     type Id = String;
-//! }
-//!
-//! // Define a port (interface)
+//! // A repository port. Repository is save-only; reads live on QueryRepository.
 //! trait UserRepository: Repository<User> {
 //!     fn find_by_email(&self, email: &str) -> HexResult<Option<User>>;
 //! }
 //!
-//! // Implement an adapter
+//! // An adapter implementing the port. Deriving HexAdapter registers it in the graph and
+//! // implements the `Adapter` marker trait for you.
+//! #[derive(HexAdapter)]
 //! struct InMemoryUserRepository {
 //!     users: Vec<User>,
 //! }
-//!
-//! impl Adapter for InMemoryUserRepository {}
 //! ```
 //!
 //! # Feature Flags
 //!
-//! - `default`: Core traits and types (zero dependencies)
-//! - `graph`: Graph-based introspection (Phase 2+)
-//! - `macros`: Derive macros for zero-boilerplate DX (Phase 3+)
-//! - `analysis`: Architectural analysis and validation (Phase 4+)
+//! `default = ["macros", "static-di"]`.
+//!
+//! - `macros`: derive macros (`HexEntity`, `HexDomain`, `HexPort`, …) — on by default.
+//! - `static-di`: zero-cost, WASM-friendly static dependency injection — on by default.
+//! - `serde`: `Serialize`/`Deserialize` for the rich error types (see also the
+//!   `HEXSER_INCLUDE_SOURCE_LOCATION` env var, which gates whether source locations are
+//!   included in serialized errors).
+//! - `ai`: machine-readable architecture context export (`AIContext`, `ContextBuilder`).
+//! - `mcp`: Model Context Protocol server (implies `ai`).
+//! - `visualization`: DOT / Mermaid / JSON diagram export.
+//! - `container`: dynamic (runtime) DI container (uses tokio).
+//! - `async`: enables tokio / async-trait for downstream async adapters.
+//! - `full`: all of the above.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: Rewrite crate header — correct feature list/default, drop the stale Phase-1/future-phases framing and nonexistent graph/analysis features; Quick Start now derives the real macros.
 //! - 2025-10-09T14:14:00Z @AI: Remove Entity derive alias, expose HexEntity at crate root for qualified addressing.
 //! - 2025-10-02T13:00:00Z @AI: Re-export inventory and error_codes for proc macros.
 //! - 2025-10-02T12:00:00Z @AI: Add showcase module with Describable and Inspectable traits.
@@ -84,7 +91,9 @@ pub use crate::{error::hex_error::Hexserror, result::hex_result::HexResult};
 pub use crate::domain::{Aggregate, DomainEvent, DomainService, HexEntity, HexValueItem};
 
 // Re-export all port traits
-pub use crate::ports::{InputPort, OutputPort, Query, Repository, UseCase};
+pub use crate::ports::{
+  Direction, FindOptions, InputPort, OutputPort, Query, QueryRepository, Repository, Sort, UseCase,
+};
 
 // Re-export all adapter traits
 pub use crate::adapters::{Adapter, Mapper};
@@ -128,7 +137,10 @@ pub mod prelude {
 
   pub use crate::domain::{Aggregate, DomainEvent, DomainService, HexEntity, HexValueItem};
 
-  pub use crate::ports::{InputPort, OutputPort, Query, Repository, UseCase};
+  pub use crate::ports::{
+    Direction, FindOptions, InputPort, OutputPort, Query, QueryRepository, Repository, Sort,
+    UseCase,
+  };
 
   pub use crate::adapters::{Adapter, Mapper};
 

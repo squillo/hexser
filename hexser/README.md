@@ -70,21 +70,24 @@ Your First Hexagonal Application
 ```rust
 use hexser::prelude::*;
 
-// 1. Define your domain entity
-#[derive(Entity)]
+// 1. Define your domain entity. Derive HexEntity (its `Id` is taken from the `id` field)
+//    and HexDomain to register it in the architecture graph. (Clone lets the adapter below
+//    return owned copies.)
+#[derive(Clone, HexEntity, HexDomain)]
 struct User {
   id: String,
   email: String,
   name: String,
 }
 
-// 2. Define a port (interface)
-#[derive(HexPort)]
+// 2. Define a port (interface). `Repository` is save-only; reads live on `QueryRepository`.
+//    Note: derives apply to structs/enums, not traits — do not put a derive on the trait.
 trait UserRepository: Repository<User> {
   fn find_by_email(&self, email: &str) -> HexResult<Option<User>>;
 }
 
-// 3. Implement an adapter
+// 3. Implement an adapter. Deriving HexAdapter registers it and implements the `Adapter`
+//    marker trait for you.
 #[derive(HexAdapter)]
 struct InMemoryUserRepository {
     users: Vec<User>,
@@ -112,15 +115,15 @@ fn main() -> HexResult<()> {
     let mut repo = InMemoryUserRepository { users: Vec::new() };
 
     let user = User {
-      id: "1".to_string(),
-      email: "alice@example.com".to_string(),
-      name: "Alice".to_string(),
+      id: String::from("1"),
+      email: String::from("alice@example.com"),
+      name: String::from("Alice"),
     };
 
     repo.save(user)?;
 
     let found = repo.find_by_email("alice@example.com")?;
-    println!("Found: {:?}", found.map(|u| u.name));
+    assert_eq!(found.map(|u| u.name), Some(String::from("Alice")));
 
     Ok(())
 }
@@ -183,15 +186,14 @@ Zero-cost, WASM-friendly static dependency injection. No runtime overhead, no dy
 hexser = { version = "0.4.7", features = ["static-di"] }
 ```
 
-**Example:**
+**Example** (see the `hex_static!` macro and `StaticContainer<T>` for the real API):
 ```rust
-use hexser::prelude::*;
+use hexser::static_di::StaticContainer;
 
-let container = StaticContainer::new()
-    .with_service(MyRepository::new())
-    .with_service(MyService::new());
-
-let service = container.get::<MyService>();
+// StaticContainer<T> wraps a single value with zero runtime overhead.
+let container = StaticContainer::new(String::from("my-service"));
+let service: &String = container.get();
+assert_eq!(service, "my-service");
 ```
 
 #### `ai`
@@ -202,9 +204,9 @@ Enables AI context export functionality for exposing architecture metadata to AI
 - `AgentPack` for packaging context
 - JSON serialization of graph data
 - CLI tools: `hex-ai-export`, `hex-ai-pack`
-- **Method-level documentation**: ComponentInfo now includes a `methods` field capturing method signatures, parameters, return types, and documentation (currently empty, ready for future extraction via rustdoc JSON)
+- **Method-level documentation**: ComponentInfo includes a `methods` field capturing method signatures, parameters, return types, and documentation
 
-**Dependencies:** `chrono`, `serde`, `serde_json`
+**Dependencies:** `serde`, `serde_json`
 
 ```toml
 [dependencies]
@@ -225,8 +227,9 @@ Model Context Protocol server implementation for serving architecture data via J
 
 **Provides:**
 - MCP server over stdio transport
-- Resources: `hexser://context`, `hexser://pack`
-- JSON-RPC 2.0 interface
+- Project-scoped resources: `hexser://{project}/context`, `hexser://{project}/pack` (the flat
+  `hexser://context` / `hexser://pack` forms are still accepted for backward compatibility)
+- JSON-RPC 2.0 interface (including id-less notifications)
 - CLI tool: `hex-mcp-server`
 
 **Dependencies:** Requires `ai` feature, plus `serde`, `serde_json`
@@ -243,29 +246,16 @@ cargo run --bin hex-mcp-server
 ```
 
 #### `async`
-Enables async/await support for ports and adapters.
-
-**Provides:**
-- `AsyncRepository` trait
-- `AsyncDirective` trait
-- `AsyncQuery` trait
-- Tokio runtime integration
+Enables `tokio` and `async-trait` for downstream code that implements async ports and
+adapters. This feature is a **dependency toggle**: it does not currently add any async trait to
+`hexser` itself — you define async methods on your own traits/adapters and use these
+dependencies. (Dedicated async port traits are planned; see the issue tracker.)
 
 **Dependencies:** `tokio`, `async-trait`
 
 ```toml
 [dependencies]
 hexser = { version = "0.4.7", features = ["async"] }
-```
-
-**Example:**
-```rust
-#[async_trait::async_trait]
-impl AsyncRepository<User> for AsyncUserRepo {
-    async fn find_by_id(&self, id: &String) -> HexResult<Option<User>> {
-        // async implementation
-    }
-}
 ```
 
 #### `visualization`
@@ -287,8 +277,8 @@ hexser = { version = "0.4.7", features = ["visualization"] }
 Dynamic dependency injection container with async support. **Not enabled by default** to maintain WASM compatibility.
 
 **Provides:**
-- `DynContainer` with runtime service resolution
-- Async service factories
+- `Container` with runtime (async) service resolution
+- Async service factories (`Provider` / `AsyncProvider`)
 - Dynamic dispatch with `dyn` traits
 
 **Dependencies:** `tokio`, `async-trait`
@@ -422,7 +412,7 @@ struct Order {
 impl Aggregate for Order {
   fn check_invariants(&self) -> HexResult<()> {
     if self.items.is_empty() {
-      return Err(hexser::hex_domain_error!(
+      return Err(hexser::error::hex_error::Hexserror::domain(
         hexser::error::codes::domain::INVARIANT_EMPTY,
         "Order must contain at least one item"
       ).with_next_step("Add at least one item"));
@@ -925,18 +915,22 @@ impl Application for RobustApp {
 
     fn run(&mut self) -> HexResult<()> {
         // If run fails, shutdown is still called by execute()
-        self.process_requests()
-            .map_err(|e| Hexserror::application(
-                "Request processing failed"
-            ).with_source(e))
+        self.process_requests().map_err(|e| {
+            Hexserror::adapter(
+                hexser::error::codes::adapter::API_FAILURE,
+                &format!("Request processing failed: {}", e),
+            )
+        })
     }
 
     fn shutdown(&mut self) -> HexResult<()> {
         // Shutdown errors are properly propagated
-        self.cleanup_resources()
-            .map_err(|e| Hexserror::infrastructure(
-                "Cleanup failed"
-            ).with_source(e))
+        self.cleanup_resources().map_err(|e| {
+            Hexserror::adapter(
+                hexser::error::codes::adapter::CONNECTION_FAILURE,
+                &format!("Cleanup failed: {}", e),
+            )
+        })
     }
 }
 
@@ -1078,7 +1072,7 @@ Preferred: macro + code + guidance
 fn validate_order(order: &Order) -> HexResult<()> {
   if order.items.is_empty() {
     return Err(
-        hexser::hex_domain_error!(
+        hexser::error::hex_error::Hexserror::domain(
             hexser::error::codes::domain::INVARIANT_EMPTY,
             "Order must contain at least one item"
         )
@@ -1117,34 +1111,34 @@ return Err(hexser::error::hex_error::Hexserror::not_found("User", "123")
     .with_next_step("Verify the ID and try again"));
 
 // Port errors (communication issues)
-let port_err = hexser::hex_port_error!(
+let port_err = hexser::error::hex_error::Hexserror::port(
     hexser::error::codes::port::PORT_TIMEOUT,
     "User service timed out"
 ).with_suggestion("Increase timeout or retry later");
 
-// Adapter errors (infra failures) with source error
+// Adapter errors (infra failures). The underlying cause is folded into the message; for full
+// source chaining, construct the layer error directly (e.g. AdapterError::new(..).with_source(e)).
 fn fetch_from_api(url: &str) -> HexResult<String> {
     let resp = std::fs::read_to_string(url)
-        .map_err(|ioe| hexser::hex_adapter_error!(
-            hexser::error::codes::adapter::IO_FAILURE, // or API_FAILURE in real HTTP
-            "Failed to fetch resource"
-        ).with_source(ioe))?;
+        .map_err(|ioe| hexser::error::hex_error::Hexserror::adapter(
+            hexser::error::codes::io::IO_FAILURE, // or codes::adapter::API_FAILURE for real HTTP
+            &format!("Failed to fetch resource: {}", ioe),
+        ))?;
     Ok(resp)
 }
 ```
 
-🔥 Amazing Example: Layered mapping (Adapter → Port → Domain)
+🔥 Layered mapping (Adapter → Port → Domain)
 
 ```rust
 // Adapter layer
 fn db_get_user(id: &str) -> HexResult<User> {
-    let conn = std::fs::read_to_string("/tmp/mock-db").map_err(|e|
-        hexser::hex_adapter_error!(
+    let _conn = std::fs::read_to_string("/tmp/mock-db").map_err(|e|
+        hexser::error::hex_error::Hexserror::adapter(
             hexser::error::codes::adapter::DB_CONNECTION_FAILURE,
-            "Database unavailable"
+            &format!("Database unavailable: {}", e),
         )
-        .with_source(e)
-        .with_next_steps(&["Ensure DB is running", "Check connection string"]) 
+        .with_next_steps(&["Ensure DB is running", "Check connection string"])
     )?;
     // ... parse and return User or NotFound
     Err(hexser::error::hex_error::Hexserror::not_found("User", id))
@@ -1153,24 +1147,24 @@ fn db_get_user(id: &str) -> HexResult<User> {
 // Port layer wraps adapter failure with port context
 fn port_get_user(id: &str) -> HexResult<User> {
     db_get_user(id).map_err(|e|
-        hexser::hex_port_error!(
+        hexser::error::hex_error::Hexserror::port(
             hexser::error::codes::port::COMMUNICATION_FAILURE,
-            "UserRepository failed"
-        ).with_source(e)
+            &format!("UserRepository failed: {}", e),
+        )
     )
 }
 
 // Domain layer consumes rich errors
 fn ensure_user_exists(id: &str) -> HexResult<()> {
-    let _user = port_get_user(id)?; // `?` preserves full rich error stack
+    let _user = port_get_user(id)?; // `?` preserves the rich error
     Ok(())
 }
 ```
 
 Notes
-- All hexser errors implement std::error::Error and the RichError trait (code, message, next_steps, suggestions, location, more_info, source).
-- Prefer hex_domain_error!, hex_port_error!, hex_adapter_error! and constants from hexser::error::codes::*.
-- Use with_source(err) to preserve underlying causes; Display shows a helpful, compact summary.
+- All hexser errors implement std::error::Error and expose code, message, next_steps, suggestions, and location.
+- Build errors with the `Hexserror::{domain,port,adapter,validation,not_found,conflict}` constructors and the `.with_next_step(s)` / `.with_suggestion(s)` builders, using constants from `hexser::error::codes::*`.
+- For full source-error chaining, construct the layer error struct directly (e.g. `AdapterError::new(code, msg).with_source(err)`) and wrap it in the matching `Hexserror` variant.
 
 #### Security: Controlling Source Location in Serialized Errors
 
@@ -1196,7 +1190,7 @@ export HEXSER_INCLUDE_SOURCE_LOCATION=true
 use hexser::prelude::*;
 
 fn api_handler() -> Result<String, Box<dyn std::error::Error>> {
-    let err = hexser::hex_domain_error!(
+    let err = hexser::error::hex_error::Hexserror::domain(
         hexser::error::codes::domain::INVARIANT_VIOLATION,
         "Order must have items"
     );
@@ -1353,7 +1347,7 @@ impl OrderAggregate {
   fn place_order(&mut self, items: Vec<OrderItem>) -> HexResult<()> {
     // Validate
     if items.is_empty() {
-      return Err(hexser::hex_domain_error!(
+      return Err(hexser::error::hex_error::Hexserror::domain(
         hexser::error::codes::domain::INVARIANT_EMPTY,
         "Order must have items"
       ));

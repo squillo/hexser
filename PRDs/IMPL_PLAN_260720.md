@@ -174,16 +174,51 @@ Runs alongside every PR; tracked so it can't be skipped.
 
 Refuted (not scheduled): MCP per-request rebuild, owned-Vec query surface, event-bus double-clone.
 
-## Current Step
-- **Action:** Implementation plan authored; macro dead-code claim verified. No source changed.
-- **Details:** Awaiting go-ahead + the six pre-flight decisions (recommendations above).
-  Suggested first landing: **PR-0 → PR-1 → PR-2** (signal, macro cleanup, the default-feature
-  crash) as a coherent 0.4.8, then the v0.5.0 breaking batch.
+## Progress log (branch `hardening/pr0-signal-260720`)
+
+Decisions D1–D6 taken with the recommended defaults. Landed, each with `/// why` tests, docs,
+and lint-clean verification:
+
+- **PR-0** signal + lint-clean (Hexserror boxing → result_large_err×58 gone, resolver=3, 93
+  clippy + 10 rustdoc cleared, serial_test de-flake).
+- **PR-1** hexser_macros: shared codegen, deleted dead error-macros + scaffolding, HexDirective/
+  HexQuery/generics/HexEntity/HexPort-role/HexRepository fixes, trybuild. (H3, M12/13/15/16/17)
+- **PR-2** Visualizable default-feature stack overflow. (H1)
+- **PR-3** MCP notifications + correct error codes + timeout-bounded refresh. (H4, M19/M30)
+- **PR-4** DI container never holds locks across provider code (OnceCell). (M25/M26/M32)
+- **PR-5** event bus routes by envelope type, VecDeque, bounded queue. (M28/M33/P54/P55)
+- **PR-6** error guidance on all variants, to_json→HexResult, explicit serde feature,
+  current_timestamp no-unwrap. (M6/R31/L49/L40/R59)
+- **PR-7** graph perf: current() OnceLock cache, adjacency index, deterministic BTreeMap,
+  NodeId collision warnings, criterion benches. (P24/P50/P51/P52 + PERF audit)
+- **PR-8** public API + docs (this PR): re-export QueryRepository/FindOptions/Sort/Direction to
+  ports/root/prelude (M7); rewrite lib.rs crate header — real features/default, drop Phase-1
+  framing (M10); rewrite README Quick Start against the real API + guard it with a compiled
+  integration test (H2); fix async/DI/MCP-URI feature sections (M4/M9/L48); add
+  Hexserror::with_source + missing adapter codes and swap the deleted error macros in the
+  cookbook (M8); delete_where default now errors instead of silent Ok(0) (L39).
+- **PR-10** dependency/compile footprint: drop chrono, trim syn. (PERF audit F1/F2)
+
+Separate audit doc: `PRDs/PERF_MEMORY_AUDIT_260720.md` (runtime footprint already right at
+scale; declined micro-opts recorded with rationale).
+
+## Remaining
+
+- **PR-9** tooling/packaging: fix repo URLs, pin toolchain (D6), CI feature matrix + doctests +
+  push trigger, realworld_api CI job, cargo-deny/dependabot, CHANGELOG/PUBLISHING refresh.
+- **README follow-up (tracked, not done):** the crate README is ~2450 lines of largely
+  untested illustrative code. PR-8 fixed the high-severity Quick Start (compile-guarded) and
+  the specific fictional-API sections, and made `.with_source`/the swapped-macro cookbook valid,
+  but a full accuracy pass over Part 5/6 "real-world" examples plus the L48/3.8 restructure
+  (shrink to an overview linking the compiled tutorials + mdbook, `hexser = "0.4"` snippets) is
+  deliberately deferred — it's a focused doc task better done as its own PR than piecemeal.
+- **method_extractor drift test + AgentPack::builder (L45/L46):** deferred to a later PR.
 
 ## Blockers
-- None technical. Gated only on D1–D6 sign-off before code starts.
+- None.
 
 ---
 _Revision history_
 - 2026-07-20T00:00:00Z @AI: Initial implementation plan derived from the verified core audit (PRDs/TASK_PLAN_260720.md) plus macro export/usage and test/doc-coverage verification.
 - 2026-07-20T00:10:00Z @AI: Add mandatory `/// why` doc comment on every test to the Definition of Done and testing workstream (backfill 261 existing tests + CI lint).
+- 2026-07-21T00:00:00Z @AI: Record progress — PR-0..8 + PR-10 landed; PR-9 and the README accuracy/restructure follow-up remain.
