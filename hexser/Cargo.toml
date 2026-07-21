@@ -58,5 +58,12 @@ name = "hex-mcp-server"
 path = "src/bin/hex_mcp_server.rs"
 required-features = ["mcp"]
 
+# The visualization tutorial exercises DOT/Mermaid/JSON export, which require the
+# `visualization` feature; gating it here keeps `cargo run --example` honest.
+[[example]]
+name = "visualization_tutorial"
+path = "examples/visualization_tutorial.rs"
+required-features = ["visualization"]
+
 [package.metadata.docs.rs]
 all-features = true

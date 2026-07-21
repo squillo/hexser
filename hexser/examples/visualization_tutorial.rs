@@ -3,7 +3,7 @@
 //! Learn to visualize your hexagonal architecture using hex's
 //! built-in export capabilities.
 //!
-//! Run with: cargo run --example visualization_tutorial
+//! Run with: cargo run --example visualization_tutorial --features visualization
 
 fn main() -> hexser::HexResult<()> {
   use hexser::showcase::visualizable::Visualizable;
