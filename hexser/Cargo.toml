@@ -27,6 +27,7 @@ serde_json = { workspace = true }
 uuid = { workspace = true }
 serial_test = { workspace = true }
 trybuild = { workspace = true }
+criterion = { workspace = true }
 
 [features]
 # Enable macros and static (non-dyn) DI by default. The dyn container remains opt-in.
@@ -63,6 +64,12 @@ required-features = ["mcp"]
 name = "visualization_tutorial"
 path = "examples/visualization_tutorial.rs"
 required-features = ["visualization"]
+
+[[bench]]
+name = "graph_benches"
+path = "benches/graph_benches.rs"
+harness = false
+required-features = ["ai"]
 
 [package.metadata.docs.rs]
 all-features = true

@@ -6,6 +6,7 @@
 //! compile time, with fallback to string-based IDs for dynamic cases.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Derive Ord/PartialOrd so NodeId can key a deterministic BTreeMap in the graph.
 //! - 2025-10-02T12:00:00Z @AI: Add from_type_name method for registry compatibility.
 //! - 2025-10-01T00:00:00Z @AI: Initial NodeId struct with type-based identification.
 
@@ -25,7 +26,7 @@
 /// let id2 = NodeId::of::<MyComponent>();
 /// assert_eq!(id1, id2);
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct NodeId(u64);
 
 impl NodeId {

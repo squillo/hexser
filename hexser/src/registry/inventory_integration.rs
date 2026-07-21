@@ -18,9 +18,13 @@ pub fn iter_components()
 mod tests {
   use super::*;
 
+  /// why: iterating the inventory-registered components must not panic and must be repeatable
+  /// (the registry is link-time-fixed), so two iterations yield the same count. (The old
+  /// assertion `len() >= 0` was vacuous.)
   #[test]
   fn test_component_iteration() {
-    let components: Vec<_> = iter_components().collect();
-    assert!(components.len() >= 0);
+    let first: Vec<_> = iter_components().collect();
+    let second: Vec<_> = iter_components().collect();
+    assert_eq!(first.len(), second.len());
   }
 }

@@ -116,10 +116,15 @@ worthwhile at 100×–1000× the current scale. At today's scale they are not.
       asserting the generated timestamp parses as RFC3339 and round-trips.
 - [ ] F2: trim `syn` features; compile-test `hexser_macros` + derive/trybuild tests.
 - [ ] F3: assess and lighten the `reqwest` dev-dep / gate its example.
-- [ ] F4: fold `Arc<HexGraph>` double-indirection into PR-7's `current()` change (not here).
-- [ ] Add `benches/` (criterion) for `HexGraph::current()` + `to_ai_context()` so the PR-7
-      caching/adjacency wins are measured, not assumed — and so any future footprint claim is
-      backed by numbers rather than re-audited by hand.
+- [x] PR-7 (perf core, landed): `HexGraph::current()` cached in a `OnceLock`; `BTreeMap` node
+      storage for deterministic iteration; precomputed outgoing/incoming adjacency indices make
+      `edges_from`/`edges_to` O(degree) (so `to_ai_context` is no longer O(V·E)); `NodeId`
+      collisions recorded in metadata instead of silently dropping a node.
+- [x] Added `benches/graph_benches.rs` (criterion) for `edges_from` + `to_ai_context` so the
+      wins are measured, not assumed (`cargo bench -p hexser --features ai --bench graph_benches`).
+- [ ] F4: `Arc<HexGraph>` double-indirection — `current()` still returns `Arc<Self>` for API
+      compatibility; collapsing to a bare `HexGraph` (already `Arc`-backed) is a semver-visible
+      return-type change, deferred to the v0.5 API batch (PR-8) rather than the internal PR-7.
 
 ## Current Step
 - **Action:** Audit complete and synthesized. No source changed by this document.

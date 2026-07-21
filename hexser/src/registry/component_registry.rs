@@ -55,9 +55,13 @@ impl ComponentRegistry {
 mod tests {
   use super::*;
 
+  /// why: component_count() must return without panicking and agree with the number of
+  /// entries build_graph() produces, so the registry count is a trustworthy signal. (The old
+  /// assertion `count >= 0` was vacuous on a usize.)
   #[test]
   fn test_registry_operations() {
     let count = ComponentRegistry::component_count();
-    assert!(count >= 0);
+    let graph = ComponentRegistry::build_graph();
+    assert_eq!(count, graph.node_count());
   }
 }
