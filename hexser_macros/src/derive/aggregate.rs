@@ -5,6 +5,7 @@
 //! Provides default no-op implementation that can be overridden.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Fully-qualify generated paths (::hexser::, ::std::) for hygiene.
 //! - 2025-10-02T21:00:00Z @AI: Initial HexAggregate derive macro implementation.
 
 /// Derives Aggregate trait implementation
@@ -15,11 +16,11 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
   let expanded = quote::quote! {
-      impl #impl_generics hexser::domain::Aggregate for #name #ty_generics #where_clause {
-          fn check_invariants(&self) -> hexser::HexResult<()> {
-              Ok(())
-          }
+    impl #impl_generics ::hexser::domain::Aggregate for #name #ty_generics #where_clause {
+      fn check_invariants(&self) -> ::hexser::HexResult<()> {
+        ::std::result::Result::Ok(())
       }
+    }
   };
 
   proc_macro::TokenStream::from(expanded)
@@ -29,6 +30,9 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 mod tests {
   use super::*;
 
+  /// why: sanity check that the derive emits non-empty tokens. Ignored because
+  /// `proc_macro::TokenStream` only functions inside the compiler; real expansion coverage
+  /// lives in the trybuild suite (tests/), which invokes rustc.
   #[test]
   #[ignore]
   fn test_derive_compiles() {

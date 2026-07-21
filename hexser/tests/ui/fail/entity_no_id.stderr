@@ -1,0 +1,7 @@
+error: HexEntity requires a struct with a field named `id`; the entity's `Id` associated type is taken from that field. Add an `id` field, or implement `HexEntity` manually to choose a different identity type.
+ --> tests/ui/fail/entity_no_id.rs:6:1
+  |
+6 | / struct NoIdField {
+7 | |   name: String,
+8 | | }
+  | |_^

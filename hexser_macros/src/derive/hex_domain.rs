@@ -4,6 +4,7 @@
 //! inventory submission for domain layer types.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Use shared registrable_and_submit codegen (fully-qualified paths, generics-safe).
 //! - 2025-10-02T00:00:00Z @AI: Initial HexDomain derive implementation.
 
 /// Derive HexDomain for a type
@@ -14,29 +15,11 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     return e.to_compile_error().into();
   }
 
-  let name = &input.ident;
-  let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-
-  let expanded = quote::quote! {
-      impl #impl_generics hexser::registry::Registrable for #name #ty_generics #where_clause {
-          fn node_info() -> hexser::registry::NodeInfo {
-              hexser::registry::NodeInfo {
-                  layer: hexser::graph::Layer::Domain,
-                  role: hexser::graph::Role::Entity,
-                  type_name: std::any::type_name::<Self>(),
-                  module_path: std::module_path!(),
-              }
-          }
-
-          fn dependencies() -> std::vec::Vec<hexser::graph::NodeId> {
-              std::vec::Vec::new()
-          }
-      }
-
-      hexser::inventory::submit! {
-          hexser::registry::ComponentEntry::new::<#name #ty_generics>()
-      }
-  };
+  let expanded = crate::common::codegen::registrable_and_submit(
+    &input,
+    quote::quote!(::hexser::graph::Layer::Domain),
+    quote::quote!(::hexser::graph::Role::Entity),
+  );
 
   proc_macro::TokenStream::from(expanded)
 }

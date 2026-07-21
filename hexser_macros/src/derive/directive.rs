@@ -1,8 +1,10 @@
 //! Implementation of #[derive(HexDirective)] macro.
 //!
-//! Automatically implements the Directive trait for command/intent types.
+//! Implements the Directive trait for command/intent types and registers them in the
+//! architecture graph with `Role::Directive`.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Fix bare `inventory::submit!` (unresolvable downstream) by using shared codegen with ::hexser::inventory; generics-safe.
 //! - 2025-10-02T12:00:00Z @AI: Fix to implement validate method and add inventory submission.
 //! - 2025-10-02T00:00:00Z @AI: Initial Directive derive implementation.
 
@@ -13,31 +15,20 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let name = &input.ident;
   let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
+  let registration = crate::common::codegen::registrable_and_submit(
+    &input,
+    quote::quote!(::hexser::graph::Layer::Application),
+    quote::quote!(::hexser::graph::Role::Directive),
+  );
+
   let expanded = quote::quote! {
-      impl #impl_generics hexser::application::Directive for #name #ty_generics #where_clause {
-          fn validate(&self) -> hexser::HexResult<()> {
-              Ok(())
-          }
+    impl #impl_generics ::hexser::application::Directive for #name #ty_generics #where_clause {
+      fn validate(&self) -> ::hexser::HexResult<()> {
+        ::std::result::Result::Ok(())
       }
+    }
 
-      impl #impl_generics hexser::registry::Registrable for #name #ty_generics #where_clause {
-          fn node_info() -> hexser::registry::NodeInfo {
-              hexser::registry::NodeInfo {
-                  layer: hexser::graph::Layer::Application,
-                  role: hexser::graph::Role::Directive,
-                  type_name: std::any::type_name::<Self>(),
-                  module_path: std::module_path!(),
-              }
-          }
-
-          fn dependencies() -> std::vec::Vec<hexser::graph::NodeId> {
-              std::vec::Vec::new()
-          }
-      }
-
-      inventory::submit! {
-          hexser::registry::ComponentEntry::new::<#name #ty_generics>()
-      }
+    #registration
   };
 
   proc_macro::TokenStream::from(expanded)

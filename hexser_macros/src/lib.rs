@@ -2,24 +2,20 @@
 //!
 //! This crate provides derive macros that enable zero-boilerplate hexagonal architecture
 //! by automatically implementing registration traits and generating metadata for
-//! compile-time graph construction. Also includes error construction macros with
-//! automatic source location capture.
+//! compile-time graph construction.
 //!
 //! # Derive Macros
 //!
-//! - `#[derive(HexDomain)]` - Mark domain layer types
-//! - `#[derive(HexPort)]` - Mark port traits
-//! - `#[derive(HexAdapter)]` - Mark adapter implementations
-//! - `#[derive(HexEntity)]` - Implement HexEntity trait
-//! - `#[derive(HexValueItem)]` - Implement HexValueItem trait with default validation
-//! - `#[derive(HexAggregate)]` - Mark aggregate roots
-//! - `#[derive(Repository)]` - Mark repository ports
-//!
-//! # Error Macros
-//!
-//! - `hex_domain_error!(code, message)` - Create domain error with source location
-//! - `hex_port_error!(code, message)` - Create port error with source location
-//! - `hex_adapter_error!(code, message)` - Create adapter error with source location
+//! - `#[derive(HexDomain)]` - Register a domain-layer type (role defaults to `Entity`)
+//! - `#[derive(HexPort)]` - Register a port-layer type (role defaults to `Repository`;
+//!   override with `#[hex(role = "InputPort")]`)
+//! - `#[derive(HexAdapter)]` - Register an adapter and mark it as an `Adapter`
+//! - `#[derive(HexEntity)]` - Implement `HexEntity`, taking `Id` from the `id` field
+//! - `#[derive(HexValueItem)]` - Implement `HexValueItem` with default validation
+//! - `#[derive(HexAggregate)]` - Implement `Aggregate` with default invariant check
+//! - `#[derive(HexDirective)]` - Implement `Directive` and register (role `Directive`)
+//! - `#[derive(HexQuery)]` - Register a query type (role `Query`)
+//! - `#[derive(HexRepository)]` - Semantic marker for repository ports (pair with `HexPort`)
 //!
 //! # Example
 //!
@@ -31,19 +27,16 @@
 //!     id: String,
 //!     email: String,
 //! }
-//!
-//! let err = hex_domain_error!("E_HEX_001", "Invalid state");
 //! ```
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Remove unexported/unused/non-functional error macros and their dead codegen; refresh docs to match the shipped derive set.
 //! - 2025-10-09T14:14:00Z @AI: Remove Entity derive, expose only HexEntity for clarity.
 //! - 2025-10-06T02:00:00Z @AI: Add error construction macros.
 //! - 2025-10-02T00:00:00Z @AI: Initial Phase 3 proc macro crate.
 
 mod common;
 mod derive;
-mod error;
-mod registration;
 
 #[proc_macro_derive(HexDomain, attributes(hex))]
 pub fn derive_hex_domain(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -88,19 +81,4 @@ pub fn derive_directive(input: proc_macro::TokenStream) -> proc_macro::TokenStre
 #[proc_macro_derive(HexQuery)]
 pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   crate::derive::query::derive(input)
-}
-
-#[proc_macro]
-pub fn hex_domain_error(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-  crate::error::hex_error_macro::hex_domain_error_impl(input)
-}
-
-#[proc_macro]
-pub fn hex_port_error(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-  crate::error::hex_error_macro::hex_port_error_impl(input)
-}
-
-#[proc_macro]
-pub fn hex_adapter_error(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-  crate::error::hex_error_macro::hex_adapter_error_impl(input)
 }

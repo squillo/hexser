@@ -1,20 +1,27 @@
 //! Implementation of #[derive(HexRepository)] macro.
 //!
-//! Marks a port as a Repository with appropriate metadata.
+//! `HexRepository` is a *semantic marker*: it documents, at the derive site, that a port is a
+//! repository. It intentionally emits no trait impl or registration of its own — pair it with
+//! `#[derive(HexPort)]` (whose default role is `Repository`) to register the component. Emitting
+//! registration here too would produce a conflicting duplicate `Registrable` impl.
+//!
+//! The derive still validates its target so that applying it to an unsupported item (e.g. a
+//! union) yields a clear error rather than passing silently.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Validate target and document the marker semantics explicitly (was a silent no-op comment).
 //! - 2025-10-02T12:00:00Z @AI: Remove Registrable impl to avoid conflict with HexPort.
 //! - 2025-10-02T00:00:00Z @AI: Initial Repository derive implementation.
 
-/// Derive Repository marker for a port
+/// Derive HexRepository marker for a port
 pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-  let _input = syn::parse_macro_input!(input as syn::DeriveInput);
+  let input = syn::parse_macro_input!(input as syn::DeriveInput);
 
-  // HexRepository is a marker - registration is handled by HexPort
-  // No trait implementations to avoid conflicts
-  let expanded = quote::quote! {
-      // Marker only - HexPort handles registration
-  };
+  if let Err(e) = crate::common::validation::validate_struct_or_enum(&input) {
+    return e.to_compile_error().into();
+  }
 
-  proc_macro::TokenStream::from(expanded)
+  // Semantic marker only: registration is performed by HexPort to avoid a duplicate
+  // `Registrable` impl. See the module docs.
+  proc_macro::TokenStream::new()
 }
