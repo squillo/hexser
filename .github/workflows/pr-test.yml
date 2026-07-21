@@ -51,6 +51,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: test-default
+          rustflags: ""
       - run: cargo test --workspace
 
   # Tests with all features (unit + integration + doctests). Also builds the shipped binaries.
@@ -62,6 +63,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: test-all-features
+          rustflags: ""
       - run: cargo test --workspace --all-features
       - run: cargo build --workspace --all-features --bins --release
       - uses: actions/upload-artifact@v4
@@ -85,6 +87,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: feature-matrix
+          rustflags: ""
       - run: cargo check -p hexser --no-default-features
       - run: cargo check -p hexser --no-default-features --features macros
       - run: cargo check -p hexser --no-default-features --features serde
@@ -105,6 +108,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: examples
+          rustflags: ""
       - run: cargo build -p hexser --all-features --examples
 
   # The flagship realworld_api example is an isolated workspace; build + test it explicitly.
@@ -116,6 +120,7 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: realworld
+          rustflags: ""
       - run: cargo test
         working-directory: hexser/examples/realworld_api
 
@@ -138,4 +143,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Install the pinned toolchain so `cargo metadata` (invoked by cargo-deny) resolves the
+      # rust-toolchain.toml override on the host.
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache-key: cargo-deny
+          rustflags: ""
       - uses: EmbarkStudios/cargo-deny-action@v2
