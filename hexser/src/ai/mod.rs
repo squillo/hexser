@@ -5,12 +5,16 @@
 //! and generate compliant code. All functionality behind `ai` feature flag.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Add std-only timestamp module (removes the chrono dependency).
 //! - 2025-10-10T20:44:00Z @AI: Add method_extractor module for trait method extraction.
 //! - 2025-10-06T18:14:00Z @AI: Add AgentPack module and re-exports for comprehensive AI interop.
 //! - 2025-10-02T18:00:00Z @AI: Initial AI context export implementation.
 
 #[cfg(feature = "ai")]
 pub mod ai_context;
+
+#[cfg(feature = "ai")]
+pub mod timestamp;
 
 #[cfg(feature = "ai")]
 pub mod context_builder;

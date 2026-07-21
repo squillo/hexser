@@ -7,8 +7,11 @@ members = [
 ]
 
 [workspace.dependencies]
-# Shared proc-macro tooling
-syn = { version = "2.0", features = ["full", "extra-traits"] }
+# Shared proc-macro tooling. The derives only parse DeriveInput and use parse_quote for
+# types/where-predicates, so syn's default features suffice — dropping the heavy `full`
+# (full-expression grammar) and `extra-traits` (Debug/Eq/Hash on syn AST) features cuts
+# compile time for the macro crate and every downstream build that uses `macros`.
+syn = "2.0"
 quote = "1.0"
 proc-macro2 = "1.0"
 darling = "0.20"
@@ -17,7 +20,6 @@ darling = "0.20"
 inventory = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-chrono = "0.4.42"
 tokio = { version = "1.47.1", features = ["sync", "macros", "rt-multi-thread", "time"] }
 async-trait = "0.1.89"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json"] }

@@ -15,7 +15,6 @@ inventory = { workspace = true }
 hexser_macros = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
-chrono = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
 async-trait = { workspace = true, optional = true }
 
@@ -33,7 +32,7 @@ trybuild = { workspace = true }
 # Enable macros and static (non-dyn) DI by default. The dyn container remains opt-in.
 default = ["macros", "static-di"]
 macros = ["hexser_macros"]
-ai = ["chrono", "serde", "serde_json"]
+ai = ["serde", "serde_json"]
 mcp = ["ai", "serde", "serde_json"]
 async = ["tokio", "async-trait"]
 visualization = ["serde", "serde_json"]
