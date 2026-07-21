@@ -7,6 +7,7 @@
 //! for Singleton instances.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Never hold container locks across provider execution; singletons use a per-entry OnceCell (lock-free reads, single init, no deadlock on concurrent/nested resolution of distinct services).
 //! - 2025-10-02T20:45:00Z @AI: Clean async-only implementation with tokio::sync::RwLock.
 //! - 2025-10-02T20:40:00Z @AI: Simplify to tokio::sync::RwLock when container feature enabled.
 //! - 2025-10-02T20:35:00Z @AI: Fix async compatibility by using tokio::sync::RwLock.
@@ -29,7 +30,11 @@ struct ContainerInner {
 struct ServiceEntry {
   scope: crate::container::scope::Scope,
   factory: std::sync::Arc<dyn std::any::Any + Send + Sync>,
-  singleton_cache: tokio::sync::RwLock<Option<std::sync::Arc<dyn std::any::Any + Send + Sync>>>,
+  /// Per-service singleton cache. Wrapped in `Arc` so it can be cloned out of the services map
+  /// (dropping the map lock) before the provider runs; `OnceCell` guarantees exactly one
+  /// initialization, has lock-free reads once populated, and never holds a container-wide lock.
+  singleton_cache:
+    std::sync::Arc<tokio::sync::OnceCell<std::sync::Arc<dyn std::any::Any + Send + Sync>>>,
 }
 
 impl Container {
@@ -82,7 +87,7 @@ impl Container {
       ServiceEntry {
         scope,
         factory: std::sync::Arc::new(boxed_provider),
-        singleton_cache: tokio::sync::RwLock::const_new(None),
+        singleton_cache: std::sync::Arc::new(tokio::sync::OnceCell::new()),
       },
     );
 
@@ -100,37 +105,45 @@ impl Container {
     &self,
     name: &str,
   ) -> crate::result::hex_result::HexResult<std::sync::Arc<T>> {
-    let services = self.inner.services.read().await;
+    // Hold the services read lock only long enough to clone the factory, scope, and singleton
+    // cache out of the map. The provider is invoked *after* the lock is dropped, so provider
+    // code that resolves other services (the natural DI pattern) can re-acquire the map lock
+    // without deadlocking, and a slow provider never blocks registration.
+    let (scope, factory, cache) = {
+      let services = self.inner.services.read().await;
+      let entry = services
+        .get(name)
+        .ok_or_else(|| crate::error::hex_error::Hexserror::not_found("Service", name))?;
+      (
+        entry.scope,
+        std::sync::Arc::clone(&entry.factory),
+        std::sync::Arc::clone(&entry.singleton_cache),
+      )
+    };
 
-    let entry = services
-      .get(name)
-      .ok_or_else(|| crate::error::hex_error::Hexserror::not_found("Service", name))?;
-
-    match entry.scope {
+    match scope {
       crate::container::scope::Scope::Singleton => {
-        let mut cache = entry.singleton_cache.write().await;
-
-        if let Some(cached) = cache.as_ref() {
-          return cached.clone().downcast::<T>().map_err(|_| {
-            crate::error::hex_error::Hexserror::adapter("E_CNT_004", "Type mismatch")
-          });
-        }
-
-        let provider = entry
-          .factory
-          .downcast_ref::<Box<dyn crate::container::provider::Provider<T>>>()
-          .ok_or_else(|| {
-            crate::error::hex_error::Hexserror::adapter("E_CNT_005", "Provider type mismatch")
-          })?;
-
-        let instance = provider.provide()?;
-        let arc_instance = std::sync::Arc::new(instance);
-        *cache = Some(arc_instance.clone() as std::sync::Arc<dyn std::any::Any + Send + Sync>);
-        Ok(arc_instance)
+        let cached = cache
+          .get_or_try_init(|| async {
+            let provider = factory
+              .downcast_ref::<Box<dyn crate::container::provider::Provider<T>>>()
+              .ok_or_else(|| {
+                crate::error::hex_error::Hexserror::adapter("E_CNT_005", "Provider type mismatch")
+              })?;
+            let instance = provider.provide()?;
+            std::result::Result::Ok::<_, crate::error::hex_error::Hexserror>(std::sync::Arc::new(
+              instance,
+            )
+              as std::sync::Arc<dyn std::any::Any + Send + Sync>)
+          })
+          .await?;
+        cached
+          .clone()
+          .downcast::<T>()
+          .map_err(|_| crate::error::hex_error::Hexserror::adapter("E_CNT_004", "Type mismatch"))
       }
       crate::container::scope::Scope::Transient => {
-        let provider = entry
-          .factory
+        let provider = factory
           .downcast_ref::<Box<dyn crate::container::provider::Provider<T>>>()
           .ok_or_else(|| {
             crate::error::hex_error::Hexserror::adapter("E_CNT_006", "Provider type mismatch")
@@ -188,7 +201,7 @@ impl Container {
       ServiceEntry {
         scope,
         factory: std::sync::Arc::new(boxed_provider),
-        singleton_cache: tokio::sync::RwLock::const_new(None),
+        singleton_cache: std::sync::Arc::new(tokio::sync::OnceCell::new()),
       },
     );
 
@@ -208,37 +221,47 @@ impl Container {
     &self,
     name: &str,
   ) -> crate::result::hex_result::HexResult<std::sync::Arc<T>> {
-    let services = self.inner.services.read().await;
+    // See `resolve`: clone what is needed out of the map under a brief read lock, then run the
+    // async provider with no container lock held. This is what makes nested async resolution
+    // (a provider awaiting `resolve_async` for a dependency) safe from deadlock.
+    let (scope, factory, cache) = {
+      let services = self.inner.services.read().await;
+      let entry = services
+        .get(name)
+        .ok_or_else(|| crate::error::hex_error::Hexserror::not_found("Service", name))?;
+      (
+        entry.scope,
+        std::sync::Arc::clone(&entry.factory),
+        std::sync::Arc::clone(&entry.singleton_cache),
+      )
+    };
 
-    let entry = services
-      .get(name)
-      .ok_or_else(|| crate::error::hex_error::Hexserror::not_found("Service", name))?;
-
-    match entry.scope {
+    match scope {
       crate::container::scope::Scope::Singleton => {
-        let mut cache = entry.singleton_cache.write().await;
-
-        if let Some(cached) = cache.as_ref() {
-          return cached.clone().downcast::<T>().map_err(|_| {
-            crate::error::hex_error::Hexserror::adapter("E_CNT_004", "Type mismatch")
-          });
-        }
-
-        let provider = entry
-          .factory
-          .downcast_ref::<Box<dyn crate::container::async_provider::AsyncProvider<T>>>()
-          .ok_or_else(|| {
-            crate::error::hex_error::Hexserror::adapter("E_CNT_007", "Async provider type mismatch")
-          })?;
-
-        let instance = provider.provide_async().await?;
-        let arc_instance = std::sync::Arc::new(instance);
-        *cache = Some(arc_instance.clone() as std::sync::Arc<dyn std::any::Any + Send + Sync>);
-        Ok(arc_instance)
+        let cached = cache
+          .get_or_try_init(|| async {
+            let provider = factory
+              .downcast_ref::<Box<dyn crate::container::async_provider::AsyncProvider<T>>>()
+              .ok_or_else(|| {
+                crate::error::hex_error::Hexserror::adapter(
+                  "E_CNT_007",
+                  "Async provider type mismatch",
+                )
+              })?;
+            let instance = provider.provide_async().await?;
+            std::result::Result::Ok::<_, crate::error::hex_error::Hexserror>(std::sync::Arc::new(
+              instance,
+            )
+              as std::sync::Arc<dyn std::any::Any + Send + Sync>)
+          })
+          .await?;
+        cached
+          .clone()
+          .downcast::<T>()
+          .map_err(|_| crate::error::hex_error::Hexserror::adapter("E_CNT_004", "Type mismatch"))
       }
       crate::container::scope::Scope::Transient => {
-        let provider = entry
-          .factory
+        let provider = factory
           .downcast_ref::<Box<dyn crate::container::async_provider::AsyncProvider<T>>>()
           .ok_or_else(|| {
             crate::error::hex_error::Hexserror::adapter("E_CNT_008", "Async provider type mismatch")
@@ -341,5 +364,113 @@ mod tests {
     let container2 = container1.clone();
     assert!(container2.contains("shared").await);
     assert_eq!(container2.service_count().await, 1);
+  }
+
+  struct CountingProvider {
+    calls: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+  }
+
+  impl crate::container::provider::Provider<TestService> for CountingProvider {
+    fn provide(&self) -> crate::result::hex_result::HexResult<TestService> {
+      self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+      Ok(TestService { value: 7 })
+    }
+  }
+
+  /// why: a Singleton provider must run exactly once even when many tasks resolve it
+  /// concurrently, and every caller must get the same instance. The previous code took an
+  /// exclusive write lock on every resolve (M26); this guards both single-init and sharing.
+  #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+  async fn test_singleton_provider_runs_exactly_once_under_concurrency() {
+    let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let container = Container::new();
+    container
+      .register(
+        "svc",
+        CountingProvider {
+          calls: calls.clone(),
+        },
+        crate::container::scope::Scope::Singleton,
+      )
+      .await
+      .unwrap();
+
+    let mut handles = std::vec::Vec::new();
+    for _ in 0..16 {
+      let c = container.clone();
+      handles.push(tokio::spawn(async move {
+        c.resolve::<TestService>("svc").await.unwrap()
+      }));
+    }
+    let mut arcs = std::vec::Vec::new();
+    for h in handles {
+      arcs.push(h.await.unwrap());
+    }
+
+    assert_eq!(
+      calls.load(std::sync::atomic::Ordering::SeqCst),
+      1,
+      "singleton provider must run exactly once"
+    );
+    assert_eq!(arcs[0].value, 7);
+    for a in &arcs {
+      assert!(
+        std::sync::Arc::ptr_eq(&arcs[0], a),
+        "all resolves must return the same singleton instance"
+      );
+    }
+  }
+
+  struct RegisteringProvider {
+    container: Container,
+  }
+
+  #[async_trait::async_trait]
+  impl crate::container::async_provider::AsyncProvider<TestService> for RegisteringProvider {
+    async fn provide_async(&self) -> crate::result::hex_result::HexResult<TestService> {
+      // Register another service from within a provider. This re-acquires the services write
+      // lock; before the fix the services read lock was still held across provider execution,
+      // so this deadlocked. It must now complete.
+      self
+        .container
+        .register(
+          "late",
+          TestProvider { value: 99 },
+          crate::container::scope::Scope::Singleton,
+        )
+        .await?;
+      Ok(TestService { value: 1 })
+    }
+  }
+
+  /// why: a provider that touches the container (here, registering a service) must not deadlock,
+  /// proving no container lock is held across provider execution (M25/M32). Bounded by a timeout
+  /// so a regression fails fast instead of hanging the suite.
+  #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+  async fn test_provider_touching_container_does_not_deadlock() {
+    let container = Container::new();
+    container
+      .register_async(
+        "early",
+        RegisteringProvider {
+          container: container.clone(),
+        },
+        crate::container::scope::Scope::Singleton,
+      )
+      .await
+      .unwrap();
+
+    let resolved = tokio::time::timeout(
+      std::time::Duration::from_secs(5),
+      container.resolve_async::<TestService>("early"),
+    )
+    .await;
+
+    assert!(
+      resolved.is_ok(),
+      "resolve_async deadlocked: a provider re-entered the container"
+    );
+    assert!(resolved.unwrap().is_ok());
+    assert!(container.contains("late").await);
   }
 }
