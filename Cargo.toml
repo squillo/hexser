@@ -34,7 +34,7 @@ pretty_assertions = "1.4"
 uuid = { version = "1.0", features = ["v4"] }
 serial_test = "3"
 trybuild = "1.0"
-criterion = "0.5"
+criterion = "0.7"
 
 # Workspace member crates (for path + version unification)
 hexser_macros = { version = "0.5.0", path = "hexser_macros" }
