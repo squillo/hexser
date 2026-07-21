@@ -7,10 +7,10 @@
 //!
 //! # Architecture
 //!
-//! - **CloudEventsEnvelope<T>**: CloudEvents v1.0-compliant wrapper struct
-//! - **EventPublisher<T>**: Port for publishing events to transports
-//! - **EventSubscriber<T>**: Port for consuming events from transports
-//! - **EventCodec<T>**: Port for serialization/deserialization
+//! - **`CloudEventsEnvelope<T>`**: CloudEvents v1.0-compliant wrapper struct
+//! - **`EventPublisher<T>`**: Port for publishing events to transports
+//! - **`EventSubscriber<T>`**: Port for consuming events from transports
+//! - **`EventCodec<T>`**: Port for serialization/deserialization
 //! - **EventRouter**: Port for topic/subject resolution
 //!
 //! # CloudEvents v1.0 Compliance

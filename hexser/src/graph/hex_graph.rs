@@ -159,7 +159,11 @@ impl HexGraph {
     self.inner.nodes.get(id)
   }
 
-  /// Print human-readable summary of graph
+  /// Print human-readable summary of graph.
+  ///
+  /// This is an intentional stdout diagnostic for CLI/inspection use; the crate ships
+  /// no logging facade, so `println!` is deliberate here (see clippy.toml guidance).
+  #[allow(clippy::disallowed_macros)]
   pub fn pretty_print(&self) {
     println!("Hexagonal Architecture Graph:");
     println!("  Nodes: {}", self.node_count());

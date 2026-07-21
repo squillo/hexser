@@ -6,13 +6,23 @@
 //! internal code structure to clients in production environments.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Serialize all env-mutating tests with #[serial(hexser_env)] to fix a parallel-thread env race; add /// why on each test.
 //! - 2025-10-09T21:51:00Z @AI: Initial test for conditional source location serialization.
 
 #[cfg(feature = "serde")]
 mod serde_tests {
   use hexser::error::rich_error::RichError;
 
+  // Every test here mutates the process-global HEXSER_INCLUDE_SOURCE_LOCATION variable, which
+  // is read during serialization. Cargo runs tests in parallel threads, so without
+  // serialization one test's set_var/remove_var interleaves with another's assertion and
+  // flips the observed value (the historical source of this suite's flakiness).
+  // `#[serial(hexser_env)]` forces all of them onto a single lock.
+
+  /// why: the raw SourceLocation struct must always serialize its own fields; the env toggle
+  /// governs only whether *errors* embed a location, not the struct's own Serialize impl.
   #[test]
+  #[serial_test::serial(hexser_env)]
   fn test_source_location_excluded_by_default() {
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
@@ -27,7 +37,10 @@ mod serde_tests {
     );
   }
 
+  /// why: with the toggle unset, a DomainError must NOT leak its source path/line into JSON
+  /// (the privacy-safe production default).
   #[test]
+  #[serial_test::serial(hexser_env)]
   fn test_layer_error_location_excluded_by_default() {
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
@@ -46,7 +59,10 @@ mod serde_tests {
     );
   }
 
+  /// why: when the toggle is enabled, a DomainError must embed its source location so
+  /// developers opting in for debugging actually get it.
   #[test]
+  #[serial_test::serial(hexser_env)]
   fn test_layer_error_location_included_when_enabled() {
     unsafe {
       std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "1");
@@ -69,7 +85,9 @@ mod serde_tests {
     }
   }
 
+  /// why: ValidationError must honor the same default-excluded location policy as other errors.
   #[test]
+  #[serial_test::serial(hexser_env)]
   fn test_validation_error_location_excluded_by_default() {
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
@@ -89,7 +107,9 @@ mod serde_tests {
     );
   }
 
+  /// why: the toggle value "true" (not just "1") must also enable inclusion for ValidationError.
   #[test]
+  #[serial_test::serial(hexser_env)]
   fn test_validation_error_location_included_when_enabled() {
     unsafe {
       std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "true");
@@ -113,7 +133,9 @@ mod serde_tests {
     }
   }
 
+  /// why: NotFoundError must honor the default-excluded location policy.
   #[test]
+  #[serial_test::serial(hexser_env)]
   fn test_not_found_error_location_excluded_by_default() {
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
@@ -132,7 +154,10 @@ mod serde_tests {
     );
   }
 
+  /// why: the toggle value "TRUE" (uppercase) must enable inclusion, proving case-insensitive
+  /// parsing end-to-end through NotFoundError serialization.
   #[test]
+  #[serial_test::serial(hexser_env)]
   fn test_not_found_error_location_included_when_enabled() {
     unsafe {
       std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "TRUE");
@@ -155,7 +180,9 @@ mod serde_tests {
     }
   }
 
+  /// why: ConflictError must honor the default-excluded location policy.
   #[test]
+  #[serial_test::serial(hexser_env)]
   fn test_conflict_error_location_excluded_by_default() {
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
@@ -175,7 +202,9 @@ mod serde_tests {
     );
   }
 
+  /// why: when enabled, ConflictError must embed its source location.
   #[test]
+  #[serial_test::serial(hexser_env)]
   fn test_conflict_error_location_included_when_enabled() {
     unsafe {
       std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "1");
@@ -199,7 +228,10 @@ mod serde_tests {
     }
   }
 
+  /// why: an error carrying no location must still serialize its code and message normally
+  /// (the skip logic must not drop unrelated fields).
   #[test]
+  #[serial_test::serial(hexser_env)]
   fn test_error_without_location_serializes_correctly() {
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
@@ -216,7 +248,10 @@ mod serde_tests {
     );
   }
 
+  /// why: deserialization must accept payloads both with and without a `location` field,
+  /// independent of the env toggle, so errors serialized under either setting round-trip.
   #[test]
+  #[serial_test::serial(hexser_env)]
   fn test_deserialization_works_regardless_of_env_var() {
     unsafe {
       std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
@@ -237,5 +272,9 @@ mod serde_tests {
 
 #[cfg(not(feature = "serde"))]
 fn main() {
-  println!("Serde tests require the 'serde' feature to be enabled.");
+  // Test harness stub for the no-serde configuration; stdout is acceptable here.
+  #[allow(clippy::disallowed_macros)]
+  {
+    println!("Serde tests require the 'serde' feature to be enabled.");
+  }
 }

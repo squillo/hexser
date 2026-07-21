@@ -73,17 +73,17 @@ pub trait EventRouter {
   ///
   /// # Examples
   ///
-  /// ```rust
+  /// ```text
   /// // Domain-based routing
-  /// // router.resolve_topic("com.example.user.created")?;
+  /// router.resolve_topic("com.example.user.created")?;
   /// // Returns: "example.events"
   ///
   /// // Entity-based routing
-  /// // router.resolve_topic("com.example.user.created")?;
+  /// router.resolve_topic("com.example.user.created")?;
   /// // Returns: "user.events"
   ///
   /// // Hierarchical routing
-  /// // router.resolve_topic("com.example.user.created")?;
+  /// router.resolve_topic("com.example.user.created")?;
   /// // Returns: "com/example/user/events"
   /// ```
   fn resolve_topic(&self, event_type: &str) -> crate::HexResult<std::string::String>;
@@ -108,21 +108,21 @@ pub trait EventRouter {
   ///
   /// # Examples
   ///
-  /// ```rust
+  /// ```text
   /// // Direct mapping
-  /// // router.resolve_subject("user-123");
+  /// router.resolve_subject("user-123");
   /// // Returns: Some("user-123")
   ///
   /// // Prefixed mapping
-  /// // router.resolve_subject("user-123");
+  /// router.resolve_subject("user-123");
   /// // Returns: Some("aggregate:user-123")
   ///
   /// // Hash-based partitioning
-  /// // router.resolve_subject("user-123");
+  /// router.resolve_subject("user-123");
   /// // Returns: Some("partition-5")
   ///
   /// // No subject
-  /// // router.resolve_subject("user-123");
+  /// router.resolve_subject("user-123");
   /// // Returns: None
   /// ```
   fn resolve_subject(&self, aggregate_id: &str) -> std::option::Option<std::string::String>;

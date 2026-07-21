@@ -94,7 +94,7 @@ impl GraphBuilder {
     let mut node_map = std::collections::HashMap::new();
 
     for node in self.nodes {
-      node_map.insert(node.id().clone(), node);
+      node_map.insert(*node.id(), node);
     }
 
     let metadata = crate::graph::metadata::GraphMetadata::new(&self.description);

@@ -6,8 +6,12 @@
 //! compliant changes and validate against project constraints.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Allow `disallowed_macros` crate-wide in this CLI binary whose sole job is writing JSON to stdout.
 //! - 2025-10-06T17:59:00Z @AI: Introduce `hex-ai-export` binary (feature-gated) that prints AIContext as JSON.
 //! - 2025-10-06T18:09:00Z @AI: Fix unresolved paths by using `hexser::` crate paths and align return type to HexResult; map JSON errors to Hexserror.
+
+// This is a CLI binary; writing to stdout is its purpose, so `println!` is intentional.
+#![allow(clippy::disallowed_macros)]
 
 fn main() -> hexser::HexResult<()> {
   // Build the current architecture graph from the component registry.

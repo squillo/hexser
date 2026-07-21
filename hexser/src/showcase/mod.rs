@@ -1,27 +1,16 @@
-//! Showcase module for developer experience traits.
+//! Showcase module for developer-experience traits.
 //!
-//! This module provides traits that demonstrate the benefits of using hex
-//! for hexagonal architecture. These traits offer convenience methods,
-//! human-readable output, and introspection capabilities that showcase
-//! the power of the graph-based approach.
+//! Provides convenience traits that demonstrate the introspection and
+//! self-documentation capabilities of the crate's graph-based approach:
+//! `Describable`/`PrettyPrint` for human-readable output, `Inspectable` for
+//! programmatic introspection, and `Visualizable` for diagram export. These
+//! showcase how components can describe themselves and be inspected.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Consolidate the accidentally-tripled module doc header into one block (fixes doc_lazy_continuation).
+//! - 2025-10-02T17:00:00Z @AI: Showcase module creation.
+//! - 2025-10-02T12:00:00Z @AI: Add Describable and Inspectable.
 //! - 2025-10-01T00:04:00Z @AI: Initial showcase module for DX improvements.
-//! Showcase traits demonstrating developer experience benefits.
-//!
-//! This module provides traits that showcase the introspection and
-//! self-documentation capabilities of the hex crate. These traits
-//! demonstrate how components can describe themselves and be inspected.
-//!
-//! Revision History
-//! - 2025-10-02T12:00:00Z @AI: Initial showcase module with Describable and Inspectable.
-//! Showcase module for developer experience traits.
-//!
-//! Provides traits that demonstrate the power and ergonomics
-//! of hexagonal architecture introspection.
-//!
-//! Revision History
-//! - 2025-10-02T17:00:00Z @AI: Initial showcase module creation.
 
 pub mod describable;
 pub mod inspectable;

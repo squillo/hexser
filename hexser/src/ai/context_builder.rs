@@ -108,7 +108,7 @@ impl<'a> ContextBuilder<'a> {
     self
       .graph
       .edges()
-      .into_iter()
+      .iter()
       .map(|edge| {
         let is_valid = self.validate_relationship(edge);
         super::ai_context::RelationshipInfo {

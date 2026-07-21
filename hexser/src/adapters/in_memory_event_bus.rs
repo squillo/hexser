@@ -69,14 +69,13 @@
 ///
 /// bus.publish(&envelope).unwrap();
 /// ```
+/// Boxed synchronous handler invoked with each delivered event on a topic.
+type EventHandler<T> =
+  std::boxed::Box<dyn Fn(crate::ports::events::CloudEventsEnvelope<T>) -> crate::HexResult<()>>;
+
 pub struct InMemoryEventBus<T> {
   queue: std::cell::RefCell<std::vec::Vec<crate::ports::events::CloudEventsEnvelope<T>>>,
-  handlers: std::cell::RefCell<
-    std::collections::HashMap<
-      std::string::String,
-      std::boxed::Box<dyn Fn(crate::ports::events::CloudEventsEnvelope<T>) -> crate::HexResult<()>>,
-    >,
-  >,
+  handlers: std::cell::RefCell<std::collections::HashMap<std::string::String, EventHandler<T>>>,
   topic: std::string::String,
 }
 

@@ -147,7 +147,7 @@ impl AgentPack {
             let entry = DocEntry {
               path: p.to_string_lossy().to_string(),
               title,
-              bytes: content.as_bytes().len(),
+              bytes: content.len(),
               content,
             };
             entries.push(entry);

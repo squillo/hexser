@@ -1,6 +1,6 @@
 //! Generic layer error implementation.
 //!
-//! Provides LayerError<L> generic struct that implements RichError trait.
+//! Provides `LayerError<L>` generic struct that implements RichError trait.
 //! Uses phantom marker types to distinguish between different architectural layers
 //! while sharing implementation. Eliminates code duplication across layer-specific errors.
 //!

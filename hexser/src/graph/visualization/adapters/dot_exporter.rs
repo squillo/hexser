@@ -19,6 +19,12 @@ impl DotExporter {
   }
 }
 
+impl std::default::Default for DotExporter {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl crate::graph::visualization::ports::format_exporter::FormatExporter for DotExporter {
   fn export(
     &self,
@@ -34,7 +40,7 @@ impl crate::graph::visualization::ports::format_exporter::FormatExporter for Dot
       ));
     }
 
-    output.push_str("\n");
+    output.push('\n');
 
     for edge in &visual_graph.edges {
       output.push_str(&format!(

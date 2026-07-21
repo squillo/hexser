@@ -8,6 +8,12 @@
 /// JSON format exporter
 pub struct JsonExporter;
 
+impl std::default::Default for JsonExporter {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl JsonExporter {
   /// Create new JSON exporter
   pub fn new() -> Self {
