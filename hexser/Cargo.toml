@@ -33,6 +33,11 @@ criterion = { workspace = true }
 # Enable macros and static (non-dyn) DI by default. The dyn container remains opt-in.
 default = ["macros", "static-di"]
 macros = ["hexser_macros"]
+# Rich-error Serialize/Deserialize. Enable this alone to serialize `Hexserror` (e.g. in an API
+# response) without pulling in the heavier `ai`/`visualization` surfaces. Serialization of
+# source locations is additionally gated at runtime by the HEXSER_INCLUDE_SOURCE_LOCATION env
+# var (unset/false hides file paths; "1"/"true" includes them).
+serde = ["dep:serde"]
 ai = ["serde", "serde_json"]
 mcp = ["ai", "serde", "serde_json"]
 async = ["tokio", "async-trait"]

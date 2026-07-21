@@ -6,6 +6,7 @@
 //! compliant changes and validate against project constraints.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: to_json returns HexResult, so propagate with `?` instead of re-wrapping a String error.
 //! - 2026-07-20T00:00:00Z @AI: Allow `disallowed_macros` crate-wide in this CLI binary whose sole job is writing JSON to stdout.
 //! - 2025-10-06T17:59:00Z @AI: Introduce `hex-ai-export` binary (feature-gated) that prints AIContext as JSON.
 //! - 2025-10-06T18:09:00Z @AI: Fix unresolved paths by using `hexser::` crate paths and align return type to HexResult; map JSON errors to Hexserror.
@@ -20,12 +21,7 @@ fn main() -> hexser::HexResult<()> {
   // Build the AI context using the ContextBuilder and serialize to JSON.
   let builder = hexser::ai::ContextBuilder::new(std::sync::Arc::as_ref(&graph_arc));
   let context = builder.build()?;
-  let json = match context.to_json() {
-    std::result::Result::Ok(s) => s,
-    std::result::Result::Err(e) => {
-      return std::result::Result::Err(hexser::Hexserror::adapter("E_AI_SERIALIZE", &e));
-    }
-  };
+  let json = context.to_json()?;
 
   // Print to stdout for downstream tooling.
   std::println!("{}", json);

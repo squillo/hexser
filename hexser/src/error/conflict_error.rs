@@ -5,6 +5,7 @@
 //! Includes context about the conflicting resource.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: Add next_steps/suggestions storage + builders so Hexserror guidance builders no longer silently drop input on this variant.
 //! - 2025-10-09T21:51:00Z @AI: Add conditional source location serialization via env_control.
 //! - 2025-10-09T21:22:00Z @AI: Add Serde support for rich errors.
 //! - 2025-10-06T02:00:00Z @AI: Fix merge conflict duplicates.
@@ -20,6 +21,18 @@ pub struct ConflictError {
   pub message: String,
   /// Optional ID of existing conflicting resource
   pub existing_id: Option<String>,
+  /// Actionable next steps for resolving the error
+  #[cfg_attr(
+    feature = "serde",
+    serde(default, skip_serializing_if = "Vec::is_empty")
+  )]
+  pub next_steps: Vec<String>,
+  /// Concrete suggestions (e.g. example fixes)
+  #[cfg_attr(
+    feature = "serde",
+    serde(default, skip_serializing_if = "Vec::is_empty")
+  )]
+  pub suggestions: Vec<String>,
   /// Optional source code location
   #[cfg_attr(
     feature = "serde",
@@ -35,6 +48,8 @@ impl ConflictError {
       code: String::from(crate::error::codes::resource::CONFLICT),
       message: message.into(),
       existing_id: None,
+      next_steps: Vec::new(),
+      suggestions: Vec::new(),
       location: None,
     }
   }
@@ -42,6 +57,34 @@ impl ConflictError {
   /// Add existing resource ID (builder pattern)
   pub fn with_existing_id(mut self, id: impl Into<String>) -> Self {
     self.existing_id = Some(id.into());
+    self
+  }
+
+  /// Add an actionable next step (builder pattern)
+  pub fn with_next_step(mut self, step: impl Into<String>) -> Self {
+    self.next_steps.push(step.into());
+    self
+  }
+
+  /// Add multiple next steps (builder pattern)
+  pub fn with_next_steps(mut self, steps: &[&str]) -> Self {
+    self
+      .next_steps
+      .extend(steps.iter().map(|s| String::from(*s)));
+    self
+  }
+
+  /// Add a suggestion (builder pattern)
+  pub fn with_suggestion(mut self, suggestion: impl Into<String>) -> Self {
+    self.suggestions.push(suggestion.into());
+    self
+  }
+
+  /// Add multiple suggestions (builder pattern)
+  pub fn with_suggestions(mut self, suggestions: &[&str]) -> Self {
+    self
+      .suggestions
+      .extend(suggestions.iter().map(|s| String::from(*s)));
     self
   }
 
@@ -60,10 +103,19 @@ impl std::fmt::Display for ConflictError {
       write!(f, " (existing ID: {})", id)?;
     }
 
-    write!(
-      f,
-      "\nNext Steps: Resolve conflict or use different identifier"
-    )?;
+    if self.next_steps.is_empty() {
+      write!(
+        f,
+        "\nNext Step: Resolve conflict or use different identifier"
+      )?;
+    } else {
+      for step in &self.next_steps {
+        write!(f, "\nNext Step: {}", step)?;
+      }
+    }
+    for suggestion in &self.suggestions {
+      write!(f, "\nSuggestion: {}", suggestion)?;
+    }
 
     if let Some(ref location) = self.location {
       write!(f, "\nSource: {}", location)?;

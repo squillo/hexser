@@ -6,6 +6,7 @@
 //! and suggestions for remediation. Designed for both humans and AI agents.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: Forward with_next_step(s)/with_suggestion(s) to Validation/NotFound/Conflict variants (was silently dropped on those).
 //! - 2026-07-20T00:00:00Z @AI: Box variant payloads to shrink Hexserror (fixes clippy::result_large_err across the crate); enum is now pointer-sized.
 //! - 2025-10-09T21:22:00Z @AI: Add Serde support for rich errors.
 //! - 2025-10-06T00:00:00Z @AI: Refactor to wrap layer-specific error structs for Phase 1.
@@ -114,43 +115,62 @@ impl Hexserror {
     ))
   }
 
-  /// Add next step (builder pattern)
+  /// Add next step (builder pattern).
+  ///
+  /// Works on every variant — the guidance is attached to whichever layer/resource error is
+  /// wrapped, so it is never silently dropped.
   pub fn with_next_step(self, step: &str) -> Self {
     match self {
       Self::Domain(err) => Self::Domain(std::boxed::Box::new(err.with_next_step(step))),
       Self::Port(err) => Self::Port(std::boxed::Box::new(err.with_next_step(step))),
       Self::Adapter(err) => Self::Adapter(std::boxed::Box::new(err.with_next_step(step))),
-      other => other,
+      Self::Validation(err) => Self::Validation(std::boxed::Box::new(err.with_next_step(step))),
+      Self::NotFound(err) => Self::NotFound(std::boxed::Box::new(err.with_next_step(step))),
+      Self::Conflict(err) => Self::Conflict(std::boxed::Box::new(err.with_next_step(step))),
     }
   }
 
-  /// Add multiple next steps (builder pattern)
+  /// Add multiple next steps (builder pattern). Works on every variant.
   pub fn with_next_steps(self, steps: &[&str]) -> Self {
     match self {
       Self::Domain(err) => Self::Domain(std::boxed::Box::new(err.with_next_steps(steps))),
       Self::Port(err) => Self::Port(std::boxed::Box::new(err.with_next_steps(steps))),
       Self::Adapter(err) => Self::Adapter(std::boxed::Box::new(err.with_next_steps(steps))),
-      other => other,
+      Self::Validation(err) => Self::Validation(std::boxed::Box::new(err.with_next_steps(steps))),
+      Self::NotFound(err) => Self::NotFound(std::boxed::Box::new(err.with_next_steps(steps))),
+      Self::Conflict(err) => Self::Conflict(std::boxed::Box::new(err.with_next_steps(steps))),
     }
   }
 
-  /// Add suggestion (builder pattern)
+  /// Add suggestion (builder pattern). Works on every variant.
   pub fn with_suggestion(self, suggestion: &str) -> Self {
     match self {
       Self::Domain(err) => Self::Domain(std::boxed::Box::new(err.with_suggestion(suggestion))),
       Self::Port(err) => Self::Port(std::boxed::Box::new(err.with_suggestion(suggestion))),
       Self::Adapter(err) => Self::Adapter(std::boxed::Box::new(err.with_suggestion(suggestion))),
-      other => other,
+      Self::Validation(err) => {
+        Self::Validation(std::boxed::Box::new(err.with_suggestion(suggestion)))
+      }
+      Self::NotFound(err) => Self::NotFound(std::boxed::Box::new(err.with_suggestion(suggestion))),
+      Self::Conflict(err) => Self::Conflict(std::boxed::Box::new(err.with_suggestion(suggestion))),
     }
   }
 
-  /// Add multiple suggestions (builder pattern)
+  /// Add multiple suggestions (builder pattern). Works on every variant.
   pub fn with_suggestions(self, suggestions: &[&str]) -> Self {
     match self {
       Self::Domain(err) => Self::Domain(std::boxed::Box::new(err.with_suggestions(suggestions))),
       Self::Port(err) => Self::Port(std::boxed::Box::new(err.with_suggestions(suggestions))),
       Self::Adapter(err) => Self::Adapter(std::boxed::Box::new(err.with_suggestions(suggestions))),
-      other => other,
+      Self::Validation(err) => {
+        Self::Validation(std::boxed::Box::new(err.with_suggestions(suggestions)))
+      }
+      Self::NotFound(err) => {
+        Self::NotFound(std::boxed::Box::new(err.with_suggestions(suggestions)))
+      }
+      Self::Conflict(err) => {
+        Self::Conflict(std::boxed::Box::new(err.with_suggestions(suggestions)))
+      }
     }
   }
 
@@ -309,5 +329,41 @@ mod tests {
     let err = Hexserror::Domain(std::boxed::Box::new(domain_err));
 
     assert!(err.source().is_some());
+  }
+
+  /// why: `with_next_step` on a NotFound error must actually retain the step (it was silently
+  /// dropped before — the README even recommended this exact call). The guidance must appear in
+  /// the Display output that users and AI agents read.
+  #[test]
+  fn test_not_found_retains_next_step() {
+    let err = Hexserror::not_found("User", "123").with_next_step("Verify the ID and try again");
+    if let Hexserror::NotFound(nf) = &err {
+      assert_eq!(
+        nf.next_steps,
+        vec![String::from("Verify the ID and try again")]
+      );
+    } else {
+      panic!("expected NotFound");
+    }
+    assert!(format!("{}", err).contains("Verify the ID and try again"));
+  }
+
+  /// why: guidance builders must retain input on Validation and Conflict variants too, closing
+  /// the silent-drop gap for every non-layer variant.
+  #[test]
+  fn test_validation_and_conflict_retain_guidance() {
+    let v = Hexserror::validation("bad").with_suggestion("use a valid email");
+    if let Hexserror::Validation(ve) = &v {
+      assert_eq!(ve.suggestions, vec![String::from("use a valid email")]);
+    } else {
+      panic!("expected Validation");
+    }
+
+    let c = Hexserror::conflict("dup").with_next_steps(&["merge", "rename"]);
+    if let Hexserror::Conflict(ce) = &c {
+      assert_eq!(ce.next_steps.len(), 2);
+    } else {
+      panic!("expected Conflict");
+    }
   }
 }

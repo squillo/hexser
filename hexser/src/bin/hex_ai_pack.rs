@@ -4,6 +4,7 @@
 //! AI assistants and external tools. Requires the `ai` feature.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: to_json returns HexResult, so propagate with `?` instead of re-wrapping a String error.
 //! - 2026-07-20T00:00:00Z @AI: Allow `disallowed_macros` crate-wide in this CLI binary whose sole job is writing JSON to stdout.
 //! - 2025-10-06T18:14:00Z @AI: Introduce `hex-ai-pack` binary emitting comprehensive AgentPack JSON.
 
@@ -17,12 +18,7 @@ fn main() -> hexser::HexResult<()> {
   // Build the aggregated AgentPack and serialize to JSON.
   let pack = hexser::ai::AgentPack::from_graph_with_defaults(std::sync::Arc::as_ref(&graph_arc))?;
 
-  let json = match pack.to_json() {
-    std::result::Result::Ok(s) => s,
-    std::result::Result::Err(e) => {
-      return std::result::Result::Err(hexser::Hexserror::adapter("E_AI_PACK_SERIALIZE", &e));
-    }
-  };
+  let json = pack.to_json()?;
 
   std::println!("{}", json);
   std::result::Result::Ok(())

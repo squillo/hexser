@@ -5,6 +5,7 @@
 //! Includes resource type and identifier context.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: Add next_steps/suggestions storage + builders so Hexserror guidance builders no longer silently drop input on this variant.
 //! - 2025-10-09T21:51:00Z @AI: Add conditional source location serialization via env_control.
 //! - 2025-10-09T21:22:00Z @AI: Add Serde support for rich errors.
 //! - 2025-10-06T02:00:00Z @AI: Fix merge conflict duplicates.
@@ -20,6 +21,18 @@ pub struct NotFoundError {
   pub resource: String,
   /// Identifier of missing resource
   pub id: String,
+  /// Actionable next steps for resolving the error
+  #[cfg_attr(
+    feature = "serde",
+    serde(default, skip_serializing_if = "Vec::is_empty")
+  )]
+  pub next_steps: Vec<String>,
+  /// Concrete suggestions (e.g. example fixes)
+  #[cfg_attr(
+    feature = "serde",
+    serde(default, skip_serializing_if = "Vec::is_empty")
+  )]
+  pub suggestions: Vec<String>,
   /// Optional source code location
   #[cfg_attr(
     feature = "serde",
@@ -35,8 +48,38 @@ impl NotFoundError {
       code: String::from(crate::error::codes::resource::NOT_FOUND),
       resource: resource.into(),
       id: id.into(),
+      next_steps: Vec::new(),
+      suggestions: Vec::new(),
       location: None,
     }
+  }
+
+  /// Add an actionable next step (builder pattern)
+  pub fn with_next_step(mut self, step: impl Into<String>) -> Self {
+    self.next_steps.push(step.into());
+    self
+  }
+
+  /// Add multiple next steps (builder pattern)
+  pub fn with_next_steps(mut self, steps: &[&str]) -> Self {
+    self
+      .next_steps
+      .extend(steps.iter().map(|s| String::from(*s)));
+    self
+  }
+
+  /// Add a suggestion (builder pattern)
+  pub fn with_suggestion(mut self, suggestion: impl Into<String>) -> Self {
+    self.suggestions.push(suggestion.into());
+    self
+  }
+
+  /// Add multiple suggestions (builder pattern)
+  pub fn with_suggestions(mut self, suggestions: &[&str]) -> Self {
+    self
+      .suggestions
+      .extend(suggestions.iter().map(|s| String::from(*s)));
+    self
   }
 
   /// Add source location (builder pattern)
@@ -53,7 +96,17 @@ impl std::fmt::Display for NotFoundError {
       "Error [{}]: {} not found with id '{}'",
       self.code, self.resource, self.id
     )?;
-    write!(f, "\nNext Steps: Verify {} ID and existence", self.resource)?;
+
+    if self.next_steps.is_empty() {
+      write!(f, "\nNext Step: Verify {} ID and existence", self.resource)?;
+    } else {
+      for step in &self.next_steps {
+        write!(f, "\nNext Step: {}", step)?;
+      }
+    }
+    for suggestion in &self.suggestions {
+      write!(f, "\nSuggestion: {}", suggestion)?;
+    }
 
     if let Some(ref location) = self.location {
       write!(f, "\nSource: {}", location)?;
@@ -84,5 +137,25 @@ mod tests {
     assert!(display.contains("Order"));
     assert!(display.contains("abc-123"));
     assert!(display.contains(crate::error::codes::resource::NOT_FOUND));
+  }
+
+  /// why: next steps and suggestions added via the builders must render in Display and survive
+  /// a serde round-trip, so the rich-error guidance reaches both humans and serialized API
+  /// consumers instead of being silently dropped.
+  #[test]
+  #[cfg(feature = "serde")]
+  fn test_guidance_renders_and_round_trips() {
+    let err = NotFoundError::new("User", "123")
+      .with_next_step("Verify the ID")
+      .with_suggestion("call users.list() to see valid ids");
+
+    let display = format!("{}", err);
+    assert!(display.contains("Verify the ID"));
+    assert!(display.contains("call users.list()"));
+
+    let json = serde_json::to_string(&err).unwrap();
+    let back: NotFoundError = serde_json::from_str(&json).unwrap();
+    assert_eq!(back.next_steps, err.next_steps);
+    assert_eq!(back.suggestions, err.suggestions);
   }
 }

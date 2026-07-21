@@ -6,6 +6,7 @@
 //! multi-project architecture data serving.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: to_json now returns HexResult, so read_resource propagates serialize errors with `?` instead of re-wrapping a String.
 //! - 2026-07-20T00:00:00Z @AI: Handle JSON-RPC notifications (no response), two-step parse for correct -32700/-32600 codes, timeout-bounded stderr-capped refresh build, dedup refresh via refresh_project(&self); add handle_line for testability.
 //! - 2025-10-10T20:16:00Z @AI: Add Default impl and fix clippy warnings (needless borrows in cargo args).
 //! - 2025-10-10T19:48:00Z @AI: Implement hexser/refresh method for triggering recompilation and clearing inventory cache.
@@ -390,15 +391,8 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
       "context" => {
         let builder = crate::ai::ContextBuilder::new(std::sync::Arc::as_ref(&project.graph));
         let context = builder.build()?;
-        let json = match context.to_json() {
-          std::result::Result::Ok(j) => j,
-          std::result::Result::Err(e) => {
-            return std::result::Result::Err(crate::Hexserror::adapter(
-              "E_MCP_CONTEXT_SERIALIZE",
-              &e,
-            ));
-          }
-        };
+        // to_json now returns HexResult, so `?` propagates a proper Hexserror directly.
+        let json = context.to_json()?;
         std::result::Result::Ok(crate::domain::mcp::ResourceContent::text(
           std::string::String::from(uri),
           json,
@@ -408,12 +402,7 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
       "pack" => {
         let pack =
           crate::ai::AgentPack::from_graph_with_defaults(std::sync::Arc::as_ref(&project.graph))?;
-        let json = match pack.to_json() {
-          std::result::Result::Ok(j) => j,
-          std::result::Result::Err(e) => {
-            return std::result::Result::Err(crate::Hexserror::adapter("E_MCP_PACK_SERIALIZE", &e));
-          }
-        };
+        let json = pack.to_json()?;
         std::result::Result::Ok(crate::domain::mcp::ResourceContent::text(
           std::string::String::from(uri),
           json,

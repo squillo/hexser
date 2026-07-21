@@ -11,6 +11,7 @@
 //! resilient to missing optional docs.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: to_json now returns HexResult<String> (was stringly-typed Result<String,String> re-wrapped at every call site).
 //! - 2025-10-06T18:14:00Z @AI: Introduce AgentPack aggregator with defaults and JSON serialization.
 
 #[cfg(feature = "ai")]
@@ -110,14 +111,16 @@ impl AgentPack {
   }
 
   /// Serialize this AgentPack to JSON.
-  /// Returns Ok(String) or Err(String) with an explanatory message.
-  pub fn to_json(&self) -> Result<String, String> {
-    match serde_json::to_string(self) {
-      std::result::Result::Ok(s) => std::result::Result::Ok(s),
-      std::result::Result::Err(e) => {
-        std::result::Result::Err(format!("Serialization error: {}", e))
-      }
-    }
+  ///
+  /// Returns the JSON on success, or a `Hexserror` on failure — consistent with the rest of the
+  /// crate (was a stringly-typed `Result<String, String>` re-wrapped at every call site).
+  pub fn to_json(&self) -> crate::result::hex_result::HexResult<String> {
+    serde_json::to_string(self).map_err(|e| {
+      crate::error::hex_error::Hexserror::adapter(
+        crate::error::codes::adapter::MAPPING_FAILURE,
+        &format!("Failed to serialize AgentPack to JSON: {}", e),
+      )
+    })
   }
 
   fn default_guidelines() -> GuidelinesSnapshot {

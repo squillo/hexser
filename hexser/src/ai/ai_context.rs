@@ -5,6 +5,7 @@
 //! Follows JSON Schema for validation and tooling integration.
 //!
 //! Revision History
+//! - 2026-07-21T00:00:00Z @AI: to_json now returns HexResult<String> (was stringly-typed Result<String,String> re-wrapped at every call site).
 //! - 2025-10-10T20:28:00Z @AI: Add MethodInfo to ComponentInfo for capturing method signatures and documentation.
 //! - 2025-10-02T18:00:00Z @AI: Initial AI context structure.
 //! - 2025-10-06T17:59:00Z @AI: Add to_json() serializer and tests; ensure ai feature includes serde.
@@ -376,13 +377,16 @@ mod tests {
 impl AIContext {
   /// Serialize this AIContext to a JSON string.
   ///
-  /// Returns a String on success, or an error message on failure.
-  /// Uses serde_json with a stable field order as defined by this struct.
-  pub fn to_json(&self) -> Result<String, String> {
-    match serde_json::to_string(self) {
-      Ok(s) => Ok(s),
-      Err(e) => Err(format!("Serialization error: {}", e)),
-    }
+  /// Returns the JSON on success, or a `Hexserror` on failure — consistent with the rest of the
+  /// crate's error handling (was a stringly-typed `Result<String, String>` that every caller
+  /// re-wrapped).
+  pub fn to_json(&self) -> crate::result::hex_result::HexResult<String> {
+    serde_json::to_string(self).map_err(|e| {
+      crate::error::hex_error::Hexserror::adapter(
+        crate::error::codes::adapter::MAPPING_FAILURE,
+        &format!("Failed to serialize AIContext to JSON: {}", e),
+      )
+    })
   }
 }
 
