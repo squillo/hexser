@@ -6,6 +6,7 @@
 //! multi-project architecture data serving.
 //!
 //! Revision History
+//! - 2026-07-20T00:00:00Z @AI: Handle JSON-RPC notifications (no response), two-step parse for correct -32700/-32600 codes, timeout-bounded stderr-capped refresh build, dedup refresh via refresh_project(&self); add handle_line for testability.
 //! - 2025-10-10T20:16:00Z @AI: Add Default impl and fix clippy warnings (needless borrows in cargo args).
 //! - 2025-10-10T19:48:00Z @AI: Implement hexser/refresh method for triggering recompilation and clearing inventory cache.
 //! - 2025-10-10T18:37:00Z @AI: Replace single graph with ProjectRegistry for multi-project support.
@@ -124,6 +125,9 @@ impl McpStdioServer {
     let stdin = std::io::stdin();
     let mut stdout = std::io::stdout();
 
+    // NOTE (R57, deferred): stdin lines are currently unbounded. A future change should cap
+    // per-frame size and reject oversized frames with a -32600 response for extra robustness
+    // against a misbehaving client.
     for line_result in stdin.lines() {
       let line = match line_result {
         std::result::Result::Ok(l) => l,
@@ -135,27 +139,61 @@ impl McpStdioServer {
         }
       };
 
-      if line.trim().is_empty() {
-        continue;
+      // `handle_line` returns None for blank lines and for notifications (which must not be
+      // answered), and Some(response) for everything that requires a reply.
+      if let std::option::Option::Some(response) = self.handle_line(&line) {
+        self.write_response(&mut stdout, &response)?;
       }
-
-      let request: crate::domain::mcp::JsonRpcRequest = match serde_json::from_str(&line) {
-        std::result::Result::Ok(req) => req,
-        std::result::Result::Err(e) => {
-          let error_response = crate::domain::mcp::JsonRpcResponse::error(
-            serde_json::Value::Null,
-            crate::domain::mcp::JsonRpcError::parse_error(format!("Invalid JSON: {}", e)),
-          );
-          self.write_response(&mut stdout, &error_response)?;
-          continue;
-        }
-      };
-
-      let response = <Self as crate::ports::mcp_server::McpServer>::handle_request(self, request);
-      self.write_response(&mut stdout, &response)?;
     }
 
     std::result::Result::Ok(())
+  }
+
+  /// Process one line of input, returning a response to write, or `None` when nothing should be
+  /// written (a blank line, or a JSON-RPC notification which must not be responded to).
+  ///
+  /// Parsing is two-step so the correct error code is returned: malformed JSON is a parse error
+  /// (-32700); syntactically valid JSON that is not a valid request object is an invalid request
+  /// (-32600).
+  fn handle_line(&self, line: &str) -> std::option::Option<crate::domain::mcp::JsonRpcResponse> {
+    if line.trim().is_empty() {
+      return std::option::Option::None;
+    }
+
+    let value: serde_json::Value = match serde_json::from_str(line) {
+      std::result::Result::Ok(v) => v,
+      std::result::Result::Err(e) => {
+        return std::option::Option::Some(crate::domain::mcp::JsonRpcResponse::error(
+          serde_json::Value::Null,
+          crate::domain::mcp::JsonRpcError::parse_error(format!("Invalid JSON: {}", e)),
+        ));
+      }
+    };
+
+    let request: crate::domain::mcp::JsonRpcRequest = match serde_json::from_value(value) {
+      std::result::Result::Ok(req) => req,
+      std::result::Result::Err(e) => {
+        return std::option::Option::Some(crate::domain::mcp::JsonRpcResponse::error(
+          serde_json::Value::Null,
+          crate::domain::mcp::JsonRpcError::invalid_request(format!(
+            "Invalid JSON-RPC request: {}",
+            e
+          )),
+        ));
+      }
+    };
+
+    // JSON-RPC 2.0: a notification (no `id`) must be processed WITHOUT any response. The MCP
+    // handshake sends `notifications/initialized` immediately after `initialize`; hexser's
+    // server holds no per-notification state, so known notifications are accepted and unknown
+    // ones ignored — either way, no response is written.
+    if request.is_notification() {
+      return std::option::Option::None;
+    }
+
+    std::option::Option::Some(
+      <Self as crate::ports::mcp_server::McpServer>::handle_request(self, request),
+    )
   }
 
   fn write_response(
@@ -189,6 +227,106 @@ impl McpStdioServer {
     }
 
     std::result::Result::Ok(())
+  }
+
+  /// Maximum wall-clock time a `hexser/refresh` cargo build may run before it is terminated.
+  const REFRESH_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(300);
+
+  /// Maximum number of stderr bytes retained from a refresh build (older output is drained but
+  /// discarded so the child never blocks on a full pipe).
+  const MAX_REFRESH_STDERR: usize = 64 * 1024;
+
+  /// Run `cargo build -p <project> --features macros` in `root`, bounded by a timeout and a
+  /// stderr cap.
+  ///
+  /// The MCP server processes requests on a single thread, so an unbounded synchronous build
+  /// would freeze the whole server (no pings, no reads) if cargo stalls. This spawns the build,
+  /// drains its stderr on a helper thread (keeping only the first `MAX_REFRESH_STDERR` bytes so
+  /// a large error log cannot exhaust memory or deadlock on a full pipe), and kills the child if
+  /// it exceeds `REFRESH_TIMEOUT`.
+  fn run_cargo_build_bounded(
+    project: &str,
+    root: &std::path::Path,
+  ) -> crate::HexResult<crate::domain::mcp::RefreshResult> {
+    use std::io::Read;
+
+    let mut child = std::process::Command::new("cargo")
+      .args(["build", "-p", project, "--features", "macros"])
+      .current_dir(root)
+      .stdout(std::process::Stdio::null())
+      .stderr(std::process::Stdio::piped())
+      .spawn()
+      .map_err(|e| {
+        crate::Hexserror::adapter(
+          "E_MCP_COMPILE",
+          &format!("Failed to execute cargo build: {}", e),
+        )
+      })?;
+
+    let mut stderr = child.stderr.take();
+    let drain = std::thread::spawn(move || {
+      let mut kept: std::vec::Vec<u8> = std::vec::Vec::new();
+      if let std::option::Option::Some(ref mut s) = stderr {
+        let mut chunk = [0u8; 8192];
+        loop {
+          match s.read(&mut chunk) {
+            std::result::Result::Ok(0) => break,
+            std::result::Result::Ok(n) => {
+              if kept.len() < Self::MAX_REFRESH_STDERR {
+                let take = (Self::MAX_REFRESH_STDERR - kept.len()).min(n);
+                kept.extend_from_slice(&chunk[..take]);
+              }
+              // Keep reading beyond the cap to drain the pipe (discarding), so the child
+              // never blocks writing stderr.
+            }
+            std::result::Result::Err(_) => break,
+          }
+        }
+      }
+      kept
+    });
+
+    let start = std::time::Instant::now();
+    let status = loop {
+      match child.try_wait() {
+        std::result::Result::Ok(std::option::Option::Some(s)) => {
+          break std::option::Option::Some(s);
+        }
+        std::result::Result::Ok(std::option::Option::None) => {
+          if start.elapsed() > Self::REFRESH_TIMEOUT {
+            let _ = child.kill();
+            let _ = child.wait();
+            break std::option::Option::None;
+          }
+          std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+        std::result::Result::Err(e) => {
+          return std::result::Result::Err(crate::Hexserror::adapter(
+            "E_MCP_COMPILE",
+            &format!("Failed to wait for cargo build: {}", e),
+          ));
+        }
+      }
+    };
+
+    let stderr_bytes = drain.join().unwrap_or_default();
+
+    match status {
+      std::option::Option::None => std::result::Result::Ok(
+        crate::domain::mcp::RefreshResult::compilation_error(format!(
+          "cargo build exceeded the {}s timeout and was terminated",
+          Self::REFRESH_TIMEOUT.as_secs()
+        )),
+      ),
+      std::option::Option::Some(s) if s.success() => {
+        std::result::Result::Ok(crate::domain::mcp::RefreshResult::restart_required())
+      }
+      std::option::Option::Some(_) => {
+        std::result::Result::Ok(crate::domain::mcp::RefreshResult::compilation_error(
+          std::string::String::from_utf8_lossy(&stderr_bytes).to_string(),
+        ))
+      }
+    }
   }
 }
 
@@ -290,7 +428,7 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
   }
 
   fn refresh_project(
-    &mut self,
+    &self,
     request: crate::domain::mcp::RefreshRequest,
   ) -> crate::HexResult<crate::domain::mcp::RefreshResult> {
     let project = self.registry.get(&request.project).ok_or_else(|| {
@@ -300,32 +438,18 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
       )
     })?;
 
-    let output = std::process::Command::new("cargo")
-      .args(["build", "-p", &request.project, "--features", "macros"])
-      .current_dir(&project.root_path)
-      .output()
-      .map_err(|e| {
-        crate::Hexserror::adapter(
-          "E_MCP_COMPILE",
-          &format!("Failed to execute cargo build: {}", e),
-        )
-      })?;
-
-    if !output.status.success() {
-      let error_msg = std::string::String::from_utf8_lossy(&output.stderr).to_string();
-      return std::result::Result::Ok(crate::domain::mcp::RefreshResult::compilation_error(
-        error_msg,
-      ));
-    }
-
-    std::result::Result::Ok(crate::domain::mcp::RefreshResult::restart_required())
+    // Single source of truth for the build: timeout-bounded, stderr-capped. The stdio
+    // handle_request arm delegates here rather than duplicating the cargo invocation.
+    Self::run_cargo_build_bounded(&request.project, &project.root_path)
   }
 
   fn handle_request(
     &self,
     request: crate::domain::mcp::JsonRpcRequest,
   ) -> crate::domain::mcp::JsonRpcResponse {
-    let id = request.id.clone();
+    // Notifications carry no id and must never reach a response-producing path, but callers
+    // that invoke handle_request directly get `null` echoed rather than a spurious id.
+    let id = request.response_id();
 
     match request.method.as_str() {
       "initialize" => {
@@ -472,82 +596,23 @@ impl crate::ports::mcp_server::McpServer for McpStdioServer {
           }
         };
 
-        let project = match self.registry.get(&refresh_request.project) {
-          Some(p) => p,
-          None => {
-            let error_result = crate::domain::mcp::RefreshResult::compilation_error(format!(
-              "Project not found: {}",
-              refresh_request.project
-            ));
-            let result_value = match serde_json::to_value(error_result) {
-              std::result::Result::Ok(v) => v,
-              std::result::Result::Err(e) => {
-                return crate::domain::mcp::JsonRpcResponse::error(
-                  id,
-                  crate::domain::mcp::JsonRpcError::internal_error(format!(
-                    "Serialization error: {}",
-                    e
-                  )),
-                );
-              }
-            };
-            return crate::domain::mcp::JsonRpcResponse::success(id, result_value);
-          }
-        };
-
-        let output = match std::process::Command::new("cargo")
-          .args([
-            "build",
-            "-p",
-            &refresh_request.project,
-            "--features",
-            "macros",
-          ])
-          .current_dir(&project.root_path)
-          .output()
-        {
-          std::result::Result::Ok(o) => o,
-          std::result::Result::Err(e) => {
-            let error_result = crate::domain::mcp::RefreshResult::compilation_error(format!(
-              "Failed to execute cargo build: {}",
-              e
-            ));
-            let result_value = match serde_json::to_value(error_result) {
-              std::result::Result::Ok(v) => v,
-              std::result::Result::Err(e) => {
-                return crate::domain::mcp::JsonRpcResponse::error(
-                  id,
-                  crate::domain::mcp::JsonRpcError::internal_error(format!(
-                    "Serialization error: {}",
-                    e
-                  )),
-                );
-              }
-            };
-            return crate::domain::mcp::JsonRpcResponse::success(id, result_value);
-          }
-        };
-
-        let result = if !output.status.success() {
-          let error_msg = std::string::String::from_utf8_lossy(&output.stderr).to_string();
-          crate::domain::mcp::RefreshResult::compilation_error(error_msg)
-        } else {
-          crate::domain::mcp::RefreshResult::restart_required()
-        };
-
-        let result_value = match serde_json::to_value(result) {
-          std::result::Result::Ok(v) => v,
-          std::result::Result::Err(e) => {
-            return crate::domain::mcp::JsonRpcResponse::error(
+        // Delegate to the single shared implementation (no duplicated cargo/build logic).
+        match self.refresh_project(refresh_request) {
+          std::result::Result::Ok(result) => match serde_json::to_value(result) {
+            std::result::Result::Ok(v) => crate::domain::mcp::JsonRpcResponse::success(id, v),
+            std::result::Result::Err(e) => crate::domain::mcp::JsonRpcResponse::error(
               id,
               crate::domain::mcp::JsonRpcError::internal_error(format!(
                 "Serialization error: {}",
                 e
               )),
-            );
-          }
-        };
-        crate::domain::mcp::JsonRpcResponse::success(id, result_value)
+            ),
+          },
+          std::result::Result::Err(e) => crate::domain::mcp::JsonRpcResponse::error(
+            id,
+            crate::domain::mcp::JsonRpcError::internal_error(format!("{}", e)),
+          ),
+        }
       }
       _ => crate::domain::mcp::JsonRpcResponse::error(
         id,
@@ -722,10 +787,11 @@ mod tests {
     std::assert_eq!(response.error.unwrap().code, -32601);
   }
 
+  /// why: refreshing a project that isn't registered must surface a JSON-RPC error, not a fake
+  /// "success" carrying a compilation_error payload. Previously the inline path and the
+  /// refresh_project impl disagreed (M19); now both go through refresh_project, which errors.
   #[test]
   fn test_handle_refresh_project_not_found() {
-    // Test: Validates refresh returns error for nonexistent project
-    // Justification: Error handling verification for refresh endpoint
     let server = McpStdioServer::new();
     let request = crate::domain::mcp::JsonRpcRequest::new(
       serde_json::Value::Number(serde_json::Number::from(1)),
@@ -734,19 +800,14 @@ mod tests {
     );
 
     let response = server.handle_request(request);
-    std::assert!(response.result.is_some());
-    std::assert!(response.error.is_none());
-
-    let result: crate::domain::mcp::RefreshResult =
-      serde_json::from_value(response.result.unwrap()).unwrap();
-    std::assert_eq!(result.status, "error");
-    std::assert!(!result.compiled);
+    std::assert!(response.result.is_none());
+    std::assert!(response.error.is_some());
   }
 
+  /// why: a refresh with no params is a malformed call and must be rejected with -32600
+  /// (invalid request) before any build is attempted.
   #[test]
   fn test_handle_refresh_missing_params() {
-    // Test: Validates refresh returns error when params missing
-    // Justification: Validates parameter validation
     let server = McpStdioServer::new();
     let request = crate::domain::mcp::JsonRpcRequest::new(
       serde_json::Value::Number(serde_json::Number::from(1)),
@@ -758,5 +819,44 @@ mod tests {
     std::assert!(response.result.is_none());
     std::assert!(response.error.is_some());
     std::assert_eq!(response.error.unwrap().code, -32600);
+  }
+
+  /// why: an id-less notification (e.g. the mandatory `notifications/initialized`) must be
+  /// processed with NO response written — the exact JSON-RPC 2.0 rule the server violated
+  /// before (H4). `handle_line` returning None encodes "write nothing".
+  #[test]
+  fn test_notification_produces_no_response() {
+    let server = McpStdioServer::new();
+    let line = r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#;
+    std::assert!(server.handle_line(line).is_none());
+  }
+
+  /// why: malformed JSON must get a parse error (-32700), while syntactically valid JSON that
+  /// is not a request object must get an invalid-request error (-32600). The server previously
+  /// returned -32700 for both.
+  #[test]
+  fn test_handle_line_error_code_distinguishes_parse_from_shape() {
+    let server = McpStdioServer::new();
+
+    let malformed = server.handle_line("{not json");
+    let malformed = malformed.expect("malformed JSON must produce a response");
+    std::assert_eq!(malformed.error.unwrap().code, -32700);
+
+    // Valid JSON, but missing the required `method` field.
+    let bad_shape = server.handle_line(r#"{"jsonrpc":"2.0","id":1}"#);
+    let bad_shape = bad_shape.expect("invalid request object must produce a response");
+    std::assert_eq!(bad_shape.error.unwrap().code, -32600);
+  }
+
+  /// why: a normal id-bearing request still yields exactly one response with the matching id.
+  #[test]
+  fn test_handle_line_request_produces_response() {
+    let server = McpStdioServer::new();
+    let line = r#"{"jsonrpc":"2.0","id":7,"method":"resources/list"}"#;
+    let response = server
+      .handle_line(line)
+      .expect("a request must produce a response");
+    std::assert_eq!(response.id, serde_json::json!(7));
+    std::assert!(response.result.is_some());
   }
 }
