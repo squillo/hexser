@@ -1,0 +1,20 @@
+{
+  "name": "hexser",
+  "owner": {
+    "name": "N Lang Team",
+    "url": "https://github.com/squillo/hexser"
+  },
+  "description": "Official Claude Code plugins for hexser — zero-boilerplate Hexagonal Architecture for Rust.",
+  "plugins": [
+    {
+      "name": "hexser",
+      "source": "./plugins/hexser",
+      "description": "Build, review, and migrate hexser (hexagonal Rust) projects: Domain/Ports/Adapters scaffolding, CQRS Directives & Queries, rich Hexserror handling, architecture-graph introspection, and MCP wiring.",
+      "version": "0.5.0",
+      "author": { "name": "N Lang Team" },
+      "homepage": "https://github.com/squillo/hexser",
+      "license": "MIT OR Apache-2.0",
+      "keywords": ["rust", "hexagonal-architecture", "ports-and-adapters", "ddd", "cqrs", "hexser"]
+    }
+  ]
+}
