@@ -1,0 +1,13 @@
+{
+  "name": "hexser",
+  "version": "0.5.0",
+  "description": "Zero-boilerplate Hexagonal Architecture for Rust. Scaffold Domain/Ports/Adapters, write CQRS Directives & Queries, build rich Hexserror values, introspect and visualize your architecture graph, and wire the hexser MCP server so Claude can read your architecture live.",
+  "author": {
+    "name": "N Lang Team",
+    "url": "https://github.com/squillo/hexser"
+  },
+  "homepage": "https://github.com/squillo/hexser",
+  "repository": "https://github.com/squillo/hexser",
+  "license": "MIT OR Apache-2.0",
+  "keywords": ["rust", "hexagonal-architecture", "ports-and-adapters", "ddd", "cqrs", "hexser", "mcp"]
+}
