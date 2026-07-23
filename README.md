@@ -68,6 +68,17 @@ trait UserRepository: QueryRepository<User> {}
 // let found = <YourRepo as QueryRepository<User>>::find_one(&repo, &UserFilter::ByEmail("a@b.com".into()))?;
 ```
 
+## Claude Code plugin
+
+Using hexser with [Claude Code](https://claude.com/claude-code)? Install the official plugin — it teaches Claude the current hexser API and adds commands for scaffolding, review, visualization, and migration:
+
+```
+/plugin marketplace add squillo/hexser
+/plugin install hexser@hexser
+```
+
+It ships an auto-activating `hexser` skill (it fires whenever you edit Rust that uses hexser) plus slash commands: `/hexser:new`, `/hexser:add-adapter`, `/hexser:add-usecase`, `/hexser:review`, `/hexser:graph`, `/hexser:migrate`, and `/hexser:mcp-setup` (wires hexser's MCP server so Claude can read your architecture graph live). See [`plugins/hexser/README.md`](./plugins/hexser/README.md).
+
 ## CloudEvents v1.0 Support
 
 Hexser includes built-in support for CloudEvents v1.0 specification, enabling standards-compliant, transport-agnostic domain event publishing and consumption:
