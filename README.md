@@ -45,7 +45,7 @@ Quick start with hexser:
 
 ```toml
 [dependencies]
-hexser = { path = "./hexser", version = "0.4.7", features = ["macros"] }
+hexser = { path = "./hexser", version = "0.5", features = ["macros"] }
 ```
 
 ```rust
@@ -53,7 +53,7 @@ use hexser::prelude::*;
 
 // Domain entity
 struct User { id: String }
-impl Entity for User { type Id = String; }
+impl HexEntity for User { type Id = String; }
 
 // Repository port (query-oriented)
 // Define lightweight filter/sort types in your domain
@@ -139,7 +139,7 @@ Use directly from the workspace:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "./hexser_potions", version = "0.4.7" }
+hexser_potions = { path = "./hexser_potions", version = "0.5" }
 ```
 
 Then in your code:
