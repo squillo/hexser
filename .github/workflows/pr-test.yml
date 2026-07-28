@@ -27,7 +27,7 @@ jobs:
     name: Format Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo fmt --all -- --check
 
@@ -36,7 +36,7 @@ jobs:
     name: Clippy (lib + bins)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: clippy
@@ -47,7 +47,7 @@ jobs:
     name: Test (default features)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: test-default
@@ -59,7 +59,7 @@ jobs:
     name: Test (all features)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: test-all-features
@@ -83,7 +83,7 @@ jobs:
     name: Feature Matrix
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: feature-matrix
@@ -104,7 +104,7 @@ jobs:
     name: Examples build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: examples
@@ -116,7 +116,7 @@ jobs:
     name: Realworld example
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: realworld
@@ -129,7 +129,7 @@ jobs:
     name: Documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: docs
@@ -142,7 +142,7 @@ jobs:
     name: cargo-deny
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Install the pinned toolchain so `cargo metadata` (invoked by cargo-deny) resolves the
       # rust-toolchain.toml override on the host.
       - uses: actions-rust-lang/setup-rust-toolchain@v1
