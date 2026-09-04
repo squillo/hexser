@@ -8,6 +8,7 @@
 //! this derive to a marker struct representing the port.
 //!
 //! Revision History
+//! - 2026-09-04T00:00:00Z @AI: Pass the derive name to the shared codegen (generic-target compile error names the derive).
 //! - 2026-07-20T00:00:00Z @AI: Parse #[hex(role = "...")] override; use shared codegen; validate target; fully-qualified paths.
 //! - 2025-10-02T00:00:00Z @AI: Initial HexPort derive implementation.
 
@@ -24,6 +25,7 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
   let expanded = crate::common::codegen::registrable_and_submit(
     &input,
+    "HexPort",
     quote::quote!(::hexser::graph::Layer::Port),
     role,
   );

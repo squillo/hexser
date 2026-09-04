@@ -8,6 +8,10 @@
 //! qualified (`::hexser::`, `::std::`) for hygiene.
 //!
 //! Revision History
+//! - 2026-09-04T00:00:00Z @AI: A registration derive on a GENERIC type now refuses with a
+//!   compile error naming the marker-struct remedy, instead of silently discarding the
+//!   inventory submission (the type implemented `Registrable`, answered `node_info()`, and was
+//!   never in the graph). `registrable_and_submit` takes the derive's name for that message.
 //! - 2026-07-20T00:00:00Z @AI: Add #[hex(role = "...")] override parsing so component roles are not hardcoded.
 //! - 2026-07-20T00:00:00Z @AI: Extract shared Registrable+inventory codegen; fully-qualified paths; skip inventory submission for generic types.
 
@@ -16,6 +20,10 @@
 /// Returns the tokens `::hexser::graph::Role::VariantName` when present, or `None` when no
 /// `role` override is supplied (the derive then applies its default). An unknown variant name
 /// produces a normal compile error at the `Role::` path, pointing at the user's attribute.
+///
+/// Every registration derive calls this, so `#[hex(role = "...")]` means the same thing on all
+/// five of them; only the default differs. A derive that declares `attributes(hex)` and does
+/// NOT call this would accept the attribute and register the wrong role in silence.
 pub fn role_override(attrs: &[syn::Attribute]) -> Option<proc_macro2::TokenStream> {
   let mut found = None;
   for attr in attrs {
@@ -37,21 +45,32 @@ pub fn role_override(attrs: &[syn::Attribute]) -> Option<proc_macro2::TokenStrea
   found
 }
 
-/// Generate the `Registrable` implementation and (for non-generic types) the inventory
-/// submission for a component derive.
+/// Generate the `Registrable` implementation and the inventory submission for a component
+/// derive, or a compile error when the target is generic.
 ///
+/// `derive_name` is the derive's user-facing name (e.g. `"HexDomain"`); it appears in the
+/// generic-target error so the message names the derive the user actually wrote.
 /// `layer` and `role` are token streams naming the `::hexser::graph::Layer` and
 /// `::hexser::graph::Role` variants for this component kind.
 ///
 /// # Generics
 ///
-/// The `Registrable` impl is emitted for generic types, but the `inventory::submit!` is
-/// only emitted for non-generic types: the submission expands at item scope where a type's
-/// generic parameters are not in scope, and `ComponentEntry::new::<T>()` requires a single
-/// concrete type. Registering a generic component is therefore skipped rather than producing
-/// an inscrutable `cannot find type T in this scope` error at the derive site.
+/// A generic target is REFUSED, not silently skipped. The submission expands at item scope,
+/// where a type's parameters are not in scope, and `ComponentEntry::new::<T>()` needs one
+/// concrete type — `::std::any::type_name::<Self>()` on a generic names a monomorphization
+/// chosen by a consumer crate, so there is no single honest node for the type. Answering that
+/// by dropping the submission (the previous behavior) left the type implementing `Registrable`
+/// and answering `node_info()` while being absent from the graph, with no error and no
+/// warning: a computed fact discarded in silence. The derive now says so, and names the
+/// remedy — a non-generic marker struct — which also matches the polarity of hand
+/// registration, where `ComponentEntry::new::<T>()` on a generic is already a compile error.
+///
+/// The `Registrable` impl is still emitted alongside the error so a consumer sees ONE error
+/// about the real problem rather than a cascade of "trait not implemented" errors at every
+/// use site.
 pub fn registrable_and_submit(
   input: &syn::DeriveInput,
+  derive_name: &str,
   layer: proc_macro2::TokenStream,
   role: proc_macro2::TokenStream,
 ) -> proc_macro2::TokenStream {
@@ -91,14 +110,26 @@ pub fn registrable_and_submit(
     }
   };
 
-  let submission = if input.generics.params.is_empty() {
+  let submission = if is_generic {
+    let message = format!(
+      "`#[derive({derive_name})]` cannot register a generic type in the architecture graph, \
+       and will not skip it in silence: `inventory` submits one entry per component and \
+       `type_name::<Self>()` on a generic names a monomorphization chosen by a consumer crate, \
+       so there is no single honest node for this type (a lifetime or const parameter is \
+       likewise not in scope where the submission expands). Derive on a NON-GENERIC marker \
+       struct that stands for the component instead, e.g. `#[derive({derive_name})] struct \
+       {name}Component;`, and leave the generic type underived; or hand-write `impl \
+       hexser::registry::Registrable` on the generic and submit the instantiation you mean. \
+       This previously compiled: the type implemented `Registrable`, answered `node_info()`, \
+       and was never in the graph."
+    );
+    syn::Error::new_spanned(input, message).to_compile_error()
+  } else {
     quote::quote! {
       ::hexser::inventory::submit! {
         ::hexser::registry::ComponentEntry::new::<#name>()
       }
     }
-  } else {
-    proc_macro2::TokenStream::new()
   };
 
   quote::quote! {

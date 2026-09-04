@@ -180,14 +180,16 @@ Enables procedural macros for deriving hexagonal architecture traits.
 
 **Provides:**
 - `#[derive(HexEntity)]` - Implement HexEntity trait for domain entities (`Id` is taken from the struct's `id` field)
-- `#[derive(HexDomain)]` - Register a domain-layer type in the architecture graph (role defaults to `Entity`)
+- `#[derive(HexDomain)]` - Register a domain-layer type in the architecture graph (role defaults to `Entity`; override with `#[hex(role = "ValueObject")]`)
 - `#[derive(HexValueItem)]` - Implement HexValueItem trait with default validation (override validate() for custom logic)
 - `#[derive(HexAggregate)]` - Implement `Aggregate` with a default no-op `check_invariants` (override for real invariants); requires the type to also implement `HexEntity`
 - `#[derive(HexPort)]` - Register a port-layer component (struct/enum; role defaults to `Repository`). Derives target structs/enums, not traits — apply it to a marker struct alongside your port trait.
 - `#[derive(HexAdapter)]` - Mark adapter implementations (implements the `Adapter` marker trait and registers the type)
 - `#[derive(HexRepository)]` - Semantic marker for repository ports; pair with `#[derive(HexPort)]` (adds no trait impl or registration of its own)
-- `#[derive(HexDirective)]` - Implement `Directive` with a default no-op `validate` (`Ok(())`) and register the type; implement `Directive` manually instead if you need real validation logic
-- `#[derive(HexQuery)]` - Register a query type in the architecture graph
+- `#[derive(HexDirective)]` - Implement `Directive` with a default no-op `validate` (`Ok(())`) and register the type (role defaults to `Directive`; override with `#[hex(role = "...")]`); implement `Directive` manually instead if you need real validation logic
+- `#[derive(HexQuery)]` - Register a query type in the architecture graph (role defaults to `Query`; override with `#[hex(role = "...")]` — registration-only, so it doubles as the derive for any Application-layer marker)
+
+All five registration derives honour `#[hex(role = "...")]`, and all five REFUSE a generic target with a compile error naming the marker-struct remedy: `inventory` cannot name a single honest node for `Foo<T>`, so skipping the submission in silence would leave a type that implements `Registrable` and is in no graph. Registering without a derive (`hexser::hex_register_domain!` and friends) emits the same impl + submission pair.
 
 **Dependencies:** `hexser_macros`
 

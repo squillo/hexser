@@ -1,38 +1,67 @@
 //! Template framework for quickly scaffolding hexser components.
 //!
-//! This module provides lightweight helpers and macros to implement
-//! Registrable for your components without relying on derive macros.
-//! It complements proc-macro derives by offering simple, explicit
-//! building blocks you can use in any context (including no-macros builds).
+//! This module provides lightweight helpers and macros that REGISTER your components
+//! without relying on derive macros: each one emits the `Registrable` impl AND the
+//! `inventory::submit!` that puts the type in `HexGraph::current()`. It complements
+//! proc-macro derives by offering simple, explicit building blocks you can use in any
+//! context (including no-macros builds).
+//!
+//! ⚠ BOTH HALVES ARE THE REGISTRATION. `HexGraph::current()` is built by iterating the
+//! `inventory` registry, so a `Registrable` impl on its own yields a type that answers
+//! `node_info()` correctly and is in NO graph. These macros emitted only the impl until
+//! 2026-09-04: the crate had no non-derive door into the graph at all, while naming these
+//! `hex_register_*`.
+//!
+//! Registration is an ITEM-scope act — the submission is a static discovered at link time —
+//! so invoke these macros at module scope, next to the type, not inside a function body.
 //!
 //! # Quick examples
 //!
 //! ```rust
 //! use hexser::prelude::*;
-//! use hexser::hex_register_domain;
 //!
 //! struct MyEntity { id: u64 }
 //!
-//! // Implement Registrable for a domain Entity using a template macro
+//! // Register a domain Entity using a template macro (module scope, next to the type).
 //! hexser::hex_register_domain!(MyEntity, Role::Entity);
 //!
-//! // Now you can obtain node info for graph registration
-//! let info = <MyEntity as Registrable>::node_info();
-//! assert_eq!(info.layer, Layer::Domain);
-//! assert_eq!(info.role, Role::Entity);
+//! fn main() {
+//!   // The type answers node_info() AND is in the process-wide graph.
+//!   let info = <MyEntity as Registrable>::node_info();
+//!   assert_eq!(info.layer, Layer::Domain);
+//!   assert_eq!(info.role, Role::Entity);
+//!   assert!(
+//!     hexser::HexGraph::current()
+//!       .nodes()
+//!       .any(|n| n.type_name().ends_with("MyEntity"))
+//!   );
+//! }
 //! ```
 //!
 //! ```rust
 //! use hexser::prelude::*;
-//! use hexser::hex_register_adapter;
 //!
 //! struct PgUserRepo;
 //!
-//! // Register as an Adapter implementing a Repository
+//! // Register as an Adapter implementing a Repository.
 //! hexser::hex_register_adapter!(PgUserRepo, Role::Adapter);
+//!
+//! fn main() {
+//!   assert_eq!(
+//!     <PgUserRepo as Registrable>::node_info().layer,
+//!     Layer::Adapter
+//!   );
+//! }
 //! ```
 //!
 //! These helpers are intended as templates: copy, adapt, and extend as needed.
+//!
+//! Revision History
+//! - 2026-09-04T00:00:00Z @AI: The hex_register_* macros now emit the inventory submission they
+//!   are named for. They implemented `Registrable` and never submitted, so every type
+//!   "registered" through hexser's own explicit path answered node_info() correctly and was
+//!   absent from every graph query — the same end state as the silently-omitted generic
+//!   submission, reached through the door the crate advertises.
 
 /// Split a fully-qualified Rust type path into (module_path, type_name).
 ///
@@ -45,7 +74,21 @@ pub fn split_type_name(full: &'static str) -> (&'static str, &'static str) {
   }
 }
 
-/// Core macro to implement Registrable for a type with a specific layer and role.
+/// Core macro that REGISTERS a type: it implements `Registrable` with the given layer and
+/// role AND submits the component to the inventory registry, so the type is in
+/// `HexGraph::current()`.
+///
+/// ⚠ Both halves are the registration, and this macro emitted only the first until
+/// 2026-09-04 — the type answered `node_info()` correctly and no graph query could find it.
+/// That is the same silent end state as a derive dropping its submission, reached through
+/// the macro the crate itself names `register`.
+///
+/// The type must be CONCRETE: it is used as `ComponentEntry::new::<T>()` at item scope, where
+/// a generic parameter is not in scope, so a generic target is a compile error — the same
+/// polarity `#[derive(HexDomain)]` and its siblings now have. Register a non-generic marker
+/// struct that stands for the component instead.
+///
+/// Invoke at MODULE scope, next to the type: the submission is a link-time static.
 #[macro_export]
 macro_rules! hex_register_component {
   ($t:ty, $layer:expr, $role:expr) => {
@@ -58,6 +101,10 @@ macro_rules! hex_register_component {
       fn dependencies() -> ::std::vec::Vec<$crate::graph::NodeId> {
         ::std::vec![]
       }
+    }
+
+    $crate::inventory::submit! {
+      $crate::registry::ComponentEntry::new::<$t>()
     }
   };
 }

@@ -6,15 +6,18 @@
 //!
 //! # Derive Macros
 //!
-//! - `#[derive(HexDomain)]` - Register a domain-layer type (role defaults to `Entity`)
+//! - `#[derive(HexDomain)]` - Register a domain-layer type (role defaults to `Entity`;
+//!   override with `#[hex(role = "ValueObject")]`)
 //! - `#[derive(HexPort)]` - Register a port-layer type (role defaults to `Repository`;
 //!   override with `#[hex(role = "InputPort")]`)
 //! - `#[derive(HexAdapter)]` - Register an adapter and mark it as an `Adapter`
 //! - `#[derive(HexEntity)]` - Implement `HexEntity`, taking `Id` from the `id` field
 //! - `#[derive(HexValueItem)]` - Implement `HexValueItem` with default validation
 //! - `#[derive(HexAggregate)]` - Implement `Aggregate` with default invariant check
-//! - `#[derive(HexDirective)]` - Implement `Directive` and register (role `Directive`)
-//! - `#[derive(HexQuery)]` - Register a query type (role `Query`)
+//! - `#[derive(HexDirective)]` - Implement `Directive` and register (role `Directive`;
+//!   override with `#[hex(role = "...")]`)
+//! - `#[derive(HexQuery)]` - Register a query type (role `Query`; override with
+//!   `#[hex(role = "UseCase")]` for a registration-only Application-layer marker)
 //! - `#[derive(HexRepository)]` - Semantic marker for repository ports (pair with `HexPort`)
 //!
 //! # Example
@@ -30,6 +33,9 @@
 //! ```
 //!
 //! Revision History
+//! - 2026-09-04T00:00:00Z @AI: All five registration derives honour `#[hex(role)]` (HexDomain
+//!   declared the attribute and ignored it; HexDirective/HexQuery did not declare it at all), and
+//!   a registration derive on a generic type is now a compile error instead of a silent omission.
 //! - 2026-07-20T00:00:00Z @AI: Remove unexported/unused/non-functional error macros and their dead codegen; refresh docs to match the shipped derive set.
 //! - 2025-10-09T14:14:00Z @AI: Remove Entity derive, expose only HexEntity for clarity.
 //! - 2025-10-06T02:00:00Z @AI: Add error construction macros.
@@ -73,12 +79,12 @@ pub fn derive_repository(input: proc_macro::TokenStream) -> proc_macro::TokenStr
   crate::derive::repository::derive(input)
 }
 
-#[proc_macro_derive(HexDirective)]
+#[proc_macro_derive(HexDirective, attributes(hex))]
 pub fn derive_directive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   crate::derive::directive::derive(input)
 }
 
-#[proc_macro_derive(HexQuery)]
+#[proc_macro_derive(HexQuery, attributes(hex))]
 pub fn derive_query(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   crate::derive::query::derive(input)
 }

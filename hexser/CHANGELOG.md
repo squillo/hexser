@@ -1,3 +1,32 @@
+## [Unreleased]
+
+### Registration honesty (2026-09-04)
+
+Three paths could report a component as registered while it was absent from
+`HexGraph::current()`. All three now either do the registration or say they cannot. **Two are
+behaviour changes for existing code**:
+
+- `#[derive(HexDomain)]` now honours `#[hex(role = "...")]`. It declared `attributes(hex)` and
+  never read it, so `#[hex(role = "ValueObject")]` compiled clean and registered
+  `Role::Entity`. `#[derive(HexDirective)]` and `#[derive(HexQuery)]` now accept the same
+  attribute, so all five registration derives honour it and only the default differs.
+  ⚠ A graph built before this change reports the DEFAULT role for every overridden type.
+- ⚠ **BREAKING:** a registration derive on a GENERIC type is now a compile error naming the
+  marker-struct remedy. It used to emit the `Registrable` impl and drop the
+  `inventory::submit!`, so the type answered `node_info()` and was in no graph, with no error
+  and no warning. `type_name::<Self>()` on a generic names a monomorphization chosen by a
+  consumer crate, so there is no single honest node to submit — the omission was right and
+  the silence was the defect. Code that derived on a generic must move the derive to a
+  non-generic marker struct or hand-write `impl Registrable`.
+- ⚠ **BEHAVIOUR CHANGE:** `hex_register_component!` (and `hex_register_domain!`,
+  `hex_register_port!`, `hex_register_adapter!`, `hex_register_application!`,
+  `hex_register_infrastructure!`) now emit the `inventory::submit!` they are named for. They
+  emitted only the `Registrable` impl, for every type — so hexser had NO non-derive door into
+  the graph while advertising one. Types registered through them now appear in
+  `HexGraph::current()`; any assertion pinning an exact `node_count()` will see more nodes.
+
+---
+
 ## [0.5.0] - 2026-07-21
 
 ### Hardening pass (2026-07)
@@ -9,7 +38,9 @@ Correctness / reliability:
   returns the correct -32700/-32600 error codes, and runs `hexser/refresh` builds with a
   timeout and bounded stderr.
 - `#[derive(HexDirective)]` no longer emits an unresolved `inventory::submit!`; `#[derive(HexQuery)]`
-  now registers in the graph; derives work on generic types and error clearly on misuse.
+  now registers in the graph; derives error clearly on misuse. (The claim that "derives work on
+  generic types" was true only of the `Registrable` impl — the submission was dropped in silence.
+  See Unreleased.)
 - The DI `Container` no longer holds locks across user provider code (deadlock fix; singletons
   use `OnceCell`).
 - `InMemoryEventBus` routes by event type to all handlers for a topic (was last-subscription-wins),

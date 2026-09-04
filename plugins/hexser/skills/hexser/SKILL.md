@@ -39,7 +39,8 @@ Application ─ CQRS: Directive (command) + DirectiveHandler, QueryHandler
 
 Deriving `HexDomain`/`HexPort`/`HexAdapter`/`HexDirective`/`HexQuery` registers the
 type into the process-wide graph (`HexGraph::current()`) via the `inventory` crate —
-zero runtime cost, discovered at link time.
+zero runtime cost, discovered at link time. For a type you cannot annotate (or a build
+without the `macros` feature), `hexser::hex_register_domain!` and its siblings do the same.
 
 ## Golden rules (these prevent ~all first-try mistakes)
 
@@ -68,6 +69,17 @@ zero runtime cost, discovered at link time.
    brings the traits, types, and derives you need.
 7. **Custom ports extend base ports:** `trait UserRepository: Repository<User> { … }`.
 8. **`HexResult<T> = Result<T, Hexserror>`.** Application/port methods return `HexResult`.
+9. **Set the role deliberately: `#[hex(role = "…")]` on any of the five registration
+   derives.** Defaults are `Entity`/`Repository`/`Adapter`/`Directive`/`Query`. Before
+   2026-09-04 `HexDomain` declared the attribute and IGNORED it, so a value object marked
+   `ValueObject` registered as `Role::Entity` and compiled clean — if you are reading a graph
+   built by an older hexser, its domain roles are all `Entity`.
+10. **A registration derive on a GENERIC type is a compile error.** `inventory` cannot name a
+    single honest node for `Foo<T>`. Derive on a non-generic `FooComponent` marker struct, or
+    hand-write `impl Registrable`. Before 2026-09-04 the derive dropped the submission in
+    silence: the type implemented `Registrable`, answered `node_info()`, and was in no graph.
+    ⭐ **Implementing `Registrable` and being IN the graph are two different facts** — the
+    `inventory::submit!` is the second one, and it is what `HexGraph::current()` walks.
 
 ## Minimal correct shape (0.5)
 

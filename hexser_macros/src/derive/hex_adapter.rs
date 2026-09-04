@@ -5,6 +5,7 @@
 //! `#[hex(role = "Mapper")]`.
 //!
 //! Revision History
+//! - 2026-09-04T00:00:00Z @AI: Pass the derive name to the shared codegen (generic-target compile error names the derive).
 //! - 2026-07-20T00:00:00Z @AI: Parse #[hex(role = "...")] override; use shared codegen; fully-qualified paths; generics-safe.
 //! - 2025-10-02T00:00:00Z @AI: Initial HexAdapter derive implementation.
 
@@ -24,6 +25,7 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
 
   let registration = crate::common::codegen::registrable_and_submit(
     &input,
+    "HexAdapter",
     quote::quote!(::hexser::graph::Layer::Adapter),
     role,
   );
