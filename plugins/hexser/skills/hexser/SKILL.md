@@ -23,7 +23,7 @@ component into a compile-time **architecture graph** you can introspect, visuali
 and hand to AI agents. This skill makes you write hexser code that compiles and
 follows the framework's grain on the first try.
 
-**Always target hexser 0.5.x.** Add `hexser = { version = "0.5", features = ["macros"] }`
+**Always target hexser 0.6.x.** Add `hexser = { version = "0.6", features = ["macros"] }`
 (the `macros` feature is on by default). Import the prelude: `use hexser::prelude::*;`.
 
 ## Mental model

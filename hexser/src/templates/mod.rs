@@ -57,11 +57,19 @@
 //! These helpers are intended as templates: copy, adapt, and extend as needed.
 //!
 //! Revision History
+//! - 2026-09-11T00:00:00Z @AI: Allow needless_doctest_main — the explicit `fn main` is what keeps the macro invocations at module scope, which is the whole subject of these examples.
 //! - 2026-09-04T00:00:00Z @AI: The hex_register_* macros now emit the inventory submission they
 //!   are named for. They implemented `Registrable` and never submitted, so every type
 //!   "registered" through hexser's own explicit path answered node_info() correctly and was
 //!   absent from every graph query — the same end state as the silently-omitted generic
 //!   submission, reached through the door the crate advertises.
+
+// The `fn main` in the examples above is load-bearing, not boilerplate: rustdoc only skips its
+// implicit wrapper when the snippet declares `main` itself, and skipping it is the only way to
+// invoke `hex_register_*!` at MODULE scope — which is exactly the constraint these examples
+// exist to demonstrate (registration is an item-scope act, see the preamble). Removing the
+// `fn main` to satisfy the lint would move the macro into a function body and teach the misuse.
+#![allow(clippy::needless_doctest_main)]
 
 /// Split a fully-qualified Rust type path into (module_path, type_name).
 ///

@@ -6,19 +6,17 @@
 //! `std::time::SystemTime` using Howard Hinnant's constant-time days→civil-date algorithm.
 //!
 //! Revision History
+//! - 2026-09-11T00:00:00Z @AI: Read the clock through `crate::clock` so `ai`/`mcp` builds stop trapping on wasm32-unknown-unknown, where `SystemTime::now()` panics.
 //! - 2026-07-20T00:00:00Z @AI: Add std-only RFC3339 formatter to remove the chrono dependency.
 
 /// Returns the current UTC time as an RFC3339 / ISO-8601 string with second precision, e.g.
 /// `2026-07-20T13:37:00Z`.
 ///
-/// If the system clock is set before the Unix epoch, this returns the epoch itself rather than
-/// panicking (a best-effort metadata timestamp is always acceptable).
+/// If the system clock is set before the Unix epoch — or the target has no clock at all, as on
+/// `wasm32-unknown-unknown` — this returns the epoch itself rather than panicking (a
+/// best-effort metadata timestamp is always acceptable).
 pub fn now_rfc3339() -> std::string::String {
-  let secs = std::time::SystemTime::now()
-    .duration_since(std::time::UNIX_EPOCH)
-    .map(|d| d.as_secs())
-    .unwrap_or(0);
-  format_rfc3339_utc(secs)
+  format_rfc3339_utc(crate::clock::unix_secs())
 }
 
 /// Formats a count of seconds since the Unix epoch as a UTC RFC3339 string.

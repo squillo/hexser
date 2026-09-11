@@ -47,7 +47,7 @@ These methods are inherent on `HexGraph` and each returns `HexResult<String>`:
 They are only compiled when the `visualization` feature is on (`visualization = ["serde", "serde_json"]`). Add it to the crate's `Cargo.toml`:
 
 ```toml
-hexser = { version = "0.5", features = ["macros", "visualization"] }
+hexser = { version = "0.6", features = ["macros", "visualization"] }
 ```
 
 Then, for whichever format was requested:

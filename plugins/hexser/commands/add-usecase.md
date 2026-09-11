@@ -21,7 +21,7 @@ API exactly; do not invent methods, types, or features:
    use Glob/Grep to find existing `Directive`, `DirectiveHandler`, or `QueryHandler`
    code (e.g. `Grep` for `DirectiveHandler` / `QueryHandler` / `HexDirective`), and
    read the domain entity and port this use case will touch so names line up. Confirm
-   `Cargo.toml` has `hexser = { version = "0.5", features = ["macros"] }`.
+   `Cargo.toml` has `hexser = { version = "0.6", features = ["macros"] }`.
 2. **Read the target file before writing to it.** Add the code in the matching module
    (create a small `application` module if none exists) and export it.
 3. Build the pieces for the chosen kind (below).

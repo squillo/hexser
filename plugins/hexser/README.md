@@ -59,7 +59,7 @@ non-hexser repos). See `skills/hexser/references/mcp.md`.
 ## Requirements
 
 - Rust (edition 2024, rustc ≥ 1.85) and `cargo` on PATH.
-- `hexser = "0.5"` in the target project. The MCP server additionally needs the `mcp` feature.
+- `hexser = "0.6"` in the target project. The MCP server additionally needs the `mcp` feature.
 
 ## License
 

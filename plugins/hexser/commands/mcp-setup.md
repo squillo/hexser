@@ -23,7 +23,7 @@ to find how `hexser` is depended on. There are two modes:
   declared with `path = "..."` (e.g. a local checkout, or this repo itself). In
   this mode you can build and run its binary directly with `cargo`.
 - **Registry dependency** — `hexser` comes from crates.io as a plain version
-  requirement (e.g. `hexser = "0.5"`). In this mode `cargo run -p hexser` will not
+  requirement (e.g. `hexser = "0.6"`). In this mode `cargo run -p hexser` will not
   resolve, so install the binary once and launch it by name.
 
 If you are unsure, run `cargo metadata --format-version 1` and inspect the source

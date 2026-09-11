@@ -37,5 +37,5 @@ trybuild = "1.0"
 criterion = "0.5"
 
 # Workspace member crates (for path + version unification)
-hexser_macros = { version = "0.5.0", path = "hexser_macros" }
-hexser = { version = "0.5.0", path = "hexser" }
+hexser_macros = { version = "0.6.0", path = "hexser_macros" }
+hexser = { version = "0.6.0", path = "hexser" }

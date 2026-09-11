@@ -31,7 +31,7 @@ omit rather than guess.
 `Read` the nearest `Cargo.toml`. Confirm the `[dependencies]` table contains exactly:
 
 ```toml
-hexser = { version = "0.5", features = ["macros"] }
+hexser = { version = "0.6", features = ["macros"] }
 ```
 
 - If `hexser` is **missing**, add that line (`Edit`). The `macros` feature is default-on

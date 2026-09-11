@@ -56,6 +56,7 @@
 //! - `full`: all of the above.
 //!
 //! Revision History
+//! - 2026-09-11T00:00:00Z @AI: Declare the private `clock` module — single guard for the `SystemTime::now()` panic on wasm32-unknown-unknown.
 //! - 2026-07-21T00:00:00Z @AI: Rewrite crate header — correct feature list/default, drop the stale Phase-1/future-phases framing and nonexistent graph/analysis features; Quick Start now derives the real macros.
 //! - 2025-10-09T14:14:00Z @AI: Remove Entity derive alias, expose HexEntity at crate root for qualified addressing.
 //! - 2025-10-02T13:00:00Z @AI: Re-export inventory and error_codes for proc macros.
@@ -65,6 +66,9 @@
 
 pub mod adapters;
 pub mod application;
+// Private: clockless-target-safe wall-clock reads, an implementation detail of the metadata
+// timestamps rather than part of the public surface.
+mod clock;
 pub mod domain;
 pub mod error;
 pub mod graph;

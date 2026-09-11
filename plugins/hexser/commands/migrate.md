@@ -19,13 +19,21 @@ Work carefully, file-by-file. Read each file before editing it. Never run git.
 
 ## Step 1 — bump the dependency
 
-In each `Cargo.toml` that depends on hexser, set the version to `"0.5"`. `macros` is a
+In each `Cargo.toml` that depends on hexser, set the version to `"0.6"`. `macros` is a
 default feature, so keep the existing feature list; add `ai`/`visualization` only if the
 crate already used those APIs.
 
 ```toml
-hexser = { version = "0.5", features = ["macros"] }
+hexser = { version = "0.6", features = ["macros"] }
 ```
+
+This guide covers the 0.4 → 0.5 API changes. 0.6 adds exactly one further break on top of
+them: a registration derive (`HexDomain`, `HexPort`, `HexAdapter`, `HexDirective`,
+`HexQuery`) on a GENERIC type is now a compile error — move the derive to a non-generic
+marker struct, or hand-write `impl Registrable`. It also changes behaviour in two ways that
+need no edits but can move assertions: `#[hex(role = "...")]` is now honoured, and the
+`hex_register_*!` macros now actually submit to the graph, so `node_count()` rises. See
+CHANGELOG 0.6.0.
 
 ## Step 2 — box direct `Hexserror` variant constructions
 

@@ -1,6 +1,8 @@
 # Migrating hexser 0.4 to 0.5
 
-A practical checklist of every breaking change from hexser 0.4.x to 0.5.0 and the exact fix for each. Work top to bottom, then run `cargo check`. For the full 0.5 surface see api.md; for derive details see derives.md.
+A practical checklist of every breaking change from hexser 0.4.x to 0.5.0 and the exact fix for each. Work top to bottom, then run `cargo check`. For the full surface see api.md; for derive details see derives.md.
+
+Current is 0.6, so land on `"0.6"` and apply one further break after this checklist: a registration derive on a GENERIC type is now a compile error (move it to a non-generic marker struct, or hand-write `impl Registrable`). 0.6 also honours `#[hex(role = "...")]` and makes `hex_register_*!` submit to the graph — no edits needed, but `node_count()` assertions can move.
 
 The `/hexser:migrate` command automates the mechanical parts of this list (the Cargo bump, boxed-error rewrites, and rename passes); review its edits and hand-fix the judgement calls (id-less entities, `delete_where` overrides).
 
@@ -11,7 +13,7 @@ The `/hexser:migrate` command automates the mechanical parts of this list (the C
 hexser = { version = "0.4", features = ["macros"] }
 
 # After
-hexser = { version = "0.5", features = ["macros"] }
+hexser = { version = "0.6", features = ["macros"] }
 ```
 
 `macros` and `static-di` are the default features. Add `ai`, `mcp`, or `visualization` if you use those APIs.

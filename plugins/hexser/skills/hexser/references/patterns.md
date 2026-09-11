@@ -103,7 +103,7 @@ fn main() -> HexResult<()> {
 }
 ```
 
-Cargo: `hexser = { version = "0.5", features = ["macros"] }` (macros default on). Add `visualization` and/or `ai` for graph JSON / AI export.
+Cargo: `hexser = { version = "0.6", features = ["macros"] }` (macros default on). Add `visualization` and/or `ai` for graph JSON / AI export.
 
 ## Defining a custom port (supertrait on `Repository<T>`)
 

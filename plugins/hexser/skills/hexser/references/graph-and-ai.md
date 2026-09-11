@@ -148,7 +148,7 @@ println!("{}", graph.to_ascii_art()); // always works
 Enable `visualization` for structured exports. These are inherent methods on `HexGraph`:
 
 ```rust
-// Cargo.toml: hexser = { version = "0.5", features = ["visualization"] }
+// Cargo.toml: hexser = { version = "0.6", features = ["visualization"] }
 use hexser::prelude::*;
 
 let graph = HexGraph::current();
@@ -170,7 +170,7 @@ Enable `ai` (implies `serde` + `serde_json`) to turn the graph into an agent-rea
 `AIContext` (`hexser::ai::AIContext`) fields: `architecture`, `version`, `components: Vec<ComponentInfo>`, `relationships`, `constraints`, `suggestions`, `metadata`. Related types: `ComponentInfo` (which now carries `methods: Vec<MethodInfo>`), `MethodInfo`, `ParameterInfo`, `RelationshipInfo`, `ConstraintSet`, `Suggestion`, `SuggestionType`, `Priority`, `ContextMetadata`.
 
 ```rust
-// Cargo.toml: hexser = { version = "0.5", features = ["ai"] }
+// Cargo.toml: hexser = { version = "0.6", features = ["ai"] }
 use hexser::prelude::*;
 
 let graph = HexGraph::current();

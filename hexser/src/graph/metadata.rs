@@ -6,6 +6,7 @@
 //! copied when graphs are constructed.
 //!
 //! Revision History
+//! - 2026-09-11T00:00:00Z @AI: current_timestamp delegates to `crate::clock` — `SystemTime::now()` panics on wasm32-unknown-unknown, which trapped the module on the first `HexGraph::current()`.
 //! - 2026-07-21T00:00:00Z @AI: PRD-272 §3.H — attributes map uses IndexMap for deterministic iteration (warnings surface in insertion order).
 //! - 2026-07-21T00:00:00Z @AI: current_timestamp no longer unwraps duration_since (best-effort 0 on a pre-epoch clock) — removes a panic path from the universal construction path.
 //! - 2026-07-20T00:00:00Z @AI: Add add_warning/warnings to record non-fatal construction warnings (e.g. NodeId collisions) in attributes.
@@ -51,13 +52,10 @@ impl GraphMetadata {
     }
   }
 
-  /// Get current Unix timestamp (best-effort; returns 0 if the clock predates the epoch rather
-  /// than panicking, since this runs on the universal graph-construction path).
+  /// Get current Unix timestamp (best-effort; returns 0 rather than panicking on a pre-epoch
+  /// clock or a clockless target, since this runs on the universal graph-construction path).
   fn current_timestamp() -> u64 {
-    std::time::SystemTime::now()
-      .duration_since(std::time::UNIX_EPOCH)
-      .map(|d| d.as_secs())
-      .unwrap_or(0)
+    crate::clock::unix_secs()
   }
 
   /// Get an attribute value.

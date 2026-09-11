@@ -1,6 +1,6 @@
 {
   "name": "hexser",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Zero-boilerplate Hexagonal Architecture for Rust. Scaffold Domain/Ports/Adapters, write CQRS Directives & Queries, build rich Hexserror values, introspect and visualize your architecture graph, and wire the hexser MCP server so Claude can read your architecture live.",
   "author": {
     "name": "N Lang Team",

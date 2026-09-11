@@ -17,7 +17,7 @@ The server is gated behind the `mcp` feature, which **implies `ai` + `serde` +
 
 ```toml
 # workspace/path dependency
-hexser = { version = "0.5", features = ["mcp"] }
+hexser = { version = "0.6", features = ["mcp"] }
 ```
 
 - Binary: `hex-mcp-server` (declared `[[bin]] required-features = ["mcp"]`, source

@@ -65,7 +65,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hexser = "0.5"
+hexser = "0.6"
 ```
 
 Your First Hexagonal Application
@@ -172,7 +172,7 @@ Enabled by default. Includes procedural macros and zero-cost static dependency i
 
 ```toml
 [dependencies]
-hexser = "0.5"  # Uses default features
+hexser = "0.6"  # Uses default features
 ```
 
 #### `macros`
@@ -195,7 +195,7 @@ All five registration derives honour `#[hex(role = "...")]`, and all five REFUSE
 
 ```toml
 [dependencies]
-hexser = { version = "0.5", default-features = false, features = ["macros"] }
+hexser = { version = "0.6", default-features = false, features = ["macros"] }
 ```
 
 #### `static-di`
@@ -210,7 +210,7 @@ Zero-cost, WASM-friendly static dependency injection. No runtime overhead, no dy
 
 ```toml
 [dependencies]
-hexser = { version = "0.5", features = ["static-di"] }
+hexser = { version = "0.6", features = ["static-di"] }
 ```
 
 **Example** (see the `hex_static!` macro and `StaticContainer<T>` for the real API):
@@ -237,7 +237,7 @@ Enables AI context export functionality for exposing architecture metadata to AI
 
 ```toml
 [dependencies]
-hexser = { version = "0.5", features = ["ai"] }
+hexser = { version = "0.6", features = ["ai"] }
 ```
 
 **Usage:**
@@ -263,7 +263,7 @@ Model Context Protocol server implementation for serving architecture data via J
 
 ```toml
 [dependencies]
-hexser = { version = "0.5", features = ["mcp"] }
+hexser = { version = "0.6", features = ["mcp"] }
 ```
 
 **Usage:**
@@ -282,7 +282,7 @@ dependencies. (Dedicated async port traits are planned; see the issue tracker.)
 
 ```toml
 [dependencies]
-hexser = { version = "0.5", features = ["async"] }
+hexser = { version = "0.6", features = ["async"] }
 ```
 
 #### `visualization`
@@ -297,7 +297,7 @@ Enables graph visualization and export capabilities.
 
 ```toml
 [dependencies]
-hexser = { version = "0.5", features = ["visualization"] }
+hexser = { version = "0.6", features = ["visualization"] }
 ```
 
 #### `container`
@@ -314,7 +314,7 @@ Dynamic dependency injection container with async support. **Not enabled by defa
 
 ```toml
 [dependencies]
-hexser = { version = "0.5", features = ["container"] }
+hexser = { version = "0.6", features = ["container"] }
 ```
 
 #### `full`
@@ -324,7 +324,7 @@ Enables all features: `ai`, `mcp`, `async`, `macros`, `visualization`, `containe
 
 ```toml
 [dependencies]
-hexser = { version = "0.5", features = ["full"] }
+hexser = { version = "0.6", features = ["full"] }
 ```
 
 ### Binary Targets
@@ -363,25 +363,27 @@ cargo run --bin hex-mcp-server --features mcp
 #### Minimal (no default features)
 ```toml
 [dependencies]
-hexser = { version = "0.5", default-features = false }
+hexser = { version = "0.6", default-features = false }
 ```
 
 #### WASM-optimized
 ```toml
 [dependencies]
-hexser = { version = "0.5", default-features = false, features = ["macros", "static-di"] }
+hexser = { version = "0.6", default-features = false, features = ["macros", "static-di"] }
 ```
+Runs on `wasm32-unknown-unknown` and `wasm32-wasip1` (both executed under wasmtime in CI).
+Richer feature sets up to `full` compile for wasm too; see [WASM guidance](#%EF%B8%8F-static-non-dyn-di--wasm-friendly).
 
 #### AI-enabled with async
 ```toml
 [dependencies]
-hexser = { version = "0.5", features = ["ai", "async", "visualization"] }
+hexser = { version = "0.6", features = ["ai", "async", "visualization"] }
 ```
 
 #### Full development setup
 ```toml
 [dependencies]
-hexser = { version = "0.5", features = ["full"] }
+hexser = { version = "0.6", features = ["full"] }
 ```
 
 ---
@@ -1576,7 +1578,7 @@ Add to your project via workspace path:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "../hexser_potions", version = "0.5" }
+hexser_potions = { path = "../hexser_potions", version = "0.6" }
 ```
 
 Then in code:
@@ -1622,6 +1624,16 @@ let (repo, service) = app.into_inner();
 WASM guidance:
 - Default features are WASM-friendly (no tokio). Keep `container` disabled for wasm.
 - Use `static-di` (default) and avoid the dyn container for maximum compatibility.
+- Both `wasm32-unknown-unknown` and `wasm32-wasip1` are verified by **executing** hexser under
+  wasmtime in CI, not merely compiling it (`scripts/wasm-e2e.sh`). Compiling is not evidence:
+  hexser 0.5.0 built clean for `wasm32-unknown-unknown` and then trapped on the first
+  `HexGraph::current()`. Derive registration through `inventory` works on both targets.
+- `wasm32-unknown-unknown` has no clock behind `std`, so `GraphMetadata::created_at` is `0` and
+  `ai` timestamps are the Unix epoch. Both are informational metadata. WASI (`wasm32-wasip1`)
+  has a real clock and reports real times.
+- Host-only surfaces return errors under wasm instead of writing: `save_visualization` goes
+  through `std::fs`, so use `to_dot()` / `to_mermaid()` / `to_json()` and hand the string to
+  the host instead.
 
 
 

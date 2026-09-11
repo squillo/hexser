@@ -1,5 +1,41 @@
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-11
+
+Minor rather than patch: the registration-honesty section below carries a breaking change, and
+cargo treats `0.5.1` as compatible with `0.5.0`. Shipping it as a patch would have broken
+downstream builds on a plain `cargo update`.
+
+### WASM: runs, not just compiles (2026-09-11)
+
+⚠ **Fixed:** hexser trapped on `wasm32-unknown-unknown` the first time anything touched
+`HexGraph::current()`. std routes `SystemTime::now()` through its `unsupported` platform layer
+on that target, where it is a hard `panic!("time not implemented on this platform")` — and
+`GraphMetadata` stamps that clock on the universal graph-construction path, so `HexGraph::new()`
+and the first `HexGraph::current()` both took the whole module down. The `ai`/`mcp` RFC3339
+timestamp read the clock the same way. Both now go through one guard (`src/clock.rs`).
+
+Nothing but a compiler had ever checked the claim. 0.5.0 built clean for both wasm targets under
+every feature combination up to `full` — which is precisely why the trap shipped and why the
+README could keep saying "including on wasm32-unknown-unknown". CI now **executes** hexser under
+wasmtime on `wasm32-unknown-unknown` and `wasm32-wasip1` (`scripts/wasm-e2e.sh`, probe crate in
+`wasm-e2e/`), asserting that `inventory` link-time registration yields a populated graph, that
+static DI builds, that errors render, and that the AI and visualization exports work. Reverting
+the fix turns that job red while the 16-cell compile matrix beside it stays green.
+
+Behaviour to know about on `wasm32-unknown-unknown` (WASI is unaffected — it has a real clock):
+- `GraphMetadata::created_at` is `0`.
+- `ai` timestamps are `1970-01-01T00:00:00Z`.
+
+Both are informational metadata, never correctness inputs. Reading a real browser clock would
+mean `js-sys`/`wasm-bindgen`, which would cost the dependency-free WASM story for one field —
+stamp times at the edge instead.
+
+Also fixed: `cargo clippy --lib --bins -- -D warnings` was failing on `src/templates/mod.rs`,
+where the `fn main` in the registration examples is load-bearing (it is what keeps the
+`hex_register_*!` calls at module scope, which is the point of those examples) rather than the
+boilerplate `needless_doctest_main` takes it for.
+
 ### Registration honesty (2026-09-04)
 
 Three paths could report a component as registered while it was absent from

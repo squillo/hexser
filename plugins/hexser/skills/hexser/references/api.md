@@ -1,6 +1,6 @@
 # hexser API reference (0.5)
 
-Condensed, accurate surface for hexser `0.5.0` (edition 2024, rust-version 1.85). Prefer `use hexser::prelude::*;`; use qualified paths only for items not in the prelude. For error constructors and codes see errors.md; for derives and registration see derives.md.
+Condensed, accurate surface for hexser `0.6.0` (edition 2024, rust-version 1.85). Prefer `use hexser::prelude::*;`; use qualified paths only for items not in the prelude. For error constructors and codes see errors.md; for derives and registration see derives.md.
 
 ## 1. Prelude
 
@@ -193,5 +193,7 @@ From `hexser/Cargo.toml`.
 | `full` | `["ai","mcp","async","macros","visualization","container","static-di"]` | |
 
 Bins: `hex-ai-export` and `hex-ai-pack` need `ai`; `hex-mcp-server` needs `mcp`. Default features are WASM-friendly — keep `container`/`async` off for wasm.
+
+WASM: `wasm32-unknown-unknown` and `wasm32-wasip1` are verified by *running* hexser under wasmtime in CI (`scripts/wasm-e2e.sh`), not just building it. `inventory` registration works on both. `wasm32-unknown-unknown` has no std clock, so `GraphMetadata::created_at` is `0` and `ai` timestamps are the epoch; WASI reports real times. `save_visualization` (`std::fs`) errors under wasm — use `to_dot()`/`to_mermaid()`/`to_json()`.
 
 DI: `static-di` (default) gives `StaticContainer<T>` (`get`/`get_mut`/`into_inner`/`map`), `StaticBuilder`, and the `hex_static!{…}` macro (`src/static_di.rs`). `container` gives the runtime `Container`, `Provider`, `Scope`, `ContainerError`, `AsyncProvider` (`src/container/mod.rs`).
