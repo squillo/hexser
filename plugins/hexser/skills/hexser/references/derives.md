@@ -257,7 +257,12 @@ hexser::hex_register_port!(UserRepositoryPortNode, hexser::graph::Role::Reposito
 hexser::hex_register_adapter!(PgUserRepo, hexser::graph::Role::Adapter, depends_on: [UserRepositoryPortNode]);
 ```
 
-Read the edge with `graph.edges_to(&hexser::templates::dependency_id::<UserRepositoryPortNode>())`.
+To ask "is this adapter wired to this port?", call
+`hexser::templates::dependency_edge_exists::<PgUserRepo, UserRepositoryPortNode>(&graph)`.
+It is true only for a `Depends` edge in that direction whose port is itself a node in the
+graph, so a dangling edge never reads as wired. Write a wiring cell with it; do not write a
+private edge walk. To list the edges, use
+`graph.edges_to(&hexser::templates::dependency_id::<UserRepositoryPortNode>())`.
 ⚠ Build the id with `dependency_id`, **never `NodeId::of`**. Template-registered nodes are
 keyed by their short type name, while `NodeId::of` hashes the full path, so an id built with
 it names no node, and `build_graph` does not validate edges.

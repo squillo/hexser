@@ -26,6 +26,22 @@ crates had started to grow private copies of the registration macro to do it.
 Graph-reading cells (`templates::tests`) pin both the edge and its absence on the bare form.
 A mutant that builds the id with `NodeId::of` turns the edge cell red.
 
+### One reading door for a wiring cell: `dependency_edge_exists::<A, P>(&graph)` (2026-11-03)
+
+Added, additively:
+- `hexser::templates::dependency_edge_exists::<A, P>(&HexGraph) -> bool`. It is true only when
+  the graph has a `Depends` edge from `A`'s node onto `P`'s node AND `P`'s node is itself in
+  the graph. Both ids come from `dependency_id`.
+
+⚠ **Why the node check.** `build_graph` does not validate edges. An edge onto a type that
+implements `Registrable` without being submitted still counts in `edge_count()`, so an edge
+walk alone would call a port that is in no graph "wired". Downstream crates had started
+writing private `wired` functions; this is the one shared door.
+
+Cells pin the registered edge and its direction on the process-wide graph. On a locally built
+graph they also pin a refusal of a dangling edge and of a non-`Depends` edge, against a control
+that reads as wired.
+
 ## [0.6.0] - 2026-09-11
 
 Minor rather than patch: the registration-honesty section below carries a breaking change, and

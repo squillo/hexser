@@ -57,6 +57,7 @@
 //! These helpers are intended as templates: copy, adapt, and extend as needed.
 //!
 //! Revision History
+//! - 2026-11-03T18:00:00Z @AI: `dependency_edge_exists::<A, P>(&HexGraph)`: the one reading door for a wiring cell. True only for a `Depends` edge from `A`'s node onto `P`'s node when `P`'s node is itself in the graph, so a dangling edge never reads as wired. Downstream crates no longer each carry a private `wired` fn. Cells pin the registered edge, its direction, and the refusal of a dangling or non-`Depends` edge.
 //! - 2026-11-03T00:00:00Z @AI: `depends_on: [...]` on `hex_register_component!` and its five layer shorthands, plus `dependency_id::<D>()`: a registration can now carry its edges (adapter -> port node). The dependency id is derived from `D::node_info().type_name`, exactly as `ComponentRegistry::build_graph` keys nodes, because `NodeId::of` hashes the full path while template nodes are keyed by the short name, so an edge built with it dangles silently. The three-argument forms are unchanged. Graph-reading cells pin the edge and its absence.
 //! - 2026-09-11T00:00:00Z @AI: Allow needless_doctest_main — the explicit `fn main` is what keeps the macro invocations at module scope, which is the whole subject of these examples.
 //! - 2026-09-04T00:00:00Z @AI: The hex_register_* macros now emit the inventory submission they
@@ -95,6 +96,29 @@ pub fn split_type_name(full: &'static str) -> (&'static str, &'static str) {
 /// error instead of a dangling id.
 pub fn dependency_id<D: crate::registry::Registrable>() -> crate::graph::NodeId {
   crate::graph::NodeId::from_type_name(D::node_info().type_name)
+}
+
+/// True when `graph` carries a `Depends` edge from registered `A`'s node onto registered `P`'s
+/// node AND `P`'s node is itself in the graph.
+///
+/// This is the reading half of `depends_on:`: a wiring cell asks it "is this adapter wired to
+/// this port?" instead of each crate writing its own edge walk. Both ids come from
+/// [`dependency_id`], so the read keys nodes exactly as `build_graph` does.
+///
+/// ⚠ The node check is load-bearing. `build_graph` does not validate edges, so an edge onto a
+/// type that implements `Registrable` without being submitted still counts in `edge_count()`.
+/// Without the check, that dangling edge would read as wired while the port is in no graph.
+pub fn dependency_edge_exists<A, P>(graph: &crate::graph::HexGraph) -> bool
+where
+  A: crate::registry::Registrable,
+  P: crate::registry::Registrable,
+{
+  let source = dependency_id::<A>();
+  let target = dependency_id::<P>();
+  graph.get_node(&target).is_some()
+    && graph.edges_from(&source).iter().any(|edge| {
+      *edge.target() == target && edge.relationship == crate::graph::Relationship::Depends
+    })
 }
 
 /// Core macro that REGISTERS a type: it implements `Registrable` with the given layer and
@@ -299,6 +323,92 @@ mod tests {
       graph
         .edges_from(&super::dependency_id::<TemplatesEdgeCellBareAdapter>())
         .is_empty()
+    );
+  }
+
+  /// WHY: the reading door must say true for the registered edge only, in its direction.
+  /// MUTATION: return `true` unconditionally => the bare cell goes red; swap source and target
+  /// => the direction cells go red.
+  #[test]
+  fn dependency_edge_exists_reads_the_registered_edge_in_its_direction() {
+    let graph = crate::HexGraph::current();
+    std::assert!(
+      super::dependency_edge_exists::<TemplatesEdgeCellWiredAdapter, TemplatesEdgeCellPortNode>(
+        &graph
+      ),
+      "the depends_on edge reads as wired"
+    );
+    std::assert!(
+      !super::dependency_edge_exists::<TemplatesEdgeCellBareAdapter, TemplatesEdgeCellPortNode>(
+        &graph
+      ),
+      "an adapter registered without depends_on is not wired"
+    );
+    std::assert!(
+      !super::dependency_edge_exists::<TemplatesEdgeCellPortNode, TemplatesEdgeCellWiredAdapter>(
+        &graph
+      ),
+      "the edge has a direction: the port does not depend on its adapter"
+    );
+  }
+
+  /// WHY: a dangling edge, or an edge of another relationship, is not wiring. The graph is
+  /// built locally so no dangling edge enters the process-wide one other cells read.
+  /// MUTATION: drop the node check => the dangling cell goes red; drop the relationship
+  /// check => the `Implements` cell goes red. The control keeps both refusals honest.
+  #[test]
+  fn dependency_edge_exists_refuses_a_dangling_or_non_depends_edge() {
+    let adapter = super::dependency_id::<TemplatesEdgeCellWiredAdapter>();
+    let port = super::dependency_id::<TemplatesEdgeCellPortNode>();
+    let adapter_node = || {
+      crate::graph::HexNode::new(
+        adapter,
+        crate::graph::Layer::Adapter,
+        Role::Adapter,
+        "TemplatesEdgeCellWiredAdapter",
+        "",
+      )
+    };
+    let port_node = || {
+      crate::graph::HexNode::new(
+        port,
+        crate::graph::Layer::Port,
+        Role::OutputPort,
+        "TemplatesEdgeCellPortNode",
+        "",
+      )
+    };
+    let edge = |relationship| crate::graph::HexEdge::new(adapter, port, relationship);
+    let wired =
+      super::dependency_edge_exists::<TemplatesEdgeCellWiredAdapter, TemplatesEdgeCellPortNode>;
+
+    let control = crate::graph::GraphBuilder::new()
+      .with_node(adapter_node())
+      .with_node(port_node())
+      .with_edge(edge(crate::graph::Relationship::Depends))
+      .build();
+    std::assert!(
+      wired(&control),
+      "control: both nodes and a Depends edge read as wired"
+    );
+
+    let dangling = crate::graph::GraphBuilder::new()
+      .with_node(adapter_node())
+      .with_edge(edge(crate::graph::Relationship::Depends))
+      .build();
+    std::assert!(
+      !wired(&dangling),
+      "an edge onto an id with no node is not wiring"
+    );
+
+    let implements = crate::graph::GraphBuilder::new()
+      .with_node(adapter_node())
+      .with_node(port_node())
+      .with_edge(edge(crate::graph::Relationship::Implements))
+      .build();
+    std::assert!(
+      !wired(&implements),
+      "only a Depends edge is a dependency edge"
     );
   }
 }
