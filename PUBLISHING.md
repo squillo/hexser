@@ -31,8 +31,11 @@ Notes
 
 Current versions (as committed):
 - hexser_macros: 0.6.0
-- hexser: 0.6.0 (depends on hexser_macros = "0.6.0")
-- hexser_potions: 0.6.0 (depends on hexser = "0.6.0")
+- hexser: 0.6.1 (depends on hexser_macros = "0.6.0")
+- hexser_potions: 0.6.0 (depends on hexser = "0.6.0", which 0.6.1 satisfies)
+
+0.6.1 is a hexser-only patch: nothing in hexser_macros or hexser_potions changed, so neither is
+republished, and the workspace rows stay at 0.6.0. Publish only `cargo publish -p hexser`.
 
 Note: dependency versions are unified at the workspace level (`[workspace.dependencies]` in the
 root `Cargo.toml`), so bump them there.

@@ -1,4 +1,7 @@
-## [Unreleased]
+## [0.6.1] - 2026-11-03
+
+A patch: both changes below are additive, and the existing forms keep their behaviour. Only
+`hexser` is republished; `hexser_macros` and `hexser_potions` are unchanged at 0.6.0.
 
 ### Registrations can carry their edges: `depends_on: [...]` (2026-11-03)
 
