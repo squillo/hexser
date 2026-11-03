@@ -245,6 +245,23 @@ struct PgUserRepo;
 hexser::hex_register_adapter!(PgUserRepo, hexser::graph::Role::Adapter);
 ```
 
+**Edges: `depends_on: [...]`.** The two- and three-argument forms register a NODE with no
+edges, so the graph can say an adapter exists but never which port it plugs into. To carry
+the adapter → port edge, register a zero-sized `<Port>Node` marker for the port and name it:
+
+```rust
+struct UserRepositoryPortNode;
+struct PgUserRepo;
+
+hexser::hex_register_port!(UserRepositoryPortNode, hexser::graph::Role::Repository);
+hexser::hex_register_adapter!(PgUserRepo, hexser::graph::Role::Adapter, depends_on: [UserRepositoryPortNode]);
+```
+
+Read the edge with `graph.edges_to(&hexser::templates::dependency_id::<UserRepositoryPortNode>())`.
+⚠ Build the id with `dependency_id`, **never `NodeId::of`**. Template-registered nodes are
+keyed by their short type name, while `NodeId::of` hashes the full path, so an id built with
+it names no node, and `build_graph` does not validate edges.
+
 ⚠ **Until 2026-09-04 these emitted the `Registrable` impl and NO submission — for every
 type, not only generics.** A component "registered" through hexser's own advertised
 non-derive door answered `node_info()` correctly and was in no graph. If you inherit code

@@ -1,5 +1,31 @@
 ## [Unreleased]
 
+### Registrations can carry their edges: `depends_on: [...]` (2026-11-03)
+
+Added, additively (the existing forms are unchanged, so this is a patch-level change):
+- `hex_register_component!` and its five layer shorthands take an optional trailing
+  `depends_on: [T, ...]`. Each listed type gets one `Depends` edge.
+- `hexser::templates::dependency_id::<D>()` returns the graph id of a registered `D`.
+
+```rust
+hexser::hex_register_port!(UserRepositoryPortNode, hexser::Role::Repository);
+hexser::hex_register_adapter!(PgUserRepo, hexser::Role::Adapter, depends_on: [UserRepositoryPortNode]);
+```
+
+⚠ **Why `dependency_id` and not `NodeId::of`.** A template-registered node is keyed by its
+SHORT type name (`split_type_name`), but `NodeId::of::<T>()` hashes the FULL path. An edge
+built with `NodeId::of` therefore points at an id no node has. `ComponentRegistry::build_graph`
+does not validate edges, so such an edge is silent: `edge_count()` counts it, and
+`edges_to(port)` never finds the adapter. `dependency_id` derives the id from
+`D::node_info().type_name`, exactly as `build_graph` keys nodes. Because it requires
+`D: Registrable`, an edge to an unregistered port is a compile error.
+
+Before this, the only way to declare an edge was a hand-written `Registrable` impl, and downstream
+crates had started to grow private copies of the registration macro to do it.
+
+Graph-reading cells (`templates::tests`) pin both the edge and its absence on the bare form.
+A mutant that builds the id with `NodeId::of` turns the edge cell red.
+
 ## [0.6.0] - 2026-09-11
 
 Minor rather than patch: the registration-honesty section below carries a breaking change, and
