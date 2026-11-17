@@ -12,6 +12,8 @@
 //! reporting; the cdylib entry point returns a number.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D10 — the static-DI, AI-timestamp and visualization checks run under the default `surface` feature only; every other check, the 0.7 doors included, also runs macros-only.
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D10 (R29) — execute the 0.7 doors under wasmtime: an `Actor` of the Deck and Tables shapes, a `HexVocabulary` round trip, a `HexRefusal` through `Hexserror` and back, a `port_trait` port node, an `implements` edge read back, and an empty `findings()`.
 //! - 2026-09-11T00:00:00Z @AI: Initial probe covering graph construction, metadata clock, static DI, errors, AI timestamps and visualization export.
 
 /// A domain entity registered through `inventory` at link time.
@@ -24,6 +26,9 @@ pub struct ProbeEntity {
   /// Identity field — `HexEntity` derives `Id` from it.
   pub id: std::string::String,
 }
+
+/// True when built with the default `surface` feature; false for the macros-only probe.
+pub const SURFACE: bool = std::cfg!(feature = "surface");
 
 /// True when the target has no std clock, and hexser timestamps are therefore pinned to 0.
 ///
@@ -38,10 +43,16 @@ pub const CLOCKLESS: bool = std::cfg!(all(target_arch = "wasm32", target_os = "u
 pub fn run_checks() -> u32 {
   let node_count = check_graph_registration();
   check_metadata_clock();
-  check_static_di();
   check_errors();
-  check_ai_timestamp();
-  check_visualization();
+  #[cfg(feature = "surface")]
+  {
+    check_static_di();
+    check_ai_timestamp();
+    check_visualization();
+  }
+  check_actor();
+  check_vocabulary_and_refusal();
+  check_proved_edges();
   node_count
 }
 
@@ -59,9 +70,7 @@ fn check_graph_registration() -> u32 {
     "inventory registration produced no nodes under wasm; ProbeEntity should be present"
   );
   std::assert!(
-    graph
-      .nodes()
-      .any(|n| n.type_name().contains("ProbeEntity")),
+    graph.nodes().any(|n| n.type_name().contains("ProbeEntity")),
     "the derived ProbeEntity is missing from HexGraph::current() under wasm"
   );
 
@@ -78,7 +87,8 @@ fn check_metadata_clock() {
 
   if CLOCKLESS {
     std::assert_eq!(
-      created_at, 0,
+      created_at,
+      0,
       "a clockless target must report created_at = 0, not a fabricated time"
     );
   } else {
@@ -94,6 +104,7 @@ fn check_metadata_clock() {
 }
 
 /// The documented WASM dependency-injection path builds and yields its values.
+#[cfg(feature = "surface")]
 fn check_static_di() {
   #[derive(Clone)]
   struct Repo(u8);
@@ -139,6 +150,7 @@ fn check_errors() {
 /// The `ai` feature's RFC3339 stamp is well formed, and honest about a missing clock.
 ///
 /// This is the second site that read the clock directly, and the one `ai`/`mcp` builds hit.
+#[cfg(feature = "surface")]
 fn check_ai_timestamp() {
   let ts = hexser::ai::timestamp::now_rfc3339();
 
@@ -147,7 +159,8 @@ fn check_ai_timestamp() {
 
   if CLOCKLESS {
     std::assert_eq!(
-      ts, "1970-01-01T00:00:00Z",
+      ts,
+      "1970-01-01T00:00:00Z",
       "a clockless target must report the epoch, not a fabricated time"
     );
   } else {
@@ -162,6 +175,7 @@ fn check_ai_timestamp() {
 ///
 /// Only the in-memory export is exercised: `save_visualization` writes through `std::fs`, which
 /// correctly returns an error rather than panicking under wasm and is not a WASM-supported path.
+#[cfg(feature = "surface")]
 fn check_visualization() {
   let dot = hexser::HexGraph::current()
     .to_dot()
@@ -171,6 +185,166 @@ fn check_visualization() {
     dot.contains("digraph"),
     "DOT export produced no graph body under wasm: {dot}"
   );
+}
+
+/// A port the probe's adapter proves it serves (HEXSER-0.7 D4, D5).
+pub trait ProbeSinkPort {
+  /// Record one fact.
+  fn append(&mut self, fact: u32);
+}
+
+/// The port node, tied to its trait.
+#[derive(hexser::HexPort)]
+#[hex(role = "OutputPort", port_trait = ProbeSinkPort)]
+pub struct ProbeSinkPortNode;
+
+/// The adapter, with a compile-time proof that it implements the port's trait.
+#[derive(hexser::HexAdapter)]
+#[hex(implements(ProbeSinkPortNode))]
+pub struct ProbeSink {
+  /// What was appended.
+  pub facts: std::vec::Vec<u32>,
+}
+
+impl ProbeSinkPort for ProbeSink {
+  fn append(&mut self, fact: u32) {
+    self.facts.push(fact);
+  }
+}
+
+/// A single-writer actor's node, depending on the port it writes through.
+#[derive(hexser::HexActor)]
+#[hex(depends_on(ProbeSinkPortNode))]
+pub struct ProbeActorNode;
+
+/// A closed refusal with static guidance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, hexser::HexRefusal)]
+pub enum ProbeRefusal {
+  /// Nothing to record.
+  #[hex(next_step = "send a non-zero fact")]
+  Zero,
+  /// Recorded already.
+  Duplicate,
+}
+
+/// A Deck-shaped actor (returns its event or a closed refusal) that writes through its port.
+struct ProbeActor {
+  sink: ProbeSink,
+}
+
+impl hexser::application::Actor for ProbeActor {
+  type Command = u32;
+  type Context<'a> = ();
+  type Outcome = std::result::Result<u32, ProbeRefusal>;
+
+  fn handle(&mut self, fact: u32, _context: ()) -> Self::Outcome {
+    if fact == 0 {
+      return std::result::Result::Err(ProbeRefusal::Zero);
+    }
+    if self.sink.facts.contains(&fact) {
+      return std::result::Result::Err(ProbeRefusal::Duplicate);
+    }
+    ProbeSinkPort::append(&mut self.sink, fact);
+    std::result::Result::Ok(fact)
+  }
+}
+
+/// A Tables-shaped actor: returns `()` and appends every outcome as a fact.
+struct ProbeFacts {
+  facts: std::vec::Vec<std::result::Result<u32, ProbeRefusal>>,
+}
+
+impl hexser::application::Actor for ProbeFacts {
+  type Command = u32;
+  type Context<'a> = ();
+  type Outcome = ();
+
+  fn handle(&mut self, fact: u32, _context: ()) {
+    let outcome = if fact == 0 {
+      std::result::Result::Err(ProbeRefusal::Zero)
+    } else {
+      std::result::Result::Ok(fact)
+    };
+    self.facts.push(outcome);
+  }
+}
+
+/// The single writer's door decides under wasm: both shapes, through the trait.
+fn check_actor() {
+  let mut actor = ProbeActor {
+    sink: ProbeSink {
+      facts: std::vec::Vec::new(),
+    },
+  };
+  std::assert_eq!(
+    hexser::application::Actor::handle(&mut actor, 3, ()),
+    std::result::Result::Ok(3)
+  );
+  std::assert_eq!(
+    hexser::application::Actor::handle(&mut actor, 3, ()),
+    std::result::Result::Err(ProbeRefusal::Duplicate)
+  );
+  std::assert_eq!(
+    hexser::application::Actor::handle(&mut actor, 0, ()),
+    std::result::Result::Err(ProbeRefusal::Zero)
+  );
+  std::assert_eq!(actor.sink.facts, std::vec![3]);
+
+  let mut facts = ProbeFacts {
+    facts: std::vec::Vec::new(),
+  };
+  hexser::application::Actor::handle(&mut facts, 0, ());
+  hexser::application::Actor::handle(&mut facts, 5, ());
+  std::assert_eq!(
+    facts.facts,
+    std::vec![
+      std::result::Result::Err(ProbeRefusal::Zero),
+      std::result::Result::Ok(5)
+    ]
+  );
+}
+
+/// A refusal's codes, its read-back, and its trip through `Hexserror` and back under wasm.
+fn check_vocabulary_and_refusal() {
+  std::assert_eq!(
+    <ProbeRefusal as hexser::domain::Vocabulary>::CODES,
+    &["Zero", "Duplicate"]
+  );
+  std::assert_eq!(
+    ProbeRefusal::from_code("Duplicate"),
+    std::option::Option::Some(ProbeRefusal::Duplicate)
+  );
+  std::assert_eq!(ProbeRefusal::from_code("zero"), std::option::Option::None);
+
+  let err = hexser::Hexserror::refused(&ProbeRefusal::Zero, "nothing to record");
+  std::assert!(std::matches!(err, hexser::Hexserror::Domain(_)));
+  std::assert_eq!(
+    ProbeRefusal::from_code(err.code()),
+    std::option::Option::Some(ProbeRefusal::Zero)
+  );
+  std::assert!(
+    std::format!("{err}").contains("nothing to record"),
+    "a refused Hexserror lost its words under wasm"
+  );
+}
+
+/// The proved `Implements` edge and the actor's `Depends` edge are in a fresh graph, and the
+/// graph has nothing to say against itself.
+fn check_proved_edges() {
+  let graph = hexser::registry::ComponentRegistry::build_graph();
+  std::assert!(
+    hexser::templates::implements_edge_exists::<ProbeSink, ProbeSinkPortNode>(&graph),
+    "the proved Implements edge is missing under wasm"
+  );
+  std::assert!(
+    hexser::templates::dependency_edge_exists::<ProbeActorNode, ProbeSinkPortNode>(&graph),
+    "the actor's Depends edge is missing under wasm"
+  );
+  std::assert!(
+    !hexser::templates::implements_edge_exists::<ProbeActorNode, ProbeSinkPortNode>(&graph),
+    "a Depends edge read as Implements under wasm"
+  );
+  std::assert_eq!(graph.findings(), std::vec::Vec::new());
 }
 
 /// Entry point for `wasm32-unknown-unknown`, which has no `_start` to run.

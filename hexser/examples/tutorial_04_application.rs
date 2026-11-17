@@ -6,6 +6,7 @@
 //! Run with: cargo run --example tutorial_04_application
 //!
 //! Revision History
+//! - 2026-11-17T16:59:59Z @AI: HEXSER-0.7 — the write side is an `Actor` (`&mut self`, so the handler really assigns ids) with a `HexRefusal` outcome, in place of the deprecated `DirectiveHandler`.
 //! - 2025-10-07T11:55:00Z @AI: Align with v0.4 Repository by removing id-centric methods; no behavior change otherwise.
 
 use hexser::prelude::*;
@@ -54,6 +55,15 @@ struct CreateTodoDirective {
   title: String,
 }
 
+/// Why the handler can refuse a directive: a closed list, each with its guidance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, HexRefusal)]
+enum CreateTodoRefusal {
+  #[hex(next_step = "Give the todo a title")]
+  EmptyTitle,
+}
+
+/// The single writer for todos: `&mut self`, so it can assign ids without a lock or a `Cell`.
+#[derive(HexActor)]
 struct CreateTodoHandler {
   next_id: u32,
 }
@@ -64,17 +74,22 @@ impl CreateTodoHandler {
   }
 }
 
-impl DirectiveHandler<CreateTodoDirective> for CreateTodoHandler {
-  fn handle(&self, directive: CreateTodoDirective) -> HexResult<()> {
+impl hexser::application::Actor for CreateTodoHandler {
+  type Command = CreateTodoDirective;
+  type Context<'a> = ();
+  /// The id assigned, or why not.
+  type Outcome = Result<u32, CreateTodoRefusal>;
+
+  fn handle(&mut self, directive: CreateTodoDirective, _context: ()) -> Self::Outcome {
     if directive.title.trim().is_empty() {
-      return Err(Hexserror::validation("Title cannot be empty").with_field("title"));
+      return Err(CreateTodoRefusal::EmptyTitle);
     }
 
+    let id = self.next_id;
+    self.next_id += 1;
     println!("Creating todo: {}", directive.title);
-    println!("  Assigned ID: {}", self.next_id);
-    println!("  Validation passed");
-
-    Ok(())
+    println!("  Assigned ID: {id}");
+    Ok(id)
   }
 }
 
@@ -95,14 +110,26 @@ fn main() {
   println!("Tutorial 04: Application Layer\n");
   println!("{}", "=".repeat(50));
 
-  let handler = CreateTodoHandler::new();
+  let mut handler = CreateTodoHandler::new();
 
   let directive = CreateTodoDirective {
     title: String::from("Complete tutorial series"),
   };
 
   println!("\nExecuting directive:");
-  handler.handle(directive).unwrap();
+  hexser::application::Actor::handle(&mut handler, directive, ()).unwrap();
+
+  // A refusal is a value; it becomes a `Hexserror` only at the edge, and its code reads back.
+  let refused = hexser::application::Actor::handle(
+    &mut handler,
+    CreateTodoDirective {
+      title: String::from("  "),
+    },
+    (),
+  )
+  .unwrap_err();
+  let at_the_edge = Hexserror::refused(&refused, "A todo needs a title");
+  println!("  Refused: {at_the_edge} (code {})", at_the_edge.code());
 
   let repo = InMemoryTodoRepository::new();
   let query_handler = ListActiveTodosHandler { repository: &repo };
@@ -135,7 +162,7 @@ fn main() {
   );
 
   println!("\nKey concepts:");
-  println!("  Directives handle write operations (CQRS)");
+  println!("  An Actor is the single writer: it decides each directive (CQRS)");
   println!("  Queries handle read operations");
   println!("  Application layer orchestrates domain and ports");
   println!("  Business logic stays in domain layer");

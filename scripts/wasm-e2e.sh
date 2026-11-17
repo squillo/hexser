@@ -4,7 +4,8 @@
 #
 # Two gates, in order of strength:
 #   1. COMPILE  — every feature combination still builds for both wasm targets.
-#   2. EXECUTE  — the wasm-e2e probe actually RUNS under wasmtime on both targets.
+#   2. EXECUTE  — the wasm-e2e probe actually RUNS under wasmtime on both targets, with its
+#                default surface and macros-only.
 #
 # Gate 2 is the one that matters. hexser passed gate 1 for five releases while
 # `HexGraph::current()` trapped on first touch under wasm32-unknown-unknown, because std's
@@ -13,6 +14,7 @@
 # Usage: scripts/wasm-e2e.sh
 #
 # Revision History
+# - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D10 — execute the probe twice per target (surface, macros-only); add the macros-only set (`--no-default-features --features macros`), the pin every editor core takes; the probe now also executes the 0.7 doors (wasm-e2e/src/lib.rs).
 # - 2026-09-11T00:00:00Z @AI: Initial harness — compile matrix plus wasmtime execution on wasm32-unknown-unknown and wasm32-wasip1.
 
 set -euo pipefail
@@ -23,7 +25,8 @@ TARGETS=(wasm32-unknown-unknown wasm32-wasip1)
 # Feature combinations a consumer can select. "" is the crate default (macros + static-di),
 # which is what the README recommends for wasm; the rest must at least keep compiling so a
 # consumer who enables them gets a build error from their own code, never from hexser.
-FEATURE_SETS=("" "serde" "ai" "visualization" "mcp" "async" "container" "full")
+# "macros" alone is the pin PRD-847 gives editor_host_ports (`features = ["macros"]`, no defaults).
+FEATURE_SETS=("" "macros" "serde" "ai" "visualization" "mcp" "async" "container" "full")
 
 fail() { printf '\n\033[31mFAIL\033[0m  %s\n' "$*" >&2; exit 1; }
 step() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
@@ -60,29 +63,43 @@ done
 step "Execute probe under wasmtime"
 E2E="$ROOT/wasm-e2e"
 
-# wasm32-wasip1 is a command module: it has a real _start, real stdout, and a real clock, so
-# the probe runs like a normal binary and reports what it saw.
-( cd "$E2E" && cargo build --quiet --target wasm32-wasip1 --bin hexser_wasm_e2e ) \
-  || fail "probe does not build for wasm32-wasip1"
-wasip1_out="$(wasmtime run "$E2E/target/wasm32-wasip1/debug/hexser_wasm_e2e.wasm")" \
-  || fail "probe TRAPPED under wasm32-wasip1 (output above)"
-printf '  wasm32-wasip1           %s\n' "$wasip1_out"
-grep -q 'clockless=false' <<<"$wasip1_out" \
-  || fail "wasm32-wasip1 has a real clock; the probe reported it as clockless: $wasip1_out"
+# Each target runs the probe twice: with the default `surface` feature (static-di, serde, ai,
+# visualization), and macros-only (`--no-default-features`), the pin an editor core takes. The
+# 0.7 doors (Actor, vocabularies, refusals, port_trait, Implements edges, findings) run in both.
+PROBE_SETS=("surface" "macros-only")
+probe_args() { if [ "$1" = "macros-only" ]; then printf '%s' "--no-default-features"; fi; }
 
-# wasm32-unknown-unknown is a reactor module: no _start and no stdout, so the probe is a
-# cdylib export invoked directly. It returns the graph node count; a failed check panics,
-# which wasm lowers to an `unreachable` trap and wasmtime surfaces as a non-zero exit.
-( cd "$E2E" && cargo build --quiet --target wasm32-unknown-unknown --lib ) \
-  || fail "probe does not build for wasm32-unknown-unknown"
-unknown_out="$(wasmtime run --invoke probe \
-  "$E2E/target/wasm32-unknown-unknown/debug/hexser_wasm_e2e.wasm" 2>/dev/null)" \
-  || fail "probe TRAPPED under wasm32-unknown-unknown — rerun without 2>/dev/null for the backtrace"
-printf '  wasm32-unknown-unknown  probe() -> %s node(s)\n' "$unknown_out"
+for set in "${PROBE_SETS[@]}"; do
+  extra="$(probe_args "$set")"
+  want_surface=true
+  [ "$set" = "macros-only" ] && want_surface=false
 
-# A trap is not the only failure mode: link-time `inventory` registration relying on
-# life-before-main could silently produce an empty graph, which would exit 0 with 0 nodes.
-[ "$unknown_out" -ge 1 ] 2>/dev/null \
-  || fail "inventory registration produced no graph nodes under wasm32-unknown-unknown (got '$unknown_out')"
+  # wasm32-wasip1 is a command module: it has a real _start, real stdout, and a real clock, so
+  # the probe runs like a normal binary and reports what it saw.
+  ( cd "$E2E" && cargo build --quiet --target wasm32-wasip1 --bin hexser_wasm_e2e $extra ) \
+    || fail "probe [$set] does not build for wasm32-wasip1"
+  wasip1_out="$(wasmtime run "$E2E/target/wasm32-wasip1/debug/hexser_wasm_e2e.wasm")" \
+    || fail "probe [$set] TRAPPED under wasm32-wasip1 (output above)"
+  printf '  %-12s wasm32-wasip1           %s\n' "$set" "$wasip1_out"
+  grep -q 'clockless=false' <<<"$wasip1_out" \
+    || fail "wasm32-wasip1 has a real clock; the probe reported it as clockless: $wasip1_out"
+  grep -q "surface=$want_surface" <<<"$wasip1_out" \
+    || fail "probe [$set] ran with the wrong feature set: $wasip1_out"
+
+  # wasm32-unknown-unknown is a reactor module: no _start and no stdout, so the probe is a
+  # cdylib export invoked directly. It returns the graph node count; a failed check panics,
+  # which wasm lowers to an `unreachable` trap and wasmtime surfaces as a non-zero exit.
+  ( cd "$E2E" && cargo build --quiet --target wasm32-unknown-unknown --lib $extra ) \
+    || fail "probe [$set] does not build for wasm32-unknown-unknown"
+  unknown_out="$(wasmtime run --invoke probe \
+    "$E2E/target/wasm32-unknown-unknown/debug/hexser_wasm_e2e.wasm" 2>/dev/null)" \
+    || fail "probe [$set] TRAPPED under wasm32-unknown-unknown — rerun without 2>/dev/null for the backtrace"
+  printf '  %-12s wasm32-unknown-unknown  probe() -> %s node(s)\n' "$set" "$unknown_out"
+
+  # A trap is not the only failure mode: link-time `inventory` registration relying on
+  # life-before-main could silently produce an empty graph, which would exit 0 with 0 nodes.
+  [ "$unknown_out" -ge 1 ] 2>/dev/null \
+    || fail "inventory registration produced no graph nodes under wasm32-unknown-unknown [$set] (got '$unknown_out')"
+done
 
 printf '\n\033[32mPASS\033[0m  hexser builds AND runs on wasm32-unknown-unknown and wasm32-wasip1.\n'

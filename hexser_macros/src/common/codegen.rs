@@ -8,6 +8,7 @@
 //! qualified (`::hexser::`, `::std::`) for hygiene.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D2/D4/D5 — `registration` is the one entry for every registration derive: it reads `#[hex(...)]` through the strict `attrs` reader (an unknown key or a key the derive does not read is a compile error, where `role_override` ignored it), emits `depends_on` as `Depends` edges with the template's `dependency_id`, emits `implements` as a compile-time proof plus an `ImplementsEntry`, and emits `port_trait` as the hidden bounded `__hexser_port_trait`. `role_override` is retired into it.
 //! - 2026-09-04T00:00:00Z @AI: A registration derive on a GENERIC type now refuses with a
 //!   compile error naming the marker-struct remedy, instead of silently discarding the
 //!   inventory submission (the type implemented `Registrable`, answered `node_info()`, and was
@@ -15,34 +16,24 @@
 //! - 2026-07-20T00:00:00Z @AI: Add #[hex(role = "...")] override parsing so component roles are not hardcoded.
 //! - 2026-07-20T00:00:00Z @AI: Extract shared Registrable+inventory codegen; fully-qualified paths; skip inventory submission for generic types.
 
-/// Parse an optional `#[hex(role = "VariantName")]` override from a derive input's attributes.
-///
-/// Returns the tokens `::hexser::graph::Role::VariantName` when present, or `None` when no
-/// `role` override is supplied (the derive then applies its default). An unknown variant name
-/// produces a normal compile error at the `Role::` path, pointing at the user's attribute.
-///
-/// Every registration derive calls this, so `#[hex(role = "...")]` means the same thing on all
-/// five of them; only the default differs. A derive that declares `attributes(hex)` and does
-/// NOT call this would accept the attribute and register the wrong role in silence.
-pub fn role_override(attrs: &[syn::Attribute]) -> Option<proc_macro2::TokenStream> {
-  let mut found = None;
-  for attr in attrs {
-    if !attr.path().is_ident("hex") {
-      continue;
-    }
-    // Ignore parse errors here: a malformed `#[hex(...)]` simply yields no override rather
-    // than aborting the derive, so the default role still applies.
-    let _ = attr.parse_nested_meta(|meta| {
-      if meta.path.is_ident("role") {
-        let value = meta.value()?;
-        let lit: syn::LitStr = value.parse()?;
-        let ident = syn::Ident::new(&lit.value(), lit.span());
-        found = Some(quote::quote!(::hexser::graph::Role::#ident));
-      }
-      Ok(())
-    });
-  }
-  found
+/// The one entry for every registration derive: read `#[hex(...)]` strictly, refuse any key
+/// this derive does not read (`owns`), take the role (or `default_role`), and emit the
+/// registration with its edges. Returns the compile error instead when the attribute is wrong.
+pub fn registration(
+  input: &syn::DeriveInput,
+  derive_name: &str,
+  layer: proc_macro2::TokenStream,
+  default_role: proc_macro2::TokenStream,
+  owns: &[crate::common::attrs::Key],
+) -> proc_macro2::TokenStream {
+  let attrs = match crate::common::attrs::parse(&input.attrs)
+    .and_then(|attrs| attrs.admit(derive_name, owns, &[]).map(|()| attrs))
+  {
+    Ok(attrs) => attrs,
+    Err(error) => return error.to_compile_error(),
+  };
+  let role = attrs.role_tokens().unwrap_or(default_role);
+  registrable_and_submit(input, derive_name, layer, role, &attrs)
 }
 
 /// Generate the `Registrable` implementation and the inventory submission for a component
@@ -73,6 +64,7 @@ pub fn registrable_and_submit(
   derive_name: &str,
   layer: proc_macro2::TokenStream,
   role: proc_macro2::TokenStream,
+  attrs: &crate::common::attrs::HexAttrs,
 ) -> proc_macro2::TokenStream {
   let name = &input.ident;
   let is_generic = !input.generics.params.is_empty();
@@ -93,6 +85,10 @@ pub fn registrable_and_submit(
   };
   let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
+  // `depends_on(..)`: one `Depends` edge per listed type, through the same `dependency_id`
+  // the templates use, so a derive and a template say the same edge onto the same node.
+  let depends_on = &attrs.depends_on;
+
   let registrable = quote::quote! {
     impl #impl_generics ::hexser::registry::Registrable for #name #ty_generics #where_clause {
       fn node_info() -> ::hexser::registry::NodeInfo {
@@ -105,7 +101,7 @@ pub fn registrable_and_submit(
       }
 
       fn dependencies() -> ::std::vec::Vec<::hexser::graph::NodeId> {
-        ::std::vec::Vec::new()
+        ::std::vec![#( ::hexser::templates::dependency_id::<#depends_on>() ),*]
       }
     }
   };
@@ -125,10 +121,36 @@ pub fn registrable_and_submit(
     );
     syn::Error::new_spanned(input, message).to_compile_error()
   } else {
+    // `implements(PortNode, ..)`: the proof first (this compiles only if `#name` implements
+    // the trait the port node named with `port_trait`), then one proved `Implements` edge.
+    let claims = attrs.implements.iter().map(|port| {
+      let proof = quote::quote_spanned! {syn::spanned::Spanned::span(port)=>
+        const _: () = <#port>::__hexser_port_trait::<#name>();
+      };
+      quote::quote! {
+        #proof
+        ::hexser::inventory::submit! {
+          ::hexser::registry::ImplementsEntry::new::<#name, #port>()
+        }
+      }
+    });
+    // `port_trait = Trait`: the port node carries its trait as a bound, so the node does not
+    // compile without the trait, and `implements` has something to prove an adapter against.
+    let port_trait = attrs.port_trait.as_ref().map(|bound| {
+      quote::quote! {
+        impl #name {
+          /// The port node's trait, as a bound: `implements` proves an adapter against it.
+          #[doc(hidden)]
+          pub const fn __hexser_port_trait<__HexserImplementor: ?::core::marker::Sized + #bound>() {}
+        }
+      }
+    });
     quote::quote! {
       ::hexser::inventory::submit! {
         ::hexser::registry::ComponentEntry::new::<#name>()
       }
+      #( #claims )*
+      #port_trait
     }
   };
 

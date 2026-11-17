@@ -4,22 +4,14 @@
   §1.4 mandates for every cross-Snapp call site; every other crate's boundary is expressed in
   terms of the traits this crate defines).
 
-- **PRD-272 status:** conforming as of 2026-07-21, with two exceptions tracked and landing under
-  the same PRD (not yet merged at the time this contract was authored):
-  - §1.5 / §3.G: `HexGraph::current()` (`graph/hex_graph.rs`) still caches behind
-    `std::sync::OnceLock<Arc<HexGraph>>`. CLAIM-B1 replaces it with
-    `std::sync::LazyLock<arc_swap::ArcSwap<HexGraph>>` plus `HexGraph::install()` /
-    `HexGraph::rebuild_current()` as the sole write site. `container/container.rs`'s
-    `tokio::sync::RwLock<HashMap<String, ServiceEntry>>` (feature `container`) is likewise
-    slated (CLAIM-B2) to become `arc_swap::ArcSwap<indexmap::IndexMap<String, ServiceEntry>>`
-    with CAS-retry writes and wait-free reads; its per-entry `tokio::sync::OnceCell` singleton
-    cache is a documented carve-out (per-entry init, not a map-wide lock) and is not affected.
-  - §3.H: the graph adjacency indices (`outgoing`/`incoming` in `GraphInner`), and other
-    iterated maps (event-bus handler registry, CloudEvents envelope `extensions`) are mid-flight
-    HashMap → `indexmap::IndexMap` conversions under the same PRD (CLAIM-A1/A2/A3). Graph
-    *nodes* already use `BTreeMap` (deterministic).
-  - `arc_swap` and `indexmap` are already core (non-optional) dependencies of this crate
-    (`Cargo.toml`), added ahead of the above landing.
+- **PRD-272 status:** conforming. The two exceptions this contract first recorded have landed
+  (re-read 2026-11-17 for 0.7):
+  - §1.5 / §3.G: `HexGraph::current()` reads a `LazyLock<arc_swap::ArcSwap<HexGraph>>`
+    (`graph/hex_graph.rs`, `arch()`), and `HexGraph::install()` is the sole write site.
+    `container/container.rs` holds its services in an
+    `arc_swap::ArcSwap<indexmap::IndexMap<String, ServiceEntry>>` (feature `container`).
+  - §3.H: the graph adjacency indices (`outgoing`/`incoming`) and `CloudEventsEnvelope`
+    `extensions` are `indexmap::IndexMap`. Graph nodes are a `BTreeMap`.
 
 - **Boundary ports (trait Ports exposed to other crates/Snapps):**
   - `crate::ports::repository::{Repository, QueryRepository}` — save-side and generic
@@ -30,12 +22,20 @@
   - `crate::ports::mcp_server::McpServer` (feature `mcp`) — `initialize`, `list_resources`,
     `read_resource`, `refresh_project`, `handle_request`; the Model Context Protocol JSON-RPC
     boundary adapters implement against (`ports/mcp_server.rs`).
-  - `crate::ports::{InputPort, OutputPort, Query, UseCase}` — the remaining Phase-1 port
-    traits (input/output boundary and CQRS query shape).
+  - `crate::ports::OutputPort`, and the deprecated `crate::ports::{InputPort, UseCase}`
+    (routed to `Actor`) and `crate::ports::Query` (routed to `QueryHandler`). Deprecated in 0.7,
+    not removed.
+  - 0.7 doors (PRD HEXSER-0.7): `crate::application::Actor`, the single writer's door
+    (`&mut self`, associated `Command`/`Context<'a>`/`Outcome`); `crate::domain::Vocabulary`
+    and `crate::error::Refusal`, the closed vocabularies a command, event or refusal enum
+    derives; `Hexserror::refused`/`Hexserror::code`, the one way a refusal crosses the edge.
+    `Hexserror` keeps its six variants.
   - Graph introspection surface: `crate::graph::HexGraph` (`HexGraph::current()`,
     `nodes_by_layer`, `nodes_by_role`, `edges_from`/`edges_to`, DOT/Mermaid/JSON export under
     `visualization`) — not a trait Port, but the read surface every other Snapp/tool queries to
-    introspect this process's architecture.
+    introspect this process's architecture. 0.7 adds `HexGraph::findings()` (typed
+    `GraphFinding`s), proved `Implements` edges (`registry::ImplementsEntry`,
+    `templates::implements_edge_exists`), and `port_trait` on port nodes.
 
 - **Wire format at the boundary:**
   - JSON at the **external** AI/MCP boundary: `AIContext`/`ContextBuilder` and `AgentPack`
@@ -54,32 +54,37 @@
 - **Shared-read hot state (ArcSwap surfaces):** the `HexGraph` architecture graph via
   `HexGraph::current()` is the self-programming substrate — read on every hot path (MCP
   `read_resource`/`list_resources` via `ProjectRegistry::from_current_graph`, every AI-context
-  export) and hot-swapped when the program rewrites itself (`hexser/refresh`). Landing state
-  (CLAIM-B1, this PRD): `current()` backed by
+  export) and hot-swapped when the program rewrites itself (`hexser/refresh`). Landed
+  (CLAIM-B1): `current()` is backed by
   `std::sync::LazyLock<arc_swap::ArcSwap<HexGraph>>`, a wait-free RCU surface per N_BOOK §1.5,
   read via `.load_full()` (unchanged `Arc<HexGraph>` return type) and hot-swapped by the sole
   write site `HexGraph::install(graph)` (with `HexGraph::rebuild_current()` rebuilding from the
-  registry and installing). At the time of authoring, `current()` is still `OnceLock`-cached
-  (write-once); this section describes the intended/landing state per this PRD.
+  registry and installing).
 
-- **Locks:** ArcSwap for the graph (landing, see above). The dyn `container` feature (feature
-  `container`) uses (landing) `arc_swap::ArcSwap` for its services map plus a per-entry
+- **Locks:** ArcSwap for the graph (landed, see above). The dyn `container` feature (feature
+  `container`) uses `arc_swap::ArcSwap` for its services map plus a per-entry
   `tokio::sync::OnceCell` singleton cache — the latter is a documented carve-out (per-entry
   initialization, not a map-wide lock, never held across provider execution). No hot-path
-  `RwLock`/`Mutex`/`OnceLock` outside these two, and the `container` `RwLock` is being removed
-  under this PRD. The `RefCell`-based `adapters/in_memory_event_bus.rs` remains the documented
+  `RwLock`/`Mutex`/`OnceLock` outside these two; the `container` `RwLock` is gone. One further carve-out (0.7): `error/env_control.rs` reads
+  `HEXSER_INCLUDE_SOURCE_LOCATION` once into a `std::sync::OnceLock<bool>`. It is process
+  configuration fixed at start, never written again and never hot-swapped, so it is not
+  shared-read hot state and ArcSwap does not apply. 0.7's `Actor` takes `&mut self` and adds no
+  lock. The `RefCell`-based `adapters/in_memory_event_bus.rs` remains the documented
   single-threaded test/dev adapter (exempt as a non-hot-path, non-shared-state, single-threaded
   utility) — see N_BOOK Phase E (actor-grade path) for the multi-threaded successor.
 
-- **Deterministic iteration:** `BTreeMap` for graph nodes (already landed); `indexmap::IndexMap`
-  for graph adjacency (`outgoing`/`incoming`), `GraphMetadata::attributes`, the event-bus
-  `handlers` registry, and `CloudEventsEnvelope::extensions` (all landing under this PRD's
-  CLAIM-A1/A2/A3). No `HashMap`/`HashSet` on iterated (export/serialize/report-order-sensitive)
-  paths once landed.
+- **Deterministic iteration:** `BTreeMap` for graph nodes; `indexmap::IndexMap` for graph
+  adjacency (`outgoing`/`incoming`), `GraphMetadata::attributes`, the event-bus `handlers`
+  registry, and `CloudEventsEnvelope::extensions` (all landed, CLAIM-A1/A2/A3; re-read
+  2026-11-17). No `HashMap`/`HashSet` on iterated (export/serialize/report-order-sensitive)
+  paths. 0.7's `HexGraph::findings()` reports in a fixed order: collisions, then adapters in
+  node order, then edges in edge order.
 
 - **N_BOOK grounding:** §1.5 (wait-free RCU — the `HexGraph::current()` ArcSwap surface), §10
   (Snapp boundary independence — every `ports::*` trait is a Port other Snapps/crates code
   against, never a concrete adapter type), §23 (Tier 2 SOLE write site — `HexGraph::install()`
   is the only place the live architecture graph is replaced).
 
-_Authored 2026-07-21 under PRD-272 §1.1 (HEXSER-272-CONFORMANCE)._
+_Authored 2026-07-21 under PRD-272 §1.1 (HEXSER-272-CONFORMANCE). Updated 2026-11-17 for 0.7
+(PRD HEXSER-0.7): the landed status, the 0.7 doors, the deprecations, and the switch's
+`OnceLock` carve-out._

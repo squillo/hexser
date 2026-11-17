@@ -1,0 +1,5 @@
+error: `#[derive(HexVocabulary)]` names the variants of a closed enum, and `NotAnEnum` is not an enum. Write the closed set as one: `enum NotAnEnum { First, Second }`
+ --> tests/ui/fail/vocabulary_on_struct.rs:3:8
+  |
+3 | struct NotAnEnum {
+  |        ^^^^^^^^^

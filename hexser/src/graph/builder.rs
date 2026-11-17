@@ -6,6 +6,7 @@
 //! invalid relationships are detected.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D6 (F-A) — a collision is two registrations that differ in type name OR module path, so two template nodes with one short name in two modules are no longer merged in silence; each is recorded as a typed `GraphFinding::ShortNameCollision`, and the 0.6 string warning is rendered from it with both module paths.
 //! - 2026-07-21T00:00:00Z @AI: PRD-272 §3.H — adjacency indices use IndexMap for deterministic iteration.
 //! - 2026-07-20T00:00:00Z @AI: build() now uses BTreeMap, precomputes adjacency indices, and records NodeId collisions in metadata instead of silently dropping a node.
 //! - 2025-10-02T12:30:00Z @AI: Add add_node and add_edge alias methods.
@@ -91,25 +92,33 @@ impl GraphBuilder {
   /// Build the immutable graph.
   ///
   /// Consumes the builder and returns a HexGraph, precomputing the outgoing/incoming adjacency
-  /// indices so edge queries are O(degree). If two distinct types produce the same `NodeId`
-  /// (a hash collision), the collision is recorded in the graph metadata rather than silently
-  /// dropping one node.
+  /// indices so edge queries are O(degree). If two distinct registrations produce the same
+  /// `NodeId` (two template nodes with one short name in two modules, or a hash collision),
+  /// the later one is kept and the merge is recorded as a typed
+  /// [`GraphFinding::ShortNameCollision`](crate::graph::finding::GraphFinding::ShortNameCollision),
+  /// read through [`HexGraph::findings`](crate::graph::hex_graph::HexGraph::findings), with
+  /// its words also written to the metadata warnings. One registration seen twice (same type
+  /// name, same module) is not a collision.
   pub fn build(self) -> crate::graph::hex_graph::HexGraph {
     let mut node_map = std::collections::BTreeMap::new();
-    let mut collisions: std::vec::Vec<std::string::String> = std::vec::Vec::new();
+    let mut collisions: std::vec::Vec<crate::graph::finding::GraphFinding> = std::vec::Vec::new();
 
     for node in self.nodes {
       let id = *node.id();
       let type_name = std::string::String::from(node.type_name());
+      let module_path = std::string::String::from(node.module_path());
       if let std::option::Option::Some(prev) = node_map.insert(id, node) {
-        // Two different types hashed to the same NodeId; keep the later one but record it so the
-        // collision is observable instead of a silently missing component.
-        if prev.type_name() != type_name {
-          collisions.push(std::format!(
-            "NodeId collision between `{}` and `{}`",
-            prev.type_name(),
-            type_name
-          ));
+        // Two registrations hashed to the same NodeId; keep the later one but record it so the
+        // merge is observable instead of a silently missing component. Templates key by the
+        // SHORT name, so the module path is what tells two of them apart (F-A).
+        if prev.type_name() != type_name || prev.module_path() != module_path {
+          collisions.push(crate::graph::finding::GraphFinding::ShortNameCollision {
+            id,
+            kept_type_name: type_name,
+            kept_module_path: module_path,
+            dropped_type_name: std::string::String::from(prev.type_name()),
+            dropped_module_path: std::string::String::from(prev.module_path()),
+          });
         }
       }
     }
@@ -125,8 +134,21 @@ impl GraphBuilder {
     }
 
     let mut metadata = crate::graph::metadata::GraphMetadata::new(&self.description);
-    for collision in collisions {
-      metadata.add_warning(collision);
+    for collision in &collisions {
+      if let crate::graph::finding::GraphFinding::ShortNameCollision {
+        kept_type_name,
+        kept_module_path,
+        dropped_type_name,
+        dropped_module_path,
+        ..
+      } = collision
+      {
+        metadata.add_warning(std::format!(
+          "NodeId collision between `{}` and `{}`",
+          qualified(dropped_module_path, dropped_type_name),
+          qualified(kept_module_path, kept_type_name)
+        ));
+      }
     }
 
     let inner = std::sync::Arc::new(crate::graph::hex_graph::GraphInner {
@@ -135,6 +157,7 @@ impl GraphBuilder {
       outgoing,
       incoming,
       metadata,
+      collisions,
     });
 
     crate::graph::hex_graph::HexGraph { inner }
@@ -179,6 +202,16 @@ impl GraphBuilder {
   ) -> crate::result::hex_result::HexResult<crate::graph::hex_graph::HexGraph> {
     self.validate()?;
     Ok(self.build())
+  }
+}
+
+/// A registration's name as a reader needs it: a derive's type name is already a full path; a
+/// template's is a short name, so its module path is put in front.
+fn qualified(module_path: &str, type_name: &str) -> std::string::String {
+  if type_name.contains("::") || module_path.is_empty() {
+    std::string::String::from(type_name)
+  } else {
+    std::format!("{module_path}::{type_name}")
   }
 }
 

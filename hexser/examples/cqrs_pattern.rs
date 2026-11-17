@@ -1,15 +1,16 @@
 //! CQRS pattern example with hex.
 //!
 //! This example demonstrates Command Query Responsibility Segregation (CQRS)
-//! using hex's Directive and Query traits. It shows how to separate write
-//! operations (directives) from read operations (queries).
+//! with hexser's `Actor` (the single writer) and `QueryHandler`. It shows how to
+//! separate write operations (directives) from read operations (queries).
 //!
 //! Run with: `cargo run --example cqrs_pattern`
 //!
 //! Revision History
+//! - 2026-11-17T16:59:59Z @AI: HEXSER-0.7 — the write side is an `Actor` that owns its repository (`&mut self`) and refuses with a `HexRefusal`, in place of the deprecated `DirectiveHandler`, whose `&self` left the save unwritten.
 //! - 2025-10-07T13:02:00Z @AI: Migrate to v0.4 Repository by removing id-centric methods; no behavior change.
 
-use hexser::{Directive, DirectiveHandler, QueryHandler};
+use hexser::QueryHandler;
 
 fn main() -> hexser::HexResult<()> {
   println!("=== CQRS Pattern Example ===\n");
@@ -18,9 +19,10 @@ fn main() -> hexser::HexResult<()> {
   let write_repo = InMemoryUserRepository::new();
   let query_repo = InMemoryUserQueryRepository::new();
 
-  // Write side: Create user via directive
-  let create_handler = CreateUserHandler {
+  // Write side: the single writer owns its repository and decides each directive.
+  let mut writer = UserWriter {
     repository: write_repo,
+    next_id: 1,
   };
 
   let create_directive = CreateUserDirective {
@@ -29,8 +31,25 @@ fn main() -> hexser::HexResult<()> {
   };
 
   println!("Creating user via directive...");
-  create_handler.handle(create_directive)?;
-  println!("✓ User created");
+  let created = hexser::application::Actor::handle(&mut writer, create_directive, ())?;
+  println!("✓ User created: id {}", created.id);
+
+  // A refused directive: the code reads back to the closed refusal.
+  let refused = hexser::application::Actor::handle(
+    &mut writer,
+    CreateUserDirective {
+      email: String::from("bob"),
+      name: String::from("Bob"),
+    },
+    (),
+  )
+  .unwrap_err();
+  println!("✓ Refused: {refused}");
+  assert_eq!(
+    CreateUserRefusal::from_code(refused.code()),
+    Some(CreateUserRefusal::InvalidEmail)
+  );
+  assert_eq!(writer.repository.users.len(), 1);
 
   // Read side: Query user
   let query_handler = FindUserByEmailHandler {
@@ -69,37 +88,56 @@ struct CreateUserDirective {
   name: String,
 }
 
-impl hexser::application::Directive for CreateUserDirective {
-  fn validate(&self) -> hexser::HexResult<()> {
-    if !self.email.contains('@') {
-      return Err(hexser::Hexserror::validation("Invalid email format").with_field("email"));
-    }
-    if self.name.is_empty() {
-      return Err(hexser::Hexserror::validation("Name cannot be empty").with_field("name"));
-    }
-    Ok(())
-  }
+/// Why a create is refused: a closed list, each with its guidance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, hexser::HexRefusal)]
+enum CreateUserRefusal {
+  #[hex(next_step = "Give an email address that contains '@'")]
+  InvalidEmail,
+  #[hex(next_step = "Give a name")]
+  EmptyName,
 }
 
-// Write side: Directive handler
-struct CreateUserHandler {
+// Write side: the event the writer decided.
+#[derive(Debug)]
+struct UserCreated {
+  id: String,
+}
+
+// Write side: the single writer. `&mut self` lets it save without interior mutability.
+struct UserWriter {
   repository: InMemoryUserRepository,
+  next_id: u64,
 }
 
-impl hexser::application::DirectiveHandler<CreateUserDirective> for CreateUserHandler {
-  fn handle(&self, directive: CreateUserDirective) -> hexser::HexResult<()> {
-    directive.validate()?;
+impl hexser::application::Actor for UserWriter {
+  type Command = CreateUserDirective;
+  type Context<'a> = ();
+  type Outcome = hexser::HexResult<UserCreated>;
 
+  fn handle(&mut self, directive: CreateUserDirective, _context: ()) -> Self::Outcome {
+    if !directive.email.contains('@') {
+      return Err(hexser::Hexserror::refused(
+        &CreateUserRefusal::InvalidEmail,
+        "Invalid email format",
+      ));
+    }
+    if directive.name.is_empty() {
+      return Err(hexser::Hexserror::refused(
+        &CreateUserRefusal::EmptyName,
+        "Name cannot be empty",
+      ));
+    }
+
+    let id = self.next_id.to_string();
+    self.next_id += 1;
     let user = User {
-      id: String::from("1"),
+      id: id.clone(),
       email: directive.email,
       name: directive.name,
     };
-
-    // In a real implementation, this would use interior mutability
-    // or the handler would own the repository
-    println!("Would save user: {} <{}>", user.name, user.email);
-    Ok(())
+    println!("Saving user: {} <{}>", user.name, user.email);
+    hexser::ports::Repository::save(&mut self.repository, user)?;
+    Ok(UserCreated { id })
   }
 }
 

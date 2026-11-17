@@ -5,255 +5,201 @@
 //! environment variable. This is a security feature to prevent exposing
 //! internal code structure to clients in production environments.
 //!
+//! No test here writes the process environment. A test that needs the switch in a given state
+//! re-runs this binary in a child process whose environment fixes the switch at start, which is
+//! the only way a real program sets it. That removes the `unsafe` `set_var`/`remove_var` calls
+//! and the cross-test lock they needed.
+//!
 //! Revision History
+//! - 2026-11-17T16:20:28Z @AI: HEXSER-0.7 D9 — drop all 15 `unsafe` env writes and the
+//!   `serial_test` lock; the switch-dependent cases run as one `#[ignore]`d child test that
+//!   five parent tests re-run with the switch fixed at process start (unset, "false", "1",
+//!   "true", "TRUE"), covering all four location-bearing error types per run.
 //! - 2026-07-20T00:00:00Z @AI: Serialize all env-mutating tests with #[serial(hexser_env)] to fix a parallel-thread env race; add /// why on each test.
 //! - 2025-10-09T21:51:00Z @AI: Initial test for conditional source location serialization.
 
 #[cfg(feature = "serde")]
 mod serde_tests {
-  use hexser::error::rich_error::RichError;
+  /// The switch under test.
+  const SWITCH: &str = "HEXSER_INCLUDE_SOURCE_LOCATION";
+  /// Set by a parent to tell the child which polarity to assert: `carries` or `omits`.
+  const EXPECT: &str = "HEXSER_ENV_TEST_EXPECT";
+  /// The child test's full name inside this binary.
+  const CHILD: &str = "serde_tests::child_every_error_serializes_its_location_as_expected";
 
-  // Every test here mutates the process-global HEXSER_INCLUDE_SOURCE_LOCATION variable, which
-  // is read during serialization. Cargo runs tests in parallel threads, so without
-  // serialization one test's set_var/remove_var interleaves with another's assertion and
-  // flips the observed value (the historical source of this suite's flakiness).
-  // `#[serial(hexser_env)]` forces all of them onto a single lock.
-
-  /// why: the raw SourceLocation struct must always serialize its own fields; the env toggle
-  /// governs only whether *errors* embed a location, not the struct's own Serialize impl.
-  #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_source_location_excluded_by_default() {
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
+  /// Re-runs the one child test of this binary in a fresh process whose environment fixes the
+  /// switch at start (`Some` sets it, `None` removes it) and tells the child what to expect.
+  /// Fails unless exactly that one test ran and passed.
+  fn run_child(switch: std::option::Option<&str>, expect: &str) {
+    let exe = std::env::current_exe().expect("the test binary knows its own path");
+    let mut command = std::process::Command::new(exe);
+    command.args(["--ignored", "--exact", "--test-threads=1", CHILD]);
+    command.env(EXPECT, expect);
+    match switch {
+      std::option::Option::Some(value) => {
+        command.env(SWITCH, value);
+      }
+      std::option::Option::None => {
+        command.env_remove(SWITCH);
+      }
     }
+    let output = command
+      .output()
+      .expect("the test binary re-runs as a child");
+    let stdout = std::string::String::from_utf8_lossy(&output.stdout);
+    let stderr = std::string::String::from_utf8_lossy(&output.stderr);
+    std::assert!(
+      output.status.success(),
+      "child with {SWITCH}={switch:?} expecting {expect} failed:\n{stdout}\n{stderr}"
+    );
+    std::assert!(
+      stdout.contains("test result: ok. 1 passed;"),
+      "child with {SWITCH}={switch:?} did not run exactly one test:\n{stdout}"
+    );
+  }
 
+  /// The four location-bearing error types, each serialized with a distinct file and line.
+  fn four_errors_with_locations() -> std::vec::Vec<(&'static str, &'static str, std::string::String)>
+  {
+    // DomainError's `with_location` is the RichError trait's, named in full (no `use`).
+    let domain = <hexser::error::domain_error::DomainError as hexser::error::rich_error::RichError>::with_location(
+      hexser::error::domain_error::DomainError::new("E_DOM_001", "Test error"),
+      hexser::error::source_location::SourceLocation::new("src/domain.rs", 100, 5),
+    );
+    let validation =
+      hexser::error::validation_error::ValidationError::new("E_VAL_001", "Invalid input")
+        .with_field("email")
+        .with_location(hexser::error::source_location::SourceLocation::new(
+          "src/validation.rs",
+          51,
+          1,
+        ));
+    let not_found =
+      hexser::error::not_found_error::NotFoundError::new("User", "user-123").with_location(
+        hexser::error::source_location::SourceLocation::new("src/repo.rs", 200, 15),
+      );
+    let conflict = hexser::error::conflict_error::ConflictError::new("Email already exists")
+      .with_existing_id("user-456")
+      .with_location(hexser::error::source_location::SourceLocation::new(
+        "src/service.rs",
+        75,
+        8,
+      ));
+    std::vec![
+      (
+        "src/domain.rs",
+        "100",
+        serde_json::to_string(&domain).expect("serializes")
+      ),
+      (
+        "src/validation.rs",
+        "51",
+        serde_json::to_string(&validation).expect("serializes")
+      ),
+      (
+        "src/repo.rs",
+        "200",
+        serde_json::to_string(&not_found).expect("serializes")
+      ),
+      (
+        "src/service.rs",
+        "75",
+        serde_json::to_string(&conflict).expect("serializes")
+      ),
+    ]
+  }
+
+  /// why: the one place the real process environment is read end to end. It runs only inside
+  /// a child that its parent started with the switch fixed, and asserts the parent's polarity
+  /// for all four location-bearing error types.
+  #[test]
+  #[ignore = "runs only as a child of the parent tests below, which fix the switch at process start"]
+  fn child_every_error_serializes_its_location_as_expected() {
+    let expect = std::env::var(EXPECT).unwrap_or_default();
+    std::assert!(
+      expect == "carries" || expect == "omits",
+      "run through a parent test (it sets {EXPECT}); got {expect:?}"
+    );
+    for (file, line, json) in four_errors_with_locations() {
+      let carries = json.contains(file) && json.contains(line);
+      let mentions = json.contains(file) || json.contains("\"location\"");
+      if expect == "carries" {
+        std::assert!(carries, "the location must be serialized. JSON: {json}");
+      } else {
+        std::assert!(
+          !mentions,
+          "the location must not be serialized. JSON: {json}"
+        );
+      }
+    }
+  }
+
+  /// why: with the switch unset, no error leaks its source path or line (the production
+  /// default).
+  #[test]
+  fn every_error_omits_its_location_when_the_switch_is_unset() {
+    run_child(std::option::Option::None, "omits");
+  }
+
+  /// why: a value other than the opt-ins must not switch it on; the must-fail arm against a
+  /// reader that accepts any non-empty value.
+  #[test]
+  fn every_error_omits_its_location_when_the_switch_is_false() {
+    run_child(std::option::Option::Some("false"), "omits");
+  }
+
+  /// why: "1" is a documented opt-in, and every error then carries its location.
+  #[test]
+  fn every_error_carries_its_location_when_the_switch_is_1() {
+    run_child(std::option::Option::Some("1"), "carries");
+  }
+
+  /// why: "true" is a documented opt-in.
+  #[test]
+  fn every_error_carries_its_location_when_the_switch_is_true() {
+    run_child(std::option::Option::Some("true"), "carries");
+  }
+
+  /// why: the opt-in is case-insensitive end to end, through serialization.
+  #[test]
+  fn every_error_carries_its_location_when_the_switch_is_upper_case_true() {
+    run_child(std::option::Option::Some("TRUE"), "carries");
+  }
+
+  /// why: the raw SourceLocation struct always serializes its own fields; the switch governs
+  /// only whether *errors* embed a location, not the struct's own Serialize impl.
+  #[test]
+  fn a_source_location_itself_always_serializes_its_fields() {
     let loc = hexser::error::source_location::SourceLocation::new("src/main.rs", 42, 10);
     let json = serde_json::to_string(&loc).expect("serialization should succeed");
-
     std::assert!(
       json.contains("src/main.rs") && json.contains("42") && json.contains("10"),
       "SourceLocation struct itself always serializes its fields"
     );
   }
 
-  /// why: with the toggle unset, a DomainError must NOT leak its source path/line into JSON
-  /// (the privacy-safe production default).
+  /// why: an error carrying no location still serializes its code and message normally (the
+  /// skip logic must not drop unrelated fields), whatever the switch says.
   #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_layer_error_location_excluded_by_default() {
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-
-    let loc = hexser::error::source_location::SourceLocation::new("src/domain.rs", 100, 5);
-    let err =
-      hexser::error::domain_error::DomainError::new("E_DOM_001", "Test error").with_location(loc);
-
-    let json = serde_json::to_string(&err).expect("serialization should succeed");
-
-    std::assert!(
-      !json.contains("src/domain.rs") && !json.contains("100"),
-      "Location should be excluded by default for security. JSON: {json}"
-    );
-  }
-
-  /// why: when the toggle is enabled, a DomainError must embed its source location so
-  /// developers opting in for debugging actually get it.
-  #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_layer_error_location_included_when_enabled() {
-    unsafe {
-      std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "1");
-    }
-
-    let loc = hexser::error::source_location::SourceLocation::new("src/domain.rs", 100, 5);
-    let err =
-      hexser::error::domain_error::DomainError::new("E_DOM_001", "Test error").with_location(loc);
-
-    let json = serde_json::to_string(&err).expect("serialization should succeed");
-
-    std::assert!(
-      json.contains("src/domain.rs") && json.contains("100"),
-      "Location should be included when env var is set. JSON: {json}"
-    );
-
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-  }
-
-  /// why: ValidationError must honor the same default-excluded location policy as other errors.
-  #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_validation_error_location_excluded_by_default() {
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-
-    let loc = hexser::error::source_location::SourceLocation::new("src/validation.rs", 50, 1);
-    let err = hexser::error::validation_error::ValidationError::new("E_VAL_001", "Invalid input")
-      .with_field("email")
-      .with_location(loc);
-
-    let json = serde_json::to_string(&err).expect("serialization should succeed");
-
-    std::assert!(
-      !json.contains("src/validation.rs") && !json.contains("50"),
-      "Location should be excluded by default. JSON: {json}"
-    );
-  }
-
-  /// why: the toggle value "true" (not just "1") must also enable inclusion for ValidationError.
-  #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_validation_error_location_included_when_enabled() {
-    unsafe {
-      std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "true");
-    }
-
-    let loc = hexser::error::source_location::SourceLocation::new("src/validation.rs", 50, 1);
-    let err = hexser::error::validation_error::ValidationError::new("E_VAL_001", "Invalid input")
-      .with_field("email")
-      .with_location(loc);
-
-    let json = serde_json::to_string(&err).expect("serialization should succeed");
-
-    std::assert!(
-      json.contains("src/validation.rs") && json.contains("50"),
-      "Location should be included when env var is true. JSON: {json}"
-    );
-
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-  }
-
-  /// why: NotFoundError must honor the default-excluded location policy.
-  #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_not_found_error_location_excluded_by_default() {
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-
-    let loc = hexser::error::source_location::SourceLocation::new("src/repo.rs", 200, 15);
-    let err =
-      hexser::error::not_found_error::NotFoundError::new("User", "user-123").with_location(loc);
-
-    let json = serde_json::to_string(&err).expect("serialization should succeed");
-
-    std::assert!(
-      !json.contains("src/repo.rs") && !json.contains("200"),
-      "Location should be excluded by default. JSON: {json}"
-    );
-  }
-
-  /// why: the toggle value "TRUE" (uppercase) must enable inclusion, proving case-insensitive
-  /// parsing end-to-end through NotFoundError serialization.
-  #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_not_found_error_location_included_when_enabled() {
-    unsafe {
-      std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "TRUE");
-    }
-
-    let loc = hexser::error::source_location::SourceLocation::new("src/repo.rs", 200, 15);
-    let err =
-      hexser::error::not_found_error::NotFoundError::new("User", "user-123").with_location(loc);
-
-    let json = serde_json::to_string(&err).expect("serialization should succeed");
-
-    std::assert!(
-      json.contains("src/repo.rs") && json.contains("200"),
-      "Location should be included when env var is TRUE. JSON: {json}"
-    );
-
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-  }
-
-  /// why: ConflictError must honor the default-excluded location policy.
-  #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_conflict_error_location_excluded_by_default() {
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-
-    let loc = hexser::error::source_location::SourceLocation::new("src/service.rs", 75, 8);
-    let err = hexser::error::conflict_error::ConflictError::new("Email already exists")
-      .with_existing_id("user-456")
-      .with_location(loc);
-
-    let json = serde_json::to_string(&err).expect("serialization should succeed");
-
-    std::assert!(
-      !json.contains("src/service.rs") && !json.contains("75"),
-      "Location should be excluded by default. JSON: {json}"
-    );
-  }
-
-  /// why: when enabled, ConflictError must embed its source location.
-  #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_conflict_error_location_included_when_enabled() {
-    unsafe {
-      std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "1");
-    }
-
-    let loc = hexser::error::source_location::SourceLocation::new("src/service.rs", 75, 8);
-    let err = hexser::error::conflict_error::ConflictError::new("Email already exists")
-      .with_existing_id("user-456")
-      .with_location(loc);
-
-    let json = serde_json::to_string(&err).expect("serialization should succeed");
-
-    std::assert!(
-      json.contains("src/service.rs") && json.contains("75"),
-      "Location should be included when env var is set. JSON: {json}"
-    );
-
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-  }
-
-  /// why: an error carrying no location must still serialize its code and message normally
-  /// (the skip logic must not drop unrelated fields).
-  #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_error_without_location_serializes_correctly() {
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-
+  fn an_error_without_a_location_serializes_its_code_and_message() {
     let err = hexser::error::domain_error::DomainError::new("E_DOM_002", "Error without location");
-
     let json = serde_json::to_string(&err).expect("serialization should succeed");
-
     std::assert!(
       json.contains("E_DOM_002") && json.contains("Error without location"),
       "Error without location should serialize normally. JSON: {json}"
     );
   }
 
-  /// why: deserialization must accept payloads both with and without a `location` field,
-  /// independent of the env toggle, so errors serialized under either setting round-trip.
+  /// why: deserialization accepts payloads with and without a `location` field, independent
+  /// of the switch, so errors serialized under either setting round-trip.
   #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_deserialization_works_regardless_of_env_var() {
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-
+  fn deserialization_accepts_a_payload_with_or_without_a_location() {
     let json_with_location = r#"{"code":"E_DOM_001","message":"Test","next_steps":[],"suggestions":[],"location":{"file":"test.rs","line":1,"column":1},"more_info_url":null,"layer":null}"#;
     let json_without_location = r#"{"code":"E_DOM_001","message":"Test","next_steps":[],"suggestions":[],"more_info_url":null,"layer":null}"#;
 
-    let result1: Result<hexser::error::domain_error::DomainError, _> =
+    let result1: std::result::Result<hexser::error::domain_error::DomainError, _> =
       serde_json::from_str(json_with_location);
-    let result2: Result<hexser::error::domain_error::DomainError, _> =
+    let result2: std::result::Result<hexser::error::domain_error::DomainError, _> =
       serde_json::from_str(json_without_location);
 
     std::assert!(result1.is_ok(), "Should deserialize with location");

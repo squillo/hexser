@@ -1,3 +1,99 @@
+## [0.7.0] - 2026-11-17
+
+Minor: everything below is additive, except that `#[hex(...)]` keys hexser never read are now
+compile errors. All three crates move to 0.7.0 together. Every family pin is `0.6` or `0.6.x`,
+so a plain `cargo update` moves no one; each owner moves its own pin. The before-and-after for
+each change is in [MIGRATING_0.6_TO_0.7.md](MIGRATING_0.6_TO_0.7.md). Every example in that
+guide is compiled as a doctest.
+
+### Added: the single writer's door, `Actor` (2026-11-17)
+
+- `hexser::application::Actor` (also `hexser::Actor`): `fn handle(&mut self, command, context)
+  -> Self::Outcome`, with associated `Command`, `Context<'a>` and `Outcome`. `&mut self` is the
+  single-writer guarantee, so the door needs no lock. The outcome is the actor's own: an event,
+  a view, `Result<Event, Refusal>`, or `()`.
+- `#[derive(HexActor)]` registers the actor's node in the Application layer, role
+  `DirectiveHandler`. It reads `role` and `depends_on(..)`, and refuses a generic type.
+
+### Added: closed vocabularies and typed refusals (2026-11-17)
+
+- `hexser::domain::Vocabulary` (also `hexser::Vocabulary`) and `#[derive(HexVocabulary)]`, for
+  a command, event or refusal enum:
+  - `CODES` lists the codes in declaration order, and `code()` returns one;
+  - `from_code` reads a code back, and is generated when every variant is a unit variant;
+  - an unknown code is `None`;
+  - `#[hex(code = "...")]` overrides a variant's code, and duplicate codes are a compile error.
+- `hexser::error::Refusal` (also `hexser::Refusal`) and `#[derive(HexRefusal)]`: a vocabulary
+  whose variants carry static guidance, `#[hex(next_step = "...")]` and
+  `#[hex(suggestion = "...")]`.
+- `Hexserror::refused(&refusal, message)` puts a refusal into the existing `Domain` variant,
+  with its code and guidance. `Hexserror::code()` answers for all six variants, so the code
+  reads back to the refusal. `Hexserror` keeps exactly six variants.
+
+### Added: proved edges, on the derives and the templates (2026-11-17)
+
+- `#[hex(port_trait = Trait)]` on `HexPort`, and `port_trait: Trait` on `hex_register_port!`,
+  tie a port marker to its trait.
+- `#[hex(implements(PortNode, ..))]` on `HexAdapter`, and `implements: [..]` on
+  `hex_register_adapter!`/`hex_register_component!`, land an `Implements` edge. They compile
+  only if the adapter implements the port's trait. The edge is carried by
+  `hexser::registry::ImplementsEntry`.
+- `#[hex(depends_on(..))]` on every registration derive, the derive form of 0.6.1's template
+  `depends_on:`.
+- `hexser::templates::implements_edge_exists::<A, P>(&graph)`. It is true only when the edge
+  exists and the port's node is in the graph. It shares one reader with
+  `dependency_edge_exists`.
+
+### Added: the graph says what is wrong with it, `HexGraph::findings()` (2026-11-17)
+
+`findings()` returns `Vec<GraphFinding>` with three variants:
+- `ShortNameCollision`;
+- `AdapterWithoutProvedPort` (an adapter other than a `Mapper` with no `Implements` edge);
+- `EdgeToUnregisteredNode`.
+
+⚠ **Fixed:** two template nodes with one short name in two modules hash to one node id. 0.6
+merged them in silence, because the collision check compared short type names only. A
+collision is now any two registrations that differ in type name or module path. Each is
+recorded as a typed `ShortNameCollision`, and the metadata warning names both module paths.
+
+### Deprecated (2026-11-17)
+
+`application::DirectiveHandler`, `ports::UseCase` and `ports::InputPort` are deprecated, routed
+to `Actor`. `ports::Query` is deprecated, routed to `application::QueryHandler`, which has the
+same shape. None is removed. Each use warns and names its route.
+
+### Changed (2026-11-17)
+
+- ⚠ **`#[hex(...)]` is read strictly.** Before, each derive read only `role` and dropped a
+  parse error in silence, along with any key after it. Now:
+  - an unknown key, a malformed value, or a duplicate single-valued key is a compile error;
+  - a key the derive does not read is a compile error that names the derive that does.
+
+  Only `role` is written across the family today, so this breaks no known crate.
+- ⚠ **`HEXSER_INCLUDE_SOURCE_LOCATION` is read once per process.** A program that changes the
+  variable while it runs is no longer seen. Changing the environment at run time takes `unsafe`
+  since edition 2024. Set the variable before the process starts. The default (off) is unchanged.
+
+### Security (2026-11-17)
+
+- `hexser`, `hexser_macros` and `hexser_potions` are each `#![forbid(unsafe_code)]`, pinned by
+  a test in each crate. The tests' 28 `unsafe` environment writes (13 in `env_control`'s unit
+  tests, 15 in the serde integration test) and the `serial(hexser_env)` lock they needed are gone. The switch-dependent serde tests re-run the test binary with the
+  variable fixed at process start. The agent pack's "no `unsafe`" guideline is now enforced by
+  the compiler.
+- The lockfile moves `tokio` to 1.54.1 (RUSTSEC-2026-0386, `AsyncFd` I/O safety). It also moves
+  `futures-util` to 0.3.34 and `hyper` to 1.12.0, which drops the unmaintained `pin-utils`
+  (RUSTSEC-2026-0441). `cargo audit` and `cargo deny check` pass with no waivers.
+
+### WASM (2026-11-17)
+
+The wasmtime probe (`scripts/wasm-e2e.sh`) executes every 0.7 door on `wasm32-unknown-unknown`
+and `wasm32-wasip1`, twice per target:
+- with the documented surface;
+- macros-only (`default-features = false, features = ["macros"]`), the pin an editor core takes.
+
+The compile matrix gains the macros-only set.
+
 ## [0.6.1] - 2026-11-03
 
 A patch: both changes below are additive, and the existing forms keep their behaviour. Only

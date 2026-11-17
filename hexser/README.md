@@ -16,6 +16,7 @@ The `hexser` crate provides reusable generic types and traits for implementing H
 
 - [Why hexser?](#why-hexser)
 - [Quick Start](#quick-start)
+- [What's new in 0.7](#whats-new-in-07)
 - [Canonical, compile-tested examples](#canonical-compile-tested-examples)
 - [Feature Flags](#feature-flags)
 - [Complete Tutorial](#complete-tutorial)
@@ -65,7 +66,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-hexser = "0.6"
+hexser = "0.7"
 ```
 
 Your First Hexagonal Application
@@ -140,6 +141,57 @@ That's it! You've just built a hexagonal architecture application with:
 
 ---
 
+## What's new in 0.7
+
+0.7 adds and deprecates; it deletes nothing. The before-and-after for every change is in
+[MIGRATING_0.6_TO_0.7.md](MIGRATING_0.6_TO_0.7.md), and every example in it is compiled as a
+doctest.
+
+- **`Actor`, the single writer's door.** `fn handle(&mut self, command, context) -> Outcome`.
+  `&mut self` is the single-writer guarantee, so no lock is needed. The outcome is yours: an
+  event, a view, `Result<Event, Refusal>`, or `()`. `#[derive(HexActor)]` registers its node.
+- **Closed vocabularies and typed refusals.** `#[derive(HexVocabulary)]` gives a command, event
+  or refusal enum its `CODES`, `code()` and `from_code`. `#[derive(HexRefusal)]` adds static
+  guidance. `Hexserror::refused(&refusal, message)` crosses the edge as the existing `Domain`
+  variant, and `Hexserror::code()` reads it back.
+- **Proved edges.** `#[hex(port_trait = Trait)]` ties a port marker to its trait.
+  `#[hex(implements(PortNode))]` lands an `Implements` edge that compiles only if the adapter
+  implements that trait. `#[hex(depends_on(..))]` works on every registration derive.
+- **The graph says what is wrong with it.** `HexGraph::findings()` returns typed
+  `GraphFinding`s: a short-name collision, an adapter with no proved port, an edge to an
+  unregistered node.
+- **Deprecated, not removed:** `DirectiveHandler`, `UseCase` and `InputPort` (use `Actor`), and
+  `ports::Query` (use `QueryHandler`). Some tutorial sections below still show
+  `DirectiveHandler`; they compile on 0.7, with a deprecation warning.
+- **Safe and portable.** All three crates are `#![forbid(unsafe_code)]`. Every 0.7 door runs
+  under wasmtime on `wasm32-unknown-unknown` and `wasm32-wasip1` with `features = ["macros"]`.
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, hexser::HexRefusal)]
+enum RenameRefusal {
+  #[hex(next_step = "Type a name")]
+  EmptyName,
+}
+
+struct Deck { name: String }
+
+impl hexser::application::Actor for Deck {
+  type Command = String;
+  type Context<'a> = ();
+  type Outcome = Result<String, RenameRefusal>;
+
+  fn handle(&mut self, name: String, _context: ()) -> Self::Outcome {
+    if name.is_empty() {
+      return Err(RenameRefusal::EmptyName);
+    }
+    self.name = name.clone();
+    Ok(name)
+  }
+}
+```
+
+---
+
 ## Canonical, compile-tested examples
 
 This README contains a lot of hand-written cookbook snippets. Most are self-contained, but a
@@ -149,7 +201,7 @@ compiled source below is authoritative** — treat it as the source of truth ove
 
 - **`examples/*.rs`** — built by CI on every PR (`cargo build -p hexser --all-features --examples`), so they cannot silently drift from the real API. Start with:
   - `examples/simple_todo.rs` — minimal end-to-end app: entity, adapter, `Repository` + `QueryRepository`
-  - `examples/cqrs_pattern.rs` — `Directive`/`DirectiveHandler` and `Query`/`QueryHandler` implemented by hand (there are no `HexDirectiveHandler`/`HexQueryHandler` derives)
+  - `examples/cqrs_pattern.rs` — the write side as an `Actor` (the single writer, refusing with a `HexRefusal`) and the read side as a `QueryHandler`
   - `examples/weather_adapter.rs` — a REST adapter with full `Hexserror` error-mapping (`API_FAILURE`, `MAPPING_FAILURE`)
   - `examples/transactional_order.rs` — a directive spanning multiple repository writes
   - `examples/realworld_api/` — a full, separately-tested workspace member; its own `cargo test` run (from `hexser/examples/realworld_api`) is a dedicated CI job
@@ -172,7 +224,7 @@ Enabled by default. Includes procedural macros and zero-cost static dependency i
 
 ```toml
 [dependencies]
-hexser = "0.6"  # Uses default features
+hexser = "0.7"  # Uses default features
 ```
 
 #### `macros`
@@ -195,7 +247,7 @@ All five registration derives honour `#[hex(role = "...")]`, and all five REFUSE
 
 ```toml
 [dependencies]
-hexser = { version = "0.6", default-features = false, features = ["macros"] }
+hexser = { version = "0.7", default-features = false, features = ["macros"] }
 ```
 
 #### `static-di`
@@ -210,7 +262,7 @@ Zero-cost, WASM-friendly static dependency injection. No runtime overhead, no dy
 
 ```toml
 [dependencies]
-hexser = { version = "0.6", features = ["static-di"] }
+hexser = { version = "0.7", features = ["static-di"] }
 ```
 
 **Example** (see the `hex_static!` macro and `StaticContainer<T>` for the real API):
@@ -237,7 +289,7 @@ Enables AI context export functionality for exposing architecture metadata to AI
 
 ```toml
 [dependencies]
-hexser = { version = "0.6", features = ["ai"] }
+hexser = { version = "0.7", features = ["ai"] }
 ```
 
 **Usage:**
@@ -263,7 +315,7 @@ Model Context Protocol server implementation for serving architecture data via J
 
 ```toml
 [dependencies]
-hexser = { version = "0.6", features = ["mcp"] }
+hexser = { version = "0.7", features = ["mcp"] }
 ```
 
 **Usage:**
@@ -282,7 +334,7 @@ dependencies. (Dedicated async port traits are planned; see the issue tracker.)
 
 ```toml
 [dependencies]
-hexser = { version = "0.6", features = ["async"] }
+hexser = { version = "0.7", features = ["async"] }
 ```
 
 #### `visualization`
@@ -297,7 +349,7 @@ Enables graph visualization and export capabilities.
 
 ```toml
 [dependencies]
-hexser = { version = "0.6", features = ["visualization"] }
+hexser = { version = "0.7", features = ["visualization"] }
 ```
 
 #### `container`
@@ -314,7 +366,7 @@ Dynamic dependency injection container with async support. **Not enabled by defa
 
 ```toml
 [dependencies]
-hexser = { version = "0.6", features = ["container"] }
+hexser = { version = "0.7", features = ["container"] }
 ```
 
 #### `full`
@@ -324,7 +376,7 @@ Enables all features: `ai`, `mcp`, `async`, `macros`, `visualization`, `containe
 
 ```toml
 [dependencies]
-hexser = { version = "0.6", features = ["full"] }
+hexser = { version = "0.7", features = ["full"] }
 ```
 
 ### Binary Targets
@@ -363,13 +415,13 @@ cargo run --bin hex-mcp-server --features mcp
 #### Minimal (no default features)
 ```toml
 [dependencies]
-hexser = { version = "0.6", default-features = false }
+hexser = { version = "0.7", default-features = false }
 ```
 
 #### WASM-optimized
 ```toml
 [dependencies]
-hexser = { version = "0.6", default-features = false, features = ["macros", "static-di"] }
+hexser = { version = "0.7", default-features = false, features = ["macros", "static-di"] }
 ```
 Runs on `wasm32-unknown-unknown` and `wasm32-wasip1` (both executed under wasmtime in CI).
 Richer feature sets up to `full` compile for wasm too; see [WASM guidance](#%EF%B8%8F-static-non-dyn-di--wasm-friendly).
@@ -377,13 +429,13 @@ Richer feature sets up to `full` compile for wasm too; see [WASM guidance](#%EF%
 #### AI-enabled with async
 ```toml
 [dependencies]
-hexser = { version = "0.6", features = ["ai", "async", "visualization"] }
+hexser = { version = "0.7", features = ["ai", "async", "visualization"] }
 ```
 
 #### Full development setup
 ```toml
 [dependencies]
-hexser = { version = "0.6", features = ["full"] }
+hexser = { version = "0.7", features = ["full"] }
 ```
 
 ---
@@ -655,6 +707,10 @@ impl Directive for PlaceOrderDirective {
 
 Directive Handler:
 
+> **0.7:** `DirectiveHandler` is deprecated. New code writes an `Actor` (see
+> [What's new in 0.7](#whats-new-in-07) and `examples/cqrs_pattern.rs`). The form below still
+> compiles, with a deprecation warning.
+
 There is no `HexDirectiveHandler` derive — `DirectiveHandler<D>` is a plain trait (see
 `hexser::application::DirectiveHandler`); implement it directly, as `examples/cqrs_pattern.rs` does:
 
@@ -734,6 +790,10 @@ impl DatabaseConfig {
 hexser supports Command Query Responsibility Segregation (CQRS) out of the box.
 
 Write Side (Directives):
+
+> **0.7:** `DirectiveHandler` is deprecated. New code writes an `Actor` (see
+> [What's new in 0.7](#whats-new-in-07) and `examples/cqrs_pattern.rs`). The form below still
+> compiles, with a deprecation warning.
 
 ```rust
 // Directive represents intent to change state.
@@ -1494,7 +1554,7 @@ hexser/
 │
 ├── application/         [Orchestration Layer]
 │   ├── Directive        - Write operations (CQRS)
-│   ├── DirectiveHandler - Directive execution
+│   ├── Actor            - The single writer (DirectiveHandler is deprecated)
 │   └── QueryHandler     - Query execution
 │
 ├── infrastructure/      [Technology Layer]
@@ -1524,7 +1584,7 @@ We welcome contributions! This crate follows strict coding standards:
 - No imports: Fully qualified paths (except std prelude)
 - Documentation: Every item has //! and /// docs
 - In-file tests: Tests live with the code they test
-- No unsafe: Safe Rust only
+- No unsafe: `#![forbid(unsafe_code)]` in every crate
 - Rust 2024: Latest edition
 
 See CONTRIBUTING.md for details.
@@ -1578,7 +1638,7 @@ Add to your project via workspace path:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "../hexser_potions", version = "0.6" }
+hexser_potions = { path = "../hexser_potions", version = "0.7" }
 ```
 
 Then in code:

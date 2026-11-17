@@ -8,9 +8,9 @@
 //! # Architecture Layers
 //!
 //! - **Domain**: Core business logic (`HexEntity`, `HexValueItem`, `Aggregate`)
-//! - **Ports**: Interface definitions (`Repository`, `QueryRepository`, `UseCase`, `Query`)
+//! - **Ports**: Interface definitions (`Repository`, `QueryRepository`), tied to their nodes with `#[hex(port_trait = ...)]`
 //! - **Adapters**: Port implementations (`Adapter`, `Mapper`)
-//! - **Application**: Use case orchestration (`Directive`, `DirectiveHandler`)
+//! - **Application**: Use case orchestration (`Actor`, the single writer's door; `Directive`, `QueryHandler`)
 //! - **Infrastructure**: External concerns (`Config`)
 //!
 //! # Quick Start
@@ -56,6 +56,10 @@
 //! - `full`: all of the above.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D11 — `MIGRATING_0.6_TO_0.7.md` is compiled as doctests through a `#[cfg(doctest)]` item.
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D7 — the re-exports of the deprecated `DirectiveHandler`, `UseCase`, `InputPort` and `ports::Query` carry `#[allow(deprecated)]`; the crate header names `Actor` as the writer's door.
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D1-D6 — re-export `Actor`, `Vocabulary`, `Refusal` and `GraphFinding` at the root (not in the prelude, to keep glob imports collision-free) and the `HexActor`, `HexVocabulary`, `HexRefusal` derives at the root and in the prelude.
+//! - 2026-11-17T16:20:28Z @AI: HEXSER-0.7 D9 — `#![forbid(unsafe_code)]` at the crate root, pinned by `forbid_unsafe_tests` (ISO 27001 A.8.28 evidence, PRD HEXSER-0.7 §13 E1).
 //! - 2026-09-11T00:00:00Z @AI: Declare the private `clock` module — single guard for the `SystemTime::now()` panic on wasm32-unknown-unknown.
 //! - 2026-07-21T00:00:00Z @AI: Rewrite crate header — correct feature list/default, drop the stale Phase-1/future-phases framing and nonexistent graph/analysis features; Quick Start now derives the real macros.
 //! - 2025-10-09T14:14:00Z @AI: Remove Entity derive alias, expose HexEntity at crate root for qualified addressing.
@@ -63,6 +67,8 @@
 //! - 2025-10-02T12:00:00Z @AI: Add showcase module with Describable and Inspectable traits.
 //! - 2025-10-01T00:01:00Z @AI: Added comprehensive re-exports and prelude module.
 //! - 2025-10-01T00:00:00Z @AI: Initial Phase 1 implementation with core traits and types.
+
+#![forbid(unsafe_code)]
 
 pub mod adapters;
 pub mod application;
@@ -91,10 +97,19 @@ pub mod container;
 // Re-export commonly used items at crate root for convenience
 pub use crate::{error::hex_error::Hexserror, result::hex_result::HexResult};
 
+// HEXSER-0.7: a closed refusal, the closed vocabulary it extends, and the single writer's door.
+// At the root and in their modules, deliberately NOT in the prelude: a glob import of a name as
+// common as `Actor` could collide with a downstream type of the same name.
+pub use crate::application::actor::Actor;
+pub use crate::domain::vocabulary::Vocabulary;
+pub use crate::error::refusal::Refusal;
+
 // Re-export all domain traits
 pub use crate::domain::{Aggregate, DomainEvent, DomainService, HexEntity, HexValueItem};
 
 // Re-export all port traits
+#[allow(deprecated)]
+// InputPort, Query, UseCase and DirectiveHandler are deprecated (HEXSER-0.7 D7)
 pub use crate::ports::{
   Direction, FindOptions, InputPort, OutputPort, Query, QueryRepository, Repository, Sort, UseCase,
 };
@@ -103,6 +118,8 @@ pub use crate::ports::{
 pub use crate::adapters::{Adapter, Mapper};
 
 // Re-export all application traits
+#[allow(deprecated)]
+// InputPort, Query, UseCase and DirectiveHandler are deprecated (HEXSER-0.7 D7)
 pub use crate::application::{Application, Directive, DirectiveHandler, QueryHandler};
 
 // Re-export infrastructure traits
@@ -116,7 +133,8 @@ pub use crate::error::codes as error_codes;
 
 // Re-export graph types (Phase 2)
 pub use crate::graph::{
-  GraphBuilder, GraphMetadata, HexEdge, HexGraph, HexNode, Layer, NodeId, Relationship, Role,
+  GraphBuilder, GraphFinding, GraphMetadata, HexEdge, HexGraph, HexNode, Layer, NodeId,
+  Relationship, Role,
 };
 
 // Re-export showcase traits
@@ -125,8 +143,8 @@ pub use crate::showcase::{ArcGraphExt, Describable, Inspectable, PrettyPrint};
 // Re-export derive macros at crate root for qualified addressing (e.g., hexser::HexEntity)
 #[cfg(feature = "macros")]
 pub use hexser_macros::{
-  HexAdapter, HexAggregate, HexDirective, HexDomain, HexEntity, HexPort, HexQuery, HexRepository,
-  HexValueItem,
+  HexActor, HexAdapter, HexAggregate, HexDirective, HexDomain, HexEntity, HexPort, HexQuery,
+  HexRefusal, HexRepository, HexValueItem, HexVocabulary,
 };
 
 /// Prelude module for convenient imports.
@@ -141,6 +159,7 @@ pub mod prelude {
 
   pub use crate::domain::{Aggregate, DomainEvent, DomainService, HexEntity, HexValueItem};
 
+  #[allow(deprecated)] // HEXSER-0.7 D7
   pub use crate::ports::{
     Direction, FindOptions, InputPort, OutputPort, Query, QueryRepository, Repository, Sort,
     UseCase,
@@ -148,6 +167,7 @@ pub mod prelude {
 
   pub use crate::adapters::{Adapter, Mapper};
 
+  #[allow(deprecated)] // HEXSER-0.7 D7
   pub use crate::application::{Application, Directive, DirectiveHandler, QueryHandler};
 
   pub use crate::infrastructure::Config;
@@ -161,8 +181,8 @@ pub mod prelude {
   // Phase 3: Registry and derive macro support
   #[cfg(feature = "macros")]
   pub use hexser_macros::{
-    HexAdapter, HexAggregate, HexDirective, HexDomain, HexEntity, HexPort, HexQuery, HexRepository,
-    HexValueItem,
+    HexActor, HexAdapter, HexAggregate, HexDirective, HexDomain, HexEntity, HexPort, HexQuery,
+    HexRefusal, HexRepository, HexValueItem, HexVocabulary,
   };
 
   pub use crate::registry::{ComponentEntry, ComponentRegistry, NodeInfo, Registrable};
@@ -175,4 +195,27 @@ pub mod prelude {
 
   #[cfg(feature = "static-di")]
   pub use crate::static_di::{StaticBuilder, StaticContainer};
+}
+
+/// The 0.6 to 0.7 migration guide, compiled as doctests so its examples cannot rot
+/// (PRD HEXSER-0.7 D11, R30). Present only under `cargo test --doc`; never in the public API.
+#[cfg(doctest)]
+#[doc = include_str!("../MIGRATING_0.6_TO_0.7.md")]
+pub struct MigratingFrom06To07;
+
+#[cfg(test)]
+mod forbid_unsafe_tests {
+  /// why: the crate promises no `unsafe` (house rule; ISO 27001 A.8.28 evidence row E1 in
+  /// PRD HEXSER-0.7 §13). The compiler enforces it only while this attribute stands at the
+  /// crate root, so the attribute itself is pinned: deleting it turns this red.
+  #[test]
+  fn this_crate_forbids_unsafe_code() {
+    let source = include_str!("lib.rs");
+    std::assert!(
+      source
+        .lines()
+        .any(|line| line.trim() == "#![forbid(unsafe_code)]"),
+      "src/lib.rs must carry `#![forbid(unsafe_code)]` at the crate root"
+    );
+  }
 }

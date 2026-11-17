@@ -6,6 +6,7 @@
 //! and suggestions for remediation. Designed for both humans and AI agents.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D3 — `refused(&R, message)` builds the existing `Domain` variant from a closed refusal (code and static guidance copied; no new variant), and `code()` reads any variant's code back.
 //! - 2026-07-21T00:00:00Z @AI: Add Hexserror::with_source forwarding to layer variants (makes the documented source-chaining builder real).
 //! - 2026-07-21T00:00:00Z @AI: Forward with_next_step(s)/with_suggestion(s) to Validation/NotFound/Conflict variants (was silently dropped on those).
 //! - 2026-07-20T00:00:00Z @AI: Box variant payloads to shrink Hexserror (fixes clippy::result_large_err across the crate); enum is now pointer-sized.
@@ -114,6 +115,41 @@ impl Hexserror {
     Self::Conflict(std::boxed::Box::new(
       crate::error::conflict_error::ConflictError::new(message),
     ))
+  }
+
+  /// A closed refusal at the edge, as the EXISTING `Domain` variant: its code is the refusal's
+  /// code, its message is the edge's words, and the refusal's static guidance is copied. No
+  /// `Hexserror` variant is added for refusals, so an exhaustive match stays exhaustive. Read
+  /// the closed value back with `R::from_code(err.code())` (PRD HEXSER-0.7 D3).
+  ///
+  /// ```rust
+  /// #[derive(Debug, Clone, Copy, PartialEq, hexser::HexRefusal)]
+  /// enum EditRefusal {
+  ///   #[hex(next_step = "Type a name")]
+  ///   EmptyName,
+  /// }
+  ///
+  /// let err = hexser::Hexserror::refused(&EditRefusal::EmptyName, "The deck needs a name");
+  /// assert!(matches!(err, hexser::Hexserror::Domain(_)));
+  /// assert_eq!(EditRefusal::from_code(err.code()), Some(EditRefusal::EmptyName));
+  /// ```
+  pub fn refused<R: crate::error::refusal::Refusal>(refusal: &R, message: &str) -> Self {
+    let code = crate::domain::vocabulary::Vocabulary::code(refusal);
+    Self::domain(code, message)
+      .with_next_steps(refusal.next_steps())
+      .with_suggestions(refusal.suggestions())
+  }
+
+  /// This error's code, whichever variant carries it.
+  pub fn code(&self) -> &str {
+    match self {
+      Self::Domain(err) => crate::error::rich_error::RichError::code(err.as_ref()),
+      Self::Port(err) => crate::error::rich_error::RichError::code(err.as_ref()),
+      Self::Adapter(err) => crate::error::rich_error::RichError::code(err.as_ref()),
+      Self::Validation(err) => &err.code,
+      Self::NotFound(err) => &err.code,
+      Self::Conflict(err) => &err.code,
+    }
   }
 
   /// Add next step (builder pattern).

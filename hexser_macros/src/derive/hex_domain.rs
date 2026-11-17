@@ -6,6 +6,7 @@
 //! of entities, and a value object registered as an `Entity` is a graph that lies.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 — through `codegen::registration`: reads `role` and `depends_on(..)`, refuses any other key.
 //! - 2026-09-04T00:00:00Z @AI: Honour #[hex(role = "...")]. The derive declared attributes(hex)
 //!   and never read it, so `#[hex(role = "ValueObject")]` compiled clean and registered
 //!   Role::Entity; hex_port.rs / hex_adapter.rs already did this correctly.
@@ -20,14 +21,15 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     return e.to_compile_error().into();
   }
 
-  let role = crate::common::codegen::role_override(&input.attrs)
-    .unwrap_or_else(|| quote::quote!(::hexser::graph::Role::Entity));
-
-  let expanded = crate::common::codegen::registrable_and_submit(
+  let expanded = crate::common::codegen::registration(
     &input,
     "HexDomain",
     quote::quote!(::hexser::graph::Layer::Domain),
-    role,
+    quote::quote!(::hexser::graph::Role::Entity),
+    &[
+      crate::common::attrs::Key::Role,
+      crate::common::attrs::Key::DependsOn,
+    ],
   );
 
   proc_macro::TokenStream::from(expanded)

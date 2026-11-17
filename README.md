@@ -45,8 +45,12 @@ Quick start with hexser:
 
 ```toml
 [dependencies]
-hexser = { path = "./hexser", version = "0.6", features = ["macros"] }
+hexser = { path = "./hexser", version = "0.7", features = ["macros"] }
 ```
+
+Upgrading from 0.6? Read [hexser/MIGRATING_0.6_TO_0.7.md](hexser/MIGRATING_0.6_TO_0.7.md): the
+single writer's `Actor`, closed vocabularies and refusals, proved edges, `findings()`, and the
+deprecations. Its examples are compiled as doctests.
 
 ```rust
 use hexser::prelude::*;
@@ -139,7 +143,7 @@ Use directly from the workspace:
 
 ```toml
 [dependencies]
-hexser_potions = { path = "./hexser_potions", version = "0.6" }
+hexser_potions = { path = "./hexser_potions", version = "0.7" }
 ```
 
 Then in your code:

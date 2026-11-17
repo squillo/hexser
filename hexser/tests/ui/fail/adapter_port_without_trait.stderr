@@ -1,0 +1,8 @@
+error[E0599]: no associated item named `__hexser_port_trait` found for struct `SinkPortNode` in the current scope
+ --> tests/ui/fail/adapter_port_without_trait.rs:7:18
+  |
+4 | struct SinkPortNode;
+  | ------------------- associated item `__hexser_port_trait` not found for this struct
+...
+7 | #[hex(implements(SinkPortNode))]
+  |                  ^^^^^^^^^^^^ associated item not found in `SinkPortNode`

@@ -6,6 +6,7 @@
 //! use cases, queries (CQRS pattern), and CloudEvents v1.0-compliant event ports.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D7 — the deprecated `InputPort`, `Query` and `UseCase` stay re-exported under `#[allow(deprecated)]`.
 //! - 2026-07-21T00:00:00Z @AI: Re-export the v0.4 read API (QueryRepository, FindOptions, Sort, Direction) so it is reachable without the deep repository path.
 //! - 2025-10-09T14:51:00Z @AI: Add events module with CloudEvents v1.0 ports.
 //! - 2025-10-08T23:35:00Z @AI: Add mcp_server port for Model Context Protocol support.
@@ -22,10 +23,13 @@ pub mod use_case;
 #[cfg(feature = "mcp")]
 pub mod mcp_server;
 
+#[allow(deprecated)] // re-exported until removal (HEXSER-0.7 D7)
 pub use input_port::InputPort;
 pub use output_port::OutputPort;
+#[allow(deprecated)] // re-exported until removal (HEXSER-0.7 D7)
 pub use query::Query;
 pub use repository::{Direction, FindOptions, QueryRepository, Repository, Sort};
+#[allow(deprecated)] // re-exported until removal (HEXSER-0.7 D7)
 pub use use_case::UseCase;
 
 // Re-export CloudEvents v1.0 types and traits

@@ -5,13 +5,15 @@
 //! confirm the checks hold on the host before blaming the wasm runtime.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D10 — report whether the wider `surface` ran.
 //! - 2026-09-11T00:00:00Z @AI: Initial WASI/native reporting entry point for the probe.
 
 fn main() {
   let node_count = hexser_wasm_e2e::run_checks();
 
   std::println!(
-    "hexser wasm e2e: OK (nodes={node_count}, clockless={})",
-    hexser_wasm_e2e::CLOCKLESS
+    "hexser wasm e2e: OK (nodes={node_count}, clockless={}, surface={})",
+    hexser_wasm_e2e::CLOCKLESS,
+    hexser_wasm_e2e::SURFACE
   );
 }

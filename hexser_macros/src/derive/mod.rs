@@ -4,8 +4,10 @@
 //! module with the implementation logic.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 — `actor` (HexActor) and `vocabulary` (HexVocabulary, HexRefusal).
 //! - 2025-10-02T00:00:00Z @AI: Initial derive implementations module.
 
+pub mod actor;
 pub mod aggregate;
 pub mod directive;
 pub mod entity;
@@ -15,3 +17,4 @@ pub mod hex_port;
 pub mod hex_value_item;
 pub mod query;
 pub mod repository;
+pub mod vocabulary;

@@ -57,6 +57,7 @@
 //! These helpers are intended as templates: copy, adapt, and extend as needed.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D4/D5 — `implements: [PortNode]` on `hex_register_component!` and `hex_register_adapter!` (a compile-time proof that the adapter implements the port node's trait, then one `Implements` edge); `port_trait: Trait` on `hex_register_port!`; `implements_edge_exists::<A, P>`, which shares one private `edge_exists` with `dependency_edge_exists` (behaviour unchanged).
 //! - 2026-11-03T18:00:00Z @AI: `dependency_edge_exists::<A, P>(&HexGraph)`: the one reading door for a wiring cell. True only for a `Depends` edge from `A`'s node onto `P`'s node when `P`'s node is itself in the graph, so a dangling edge never reads as wired. Downstream crates no longer each carry a private `wired` fn. Cells pin the registered edge, its direction, and the refusal of a dangling or non-`Depends` edge.
 //! - 2026-11-03T00:00:00Z @AI: `depends_on: [...]` on `hex_register_component!` and its five layer shorthands, plus `dependency_id::<D>()`: a registration can now carry its edges (adapter -> port node). The dependency id is derived from `D::node_info().type_name`, exactly as `ComponentRegistry::build_graph` keys nodes, because `NodeId::of` hashes the full path while template nodes are keyed by the short name, so an edge built with it dangles silently. The three-argument forms are unchanged. Graph-reading cells pin the edge and its absence.
 //! - 2026-09-11T00:00:00Z @AI: Allow needless_doctest_main — the explicit `fn main` is what keeps the macro invocations at module scope, which is the whole subject of these examples.
@@ -113,12 +114,40 @@ where
   A: crate::registry::Registrable,
   P: crate::registry::Registrable,
 {
+  edge_exists::<A, P>(graph, crate::graph::Relationship::Depends)
+}
+
+/// True when `graph` carries an `Implements` edge from registered adapter `A`'s node onto
+/// registered port node `P`'s node AND `P`'s node is itself in the graph.
+///
+/// The reading half of `implements(..)` (derive) and `implements: [...]` (template). An
+/// `Implements` edge exists only where the compiler proved that `A` implements `P`'s trait, so
+/// this is never true for a `Depends` edge: declared is not proved (SB 15/380).
+pub fn implements_edge_exists<A, P>(graph: &crate::graph::HexGraph) -> bool
+where
+  A: crate::registry::Registrable,
+  P: crate::registry::Registrable,
+{
+  edge_exists::<A, P>(graph, crate::graph::Relationship::Implements)
+}
+
+/// The one edge walk both readers share: an edge of `relationship` from `A`'s node onto `P`'s
+/// node, with `P`'s node present, so a dangling edge never reads as wired.
+fn edge_exists<A, P>(
+  graph: &crate::graph::HexGraph,
+  relationship: crate::graph::Relationship,
+) -> bool
+where
+  A: crate::registry::Registrable,
+  P: crate::registry::Registrable,
+{
   let source = dependency_id::<A>();
   let target = dependency_id::<P>();
   graph.get_node(&target).is_some()
-    && graph.edges_from(&source).iter().any(|edge| {
-      *edge.target() == target && edge.relationship == crate::graph::Relationship::Depends
-    })
+    && graph
+      .edges_from(&source)
+      .iter()
+      .any(|edge| *edge.target() == target && edge.relationship() == relationship)
 }
 
 /// Core macro that REGISTERS a type: it implements `Registrable` with the given layer and
@@ -163,6 +192,9 @@ where
 #[macro_export]
 macro_rules! hex_register_component {
   (@register $t:ty, $layer:expr, $role:expr, [$($dep:ty),*]) => {
+    $crate::hex_register_component!(@register $t, $layer, $role, [$($dep),*], []);
+  };
+  (@register $t:ty, $layer:expr, $role:expr, [$($dep:ty),*], [$($port:ty),*]) => {
     impl $crate::registry::Registrable for $t {
       fn node_info() -> $crate::registry::NodeInfo {
         let full = ::std::any::type_name::<Self>();
@@ -177,12 +209,27 @@ macro_rules! hex_register_component {
     $crate::inventory::submit! {
       $crate::registry::ComponentEntry::new::<$t>()
     }
+
+    $(
+      // The proof: compiles only if `$t` implements the trait `$port` named with
+      // `port_trait`. Then one proved `Implements` edge.
+      const _: () = <$port>::__hexser_port_trait::<$t>();
+      $crate::inventory::submit! {
+        $crate::registry::ImplementsEntry::new::<$t, $port>()
+      }
+    )*
   };
   ($t:ty, $layer:expr, $role:expr) => {
-    $crate::hex_register_component!(@register $t, $layer, $role, []);
+    $crate::hex_register_component!(@register $t, $layer, $role, [], []);
   };
   ($t:ty, $layer:expr, $role:expr, depends_on: [$($dep:ty),+ $(,)?]) => {
-    $crate::hex_register_component!(@register $t, $layer, $role, [$($dep),+]);
+    $crate::hex_register_component!(@register $t, $layer, $role, [$($dep),+], []);
+  };
+  ($t:ty, $layer:expr, $role:expr, implements: [$($port:ty),+ $(,)?]) => {
+    $crate::hex_register_component!(@register $t, $layer, $role, [], [$($port),+]);
+  };
+  ($t:ty, $layer:expr, $role:expr, depends_on: [$($dep:ty),+ $(,)?], implements: [$($port:ty),+ $(,)?]) => {
+    $crate::hex_register_component!(@register $t, $layer, $role, [$($dep),+], [$($port),+]);
   };
 }
 
@@ -199,11 +246,22 @@ macro_rules! hex_register_domain {
 }
 
 /// Convenience macro for Port-layer components. Takes the same optional `depends_on: [...]`
-/// as [`hex_register_component!`](crate::hex_register_component).
+/// as [`hex_register_component!`](crate::hex_register_component), or `port_trait: Trait`,
+/// which ties the port node to its trait: delete or rename the trait and the node does not
+/// compile, and adapters can then prove they serve it with `implements: [Node]`.
 #[macro_export]
 macro_rules! hex_register_port {
   ($t:ty, $role:expr) => {
     $crate::hex_register_component!($t, $crate::graph::Layer::Port, $role);
+  };
+  ($t:ty, $role:expr, port_trait: $tr:path) => {
+    $crate::hex_register_component!($t, $crate::graph::Layer::Port, $role);
+
+    impl $t {
+      /// The port node's trait, as a bound: `implements` proves an adapter against it.
+      #[doc(hidden)]
+      pub const fn __hexser_port_trait<T: ?::core::marker::Sized + $tr>() {}
+    }
   };
   ($t:ty, $role:expr, depends_on: [$($dep:ty),+ $(,)?]) => {
     $crate::hex_register_component!($t, $crate::graph::Layer::Port, $role, depends_on: [$($dep),+]);
@@ -220,6 +278,15 @@ macro_rules! hex_register_adapter {
   };
   ($t:ty, $role:expr, depends_on: [$($dep:ty),+ $(,)?]) => {
     $crate::hex_register_component!($t, $crate::graph::Layer::Adapter, $role, depends_on: [$($dep),+]);
+  };
+  ($t:ty, $role:expr, implements: [$($port:ty),+ $(,)?]) => {
+    $crate::hex_register_component!($t, $crate::graph::Layer::Adapter, $role, implements: [$($port),+]);
+  };
+  ($t:ty, $role:expr, depends_on: [$($dep:ty),+ $(,)?], implements: [$($port:ty),+ $(,)?]) => {
+    $crate::hex_register_component!(
+      $t, $crate::graph::Layer::Adapter, $role,
+      depends_on: [$($dep),+], implements: [$($port),+]
+    );
   };
 }
 
