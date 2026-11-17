@@ -7,7 +7,7 @@ allowed-tools: Read, Write, Edit, Bash(cargo *), Grep, Glob
 Implement a concrete adapter named `$2` for the existing hexser port trait `$1`.
 
 If `$1` (the port trait) or `$2` (the adapter name) is missing, do not guess blindly:
-- Use Grep/Glob to list candidate port traits (search for `trait .*: *Repository`, `#[derive(HexPort` and `#[hex(role = "InputPort")]`) and ask the user which port to implement and what to name the adapter.
+- Use Grep/Glob to list candidate port traits (search for `trait .*: *Repository`, `#[derive(HexPort`, `port_trait =` and `hex_register_port!`) and ask the user which port to implement and what to name the adapter.
 - Only proceed once both a port trait and an adapter name are known.
 
 Follow these steps precisely. Prefer `use hexser::prelude::*;` and keep every hexser API name exactly as written here.
@@ -18,24 +18,32 @@ Follow these steps precisely. Prefer `use hexser::prelude::*;` and keep every he
 - Determine the trait's supertrait bound and entity type. In hexser a custom port is a trait with a supertrait bound, e.g. `pub trait UserRepository: Repository<User> { fn find_by_email(&self, email: &str) -> HexResult<Option<User>>; }`.
 - Classify the port:
   - Repository port — its supertrait is `Repository<T>` (from the prelude). Handle per section 3.
-  - Non-repository port — e.g. it declares `InputPort<Input, Output>`, `OutputPort<Request, Response>`, `UseCase<Input, Output>`, or `Query<Params, Result>` methods, or is a plain custom trait. Handle per section 4.
+  - Non-repository port — a plain custom trait, or one built on `OutputPort<Request, Response>`. Handle per section 4. `InputPort`, `UseCase` and `ports::Query` are deprecated in 0.7: do not write a new adapter against them. Point the user to `Actor` (writes) or `QueryHandler` (reads) instead.
+- Find the port's **node**: the marker type registered with `#[derive(HexPort)]` (or `hex_register_port!`) for this trait. It must carry `#[hex(port_trait = $1)]` (or `port_trait: $1` on the template). If the node has no `port_trait`, add it; if there is no node, create one beside the trait:
+
+  ```rust
+  #[derive(HexPort)]
+  #[hex(port_trait = $1)]
+  pub struct $1PortNode;
+  ```
 - Read the entity type `T` (e.g. `User`) so you implement the right generic parameter. `T` must implement `HexEntity`.
 
 ## 2. Create the adapter struct
 
-Create the struct `$2` with `#[derive(HexAdapter)]`. The derive emits `impl Adapter for $2 {}` and registers the type at `Layer::Adapter`, `Role::Adapter` — so do NOT hand-write `impl Adapter`. Give it whatever backing state the adapter needs (an in-memory `Vec<T>`, a client/pool handle, etc.). `#[derive(Default)]` is convenient for in-memory adapters.
+Create the struct `$2` with `#[derive(HexAdapter)]` and `#[hex(implements($1PortNode))]`. The derive emits `impl Adapter for $2 {}` and registers the type at `Layer::Adapter`, `Role::Adapter` — so do NOT hand-write `impl Adapter`. `implements` lands an `Implements` edge onto the port's node, and it compiles only if `$2` implements `$1`: that is the proof the adapter serves the port. Give it whatever backing state the adapter needs (an in-memory `Vec<T>`, a client/pool handle, etc.). `#[derive(Default)]` is convenient for in-memory adapters.
 
 ```rust
 use hexser::prelude::*;
 
 #[derive(HexAdapter, Default)]
+#[hex(implements($1PortNode))]
 struct $2 {
     // backing store or connection handle, e.g.:
     items: std::vec::Vec<T>,
 }
 ```
 
-(If the port is a mapper rather than a data adapter, override the role with `#[hex(role = "Mapper")]`.)
+(If the type is a mapper rather than a data adapter, override the role with `#[hex(role = "Mapper")]`; a mapper serves no port and needs no `implements`. A generic adapter is not registered by the derive, so it carries no edge.)
 
 ## 3. If it is a Repository port
 
@@ -109,7 +117,7 @@ impl $1 for $2 {
 
 ## 4. If it is NOT a Repository port
 
-Implement the port trait `$1` directly against `$2`, matching each method signature exactly (e.g. `InputPort::execute(&self, input) -> HexResult<Output>`, `OutputPort::send(&self, request) -> HexResult<Response>`, `UseCase::execute`, or `Query::query`). Read the trait to copy signatures verbatim.
+Implement the port trait `$1` directly against `$2`, matching each method signature exactly (e.g. `OutputPort::send(&self, request) -> HexResult<Response>`, or the custom trait's own methods). Read the trait to copy signatures verbatim.
 
 ## 5. Use rich Hexserror values
 
@@ -133,6 +141,6 @@ return Err(Hexserror::adapter("E_HEX_203", "Failed to write record")
 
 ## 6. Verify
 
-After writing the code, run `cargo check` and fix any errors before reporting done. If the crate gates macros behind a non-default feature set, check with the appropriate `cargo check --features ...` (the `macros` feature that provides `#[derive(HexAdapter)]` is on by default).
+After writing the code, run `cargo check` and fix any errors before reporting done. If the `implements` proof fails, the adapter does not implement the port's trait yet: implement the missing methods, never remove the proof. If the crate has a graph cell asserting `findings()` is empty, run it too (`cargo test`). If the crate gates macros behind a non-default feature set, check with the appropriate `cargo check --features ...` (the `macros` feature that provides `#[derive(HexAdapter)]` is on by default).
 
-Report: the port you implemented, the adapter type you created, which traits you implemented (`Repository` / `QueryRepository` / the custom port), whether deletion is supported, and the `cargo check` result.
+Report: the port you implemented and its node, the adapter type you created, which traits you implemented (`Repository` / `QueryRepository` / the custom port), whether deletion is supported, and the `cargo check` result.

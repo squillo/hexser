@@ -1,0 +1,7 @@
+error: `#[derive(HexDomain)]` cannot register a generic type in the architecture graph, and will not skip it in silence: `inventory` submits one entry per component and `type_name::<Self>()` on a generic names a monomorphization chosen by a consumer crate, so there is no single honest node for this type (a lifetime or const parameter is likewise not in scope where the submission expands). Derive on a NON-GENERIC marker struct that stands for the component instead, e.g. `#[derive(HexDomain)] struct GenericDomainComponent;`, and leave the generic type underived; or hand-write `impl hexser::registry::Registrable` on the generic and submit the instantiation you mean. This previously compiled: the type implemented `Registrable`, answered `node_info()`, and was never in the graph.
+ --> tests/ui/fail/generic_domain.rs:6:1
+  |
+6 | / struct GenericDomain<T> {
+7 | |   inner: T,
+8 | | }
+  | |_^

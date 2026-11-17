@@ -6,6 +6,7 @@
 //! Handlers may produce events as side effects of directive execution.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D7 — `#[deprecated]`, routed to `Actor` (the same job through `&self`; SB 15/203: route, then unreach, then delete). Unit tests keep exercising it under `#[allow(deprecated)]`.
 //! - 2025-10-01T00:01:00Z @AI: Renamed from CommandHandler to DirectiveHandler.
 //! - 2025-10-01T00:00:00Z @AI: Initial CommandHandler trait definition for command execution.
 
@@ -43,6 +44,10 @@
 ///     }
 /// }
 /// ```
+#[deprecated(
+  since = "0.7.0",
+  note = "use `hexser::application::Actor`: one writer through `&mut self`, with its own command, context and outcome. See MIGRATING_0.6_TO_0.7.md; removal is left to a later version."
+)]
 pub trait DirectiveHandler<D>
 where
   D: crate::application::directive::Directive,
@@ -55,6 +60,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
   use super::*;
 

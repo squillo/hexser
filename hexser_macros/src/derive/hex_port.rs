@@ -8,6 +8,8 @@
 //! this derive to a marker struct representing the port.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D4 — `#[hex(port_trait = path::Trait)]` ties the port node to its trait (the node does not compile without it, and adapters prove against it); through `codegen::registration`.
+//! - 2026-09-04T00:00:00Z @AI: Pass the derive name to the shared codegen (generic-target compile error names the derive).
 //! - 2026-07-20T00:00:00Z @AI: Parse #[hex(role = "...")] override; use shared codegen; validate target; fully-qualified paths.
 //! - 2025-10-02T00:00:00Z @AI: Initial HexPort derive implementation.
 
@@ -19,13 +21,16 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     return e.to_compile_error().into();
   }
 
-  let role = crate::common::codegen::role_override(&input.attrs)
-    .unwrap_or_else(|| quote::quote!(::hexser::graph::Role::Repository));
-
-  let expanded = crate::common::codegen::registrable_and_submit(
+  let expanded = crate::common::codegen::registration(
     &input,
+    "HexPort",
     quote::quote!(::hexser::graph::Layer::Port),
-    role,
+    quote::quote!(::hexser::graph::Role::Repository),
+    &[
+      crate::common::attrs::Key::Role,
+      crate::common::attrs::Key::DependsOn,
+      crate::common::attrs::Key::PortTrait,
+    ],
   );
 
   proc_macro::TokenStream::from(expanded)

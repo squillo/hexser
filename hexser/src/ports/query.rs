@@ -6,6 +6,7 @@
 //! Queries should be optimized for reading and may use different data models.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D7 — `#[deprecated]`, routed to `QueryHandler` (two read doors with one shape, 0 impls in the family). Unit tests keep exercising it under `#[allow(deprecated)]`.
 //! - 2025-10-01T00:00:00Z @AI: Initial Query trait definition for CQRS read operations.
 
 /// Trait for queries that perform read-only operations.
@@ -36,6 +37,10 @@
 ///
 /// trait FindUserByEmail: Query<FindUserByEmailParams, Option<UserView>> {}
 /// ```
+#[deprecated(
+  since = "0.7.0",
+  note = "use `hexser::application::QueryHandler`, which has the same shape. See MIGRATING_0.6_TO_0.7.md; removal is left to a later version."
+)]
 pub trait Query<Params, Result> {
   /// Execute the query with the given parameters.
   ///
@@ -44,6 +49,7 @@ pub trait Query<Params, Result> {
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
   use super::*;
 

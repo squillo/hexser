@@ -6,6 +6,7 @@
 //! application services that orchestrate domain logic.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D7 — `#[deprecated]`, routed to `Actor` (the same job through `&self`; SB 15/203: route, then unreach, then delete). Unit tests keep exercising it under `#[allow(deprecated)]`.
 //! - 2025-10-01T00:00:00Z @AI: Initial InputPort trait definition with generic input/output.
 
 /// Trait for input ports that define application entry points.
@@ -35,6 +36,10 @@
 ///
 /// trait CreateUserPort: InputPort<CreateUserInput, CreateUserOutput> {}
 /// ```
+#[deprecated(
+  since = "0.7.0",
+  note = "use `hexser::application::Actor`: one writer through `&mut self`, with its own command, context and outcome. See MIGRATING_0.6_TO_0.7.md; removal is left to a later version."
+)]
 pub trait InputPort<Input, Output> {
   /// Execute the operation with the given input.
   ///
@@ -43,6 +48,7 @@ pub trait InputPort<Input, Output> {
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
   use super::*;
 

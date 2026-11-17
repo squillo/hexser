@@ -19,6 +19,7 @@
 //! ```
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D3 — `refusal` module and the `Refusal` re-export.
 //! - 2026-07-20T00:00:00Z @AI: Replace docs for the removed error macros with the real Hexserror constructor API.
 //! - 2025-10-09T21:51:00Z @AI: Add env_control module for conditional source location serialization.
 //! - 2025-10-06T03:00:00Z @AI: Add error construction macros for Phase 2.
@@ -35,10 +36,12 @@ pub mod hex_error;
 pub mod layer_error;
 pub mod not_found_error;
 pub mod port_error;
+pub mod refusal;
 pub mod rich_error;
 pub mod source_location;
 pub mod validation_error;
 
 pub use codes as error_codes;
 pub use hex_error::Hexserror;
+pub use refusal::Refusal;
 pub use rich_error::RichError;

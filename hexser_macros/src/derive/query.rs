@@ -1,9 +1,15 @@
 //! Implementation of #[derive(HexQuery)] macro.
 //!
-//! Implements Registrable for query types and registers them in the architecture graph
-//! with `Role::Query`.
+//! Registers a type in the architecture graph at the Application layer, and emits no trait
+//! impl of its own. The role defaults to `Query` and can be overridden with
+//! `#[hex(role = "UseCase")]` (or any `Role` variant), matching HexPort/HexAdapter — this is
+//! the registration-only vehicle for an Application-layer component that is neither a
+//! directive nor a query (a use case marker, a directive handler marker).
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D5 — `#[hex(depends_on(..))]`; through `codegen::registration`.
+//! - 2026-09-04T00:00:00Z @AI: Honour #[hex(role = "...")] (all five registration derives now do);
+//!   pass the derive name to the shared codegen.
 //! - 2026-07-20T00:00:00Z @AI: Add the missing inventory submission (query components were absent from the graph); use shared codegen.
 //! - 2025-10-02T00:00:00Z @AI: Initial Query derive implementation.
 
@@ -11,10 +17,15 @@
 pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let input = syn::parse_macro_input!(input as syn::DeriveInput);
 
-  let expanded = crate::common::codegen::registrable_and_submit(
+  let expanded = crate::common::codegen::registration(
     &input,
+    "HexQuery",
     quote::quote!(::hexser::graph::Layer::Application),
     quote::quote!(::hexser::graph::Role::Query),
+    &[
+      crate::common::attrs::Key::Role,
+      crate::common::attrs::Key::DependsOn,
+    ],
   );
 
   proc_macro::TokenStream::from(expanded)

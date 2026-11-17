@@ -6,6 +6,7 @@
 //! using GraphBuilder and cannot be modified after creation.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D6 — `findings()` returns what is wrong as closed `GraphFinding` values: the collisions `build` recorded, adapters with no proved port, and edges to unregistered nodes, in O(nodes + edges).
 //! - 2026-07-21T00:00:00Z @AI: PRD-272 §1.5/§3.G — current() moves OnceLock→`LazyLock<ArcSwap<HexGraph>>` (wait-free RCU, self-programming hot-swap via install()/rebuild_current(), SOLE write site per N_BOOK §23); adjacency IndexMap (§3.H).
 //! - 2026-07-20T00:00:00Z @AI: Cache current() via OnceLock; BTreeMap nodes for deterministic iteration; O(degree) edges_from/edges_to via precomputed adjacency indices.
 //! - 2025-10-02T14:00:00Z @AI: Rename nodes_in_layer to nodes_by_layer and nodes_by_role to nodes_by_role for better API naming.
@@ -53,6 +54,8 @@ pub(crate) struct GraphInner {
   /// Precomputed adjacency: target node id -> indices into `edges` (for `edges_to`).
   pub(crate) incoming: indexmap::IndexMap<crate::graph::node_id::NodeId, std::vec::Vec<usize>>,
   pub(crate) metadata: crate::graph::metadata::GraphMetadata,
+  /// Registrations `build` merged into one id (F-A), as typed findings, in build order.
+  pub(crate) collisions: std::vec::Vec<crate::graph::finding::GraphFinding>,
 }
 
 impl HexGraph {
@@ -109,6 +112,7 @@ impl HexGraph {
         outgoing: indexmap::IndexMap::new(),
         incoming: indexmap::IndexMap::new(),
         metadata: crate::graph::metadata::GraphMetadata::default(),
+        collisions: std::vec::Vec::new(),
       }),
     }
   }
@@ -305,6 +309,50 @@ impl HexGraph {
   /// Check if graph is empty.
   pub fn is_empty(&self) -> bool {
     self.inner.nodes.is_empty()
+  }
+
+  /// What is wrong with this graph, as closed values (PRD HEXSER-0.7 D6), in a stable order:
+  /// the collisions `build` recorded (build order), then adapters with no proved port (node id
+  /// order), then edges to unregistered nodes (edge order). Empty for a sound graph.
+  ///
+  /// Nothing here refuses: a graph cell asserts the list is empty, or names the findings it
+  /// accepts. An adapter linked to its port only by a `Depends` edge (a template's
+  /// `depends_on:`) IS a finding: its port is declared, not proved (SB 15/380). `Mapper`s serve
+  /// no port and are never one.
+  pub fn findings(&self) -> std::vec::Vec<crate::graph::finding::GraphFinding> {
+    let mut findings = self.inner.collisions.clone();
+    for node in self.inner.nodes.values() {
+      if node.layer() != crate::graph::layer::Layer::Adapter
+        || node.role() == crate::graph::role::Role::Mapper
+      {
+        continue;
+      }
+      let proved = self
+        .edges_from(node.id())
+        .iter()
+        .any(|edge| edge.relationship() == crate::graph::relationship::Relationship::Implements);
+      if !proved {
+        findings.push(
+          crate::graph::finding::GraphFinding::AdapterWithoutProvedPort {
+            adapter: *node.id(),
+          },
+        );
+      }
+    }
+    for edge in &self.inner.edges {
+      if !self.inner.nodes.contains_key(edge.source())
+        || !self.inner.nodes.contains_key(edge.target())
+      {
+        findings.push(
+          crate::graph::finding::GraphFinding::EdgeToUnregisteredNode {
+            source: *edge.source(),
+            target: *edge.target(),
+            relationship: edge.relationship(),
+          },
+        );
+      }
+    }
+    findings
   }
 }
 

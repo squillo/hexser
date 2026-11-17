@@ -6,7 +6,7 @@ allowed-tools: Read, Grep, Glob, Bash(cargo *)
 
 # /hexser:review — read-only hexser best-practices review
 
-Review hexser (0.5.x) Rust code for correctness and adherence to the framework's
+Review hexser (0.7) Rust code for correctness and adherence to the framework's
 grain. This command is **READ-ONLY**: you inspect, cite, and recommend — you do
 **not** edit, write, or fix any file. Suggest fixes in prose only.
 
@@ -17,17 +17,21 @@ grain. This command is **READ-ONLY**: you inspect, cite, and recommend — you d
 - If `$ARGUMENTS` is empty, review the changed / related hexser files. Prefer the
   working set: run `cargo metadata` sparingly if needed, and use Grep/Glob to find
   Rust files that mention hexser (e.g. `use hexser`, `HexEntity`, `HexDomain`,
-  `HexPort`, `HexAdapter`, `Repository`, `Hexserror`). Do not run git.
+  `HexPort`, `HexAdapter`, `HexActor`, `HexRefusal`, `Repository`, `Hexserror`). Do not
+  run git.
 
 Use only Read, Grep, Glob, and `cargo` commands. Read a file before citing it.
 
 ## Ground truth
 
-The rules below are the fact-checked hexser 0.5 API. Trust the skill's reference
+The rules below are the fact-checked hexser 0.7 API. Trust the skill's reference
 docs over memory (and over the stale workspace-root README). Cite the doc that
 backs each finding:
 
-- `skills/hexser/references/derives.md` — derives, `#[hex(role = "…")]`, `id`-field rule.
+- `MIGRATING_0.6_TO_0.7.md` in the hexser repository
+  (<https://github.com/squillo/hexser/blob/main/hexser/MIGRATING_0.6_TO_0.7.md>) — the 0.7
+  additions and deprecations. Every example in it is compiled as a doctest.
+- `skills/hexser/references/derives.md` — derives, `#[hex(...)]` keys, `id`-field rule.
 - `skills/hexser/references/api.md` — trait signatures, `Repository`/`QueryRepository`, features.
 - `skills/hexser/references/patterns.md` — Domain → Port → Adapter layering, full example.
 - `skills/hexser/references/errors.md` — `Hexserror`, boxing, constructors, rich-error builders.
@@ -74,10 +78,13 @@ backs each finding:
    `HexDomain` (Domain/Entity), `HexPort` (Port; default `Role::Repository`, override
    `#[hex(role = "InputPort")]` etc.), `HexAdapter` (Adapter; default `Role::Adapter`,
    override `#[hex(role = "Mapper")]`, and it also emits `impl Adapter for T {}`),
-   `HexDirective`/`HexQuery` (Application). `HexRepository` is a pure marker (emits no
+   `HexDirective`/`HexQuery` (Application), `HexActor` (Application; default
+   `Role::DirectiveHandler`). `HexRepository` is a pure marker (emits no
    code) — pair it with `HexPort`. Derives target structs/enums only (unions error).
    Flag a `#[hex(role = "…")]` whose value is not one of the 17 `Role` variants, or a
-   role that contradicts the derive's layer. Rule: derives.md.
+   role that contradicts the derive's layer. In 0.7 `#[hex(...)]` is read strictly: an
+   unknown key, a malformed value, a duplicate single-valued key, or a key the derive does
+   not read is a compile error. Rule: derives.md.
 
 7. **Layering is respected (domain does not depend on adapters/infra).** Domain modules
    must not import or reference adapter/infrastructure types; dependencies point inward
@@ -87,7 +94,9 @@ backs each finding:
 8. **Prelude is used instead of deep paths.** Prefer `use hexser::prelude::*;`. Deep
    paths are only justified for items NOT in the prelude (e.g.
    `hexser::ports::repository::QueryRepository` for disambiguation, or
-   `hexser::showcase::visualizable::Visualizable`, which is not re-exported). Flag deep
+   `hexser::showcase::visualizable::Visualizable`, which is not re-exported). `Actor`,
+   `Vocabulary`, `Refusal` and `GraphFinding` are not in the prelude, so a path such as
+   `hexser::application::Actor` is correct. Flag deep
    paths for items the prelude already exports as a readability improvement. Rule: api.md.
 
 9. **`to_json` call sites handle `HexResult`.** In 0.5 `AIContext::to_json`,
@@ -95,6 +104,49 @@ backs each finding:
    `HexResult<String>`, not `Result<String, String>` or a bare `String`. Flag call
    sites that ignore the `Result` or assume a plain `String`. Rule: graph-and-ai.md,
    migration-0.4-to-0.5.md.
+
+10. **Closed vocabularies, not string codes.** A command, event or refusal set is a closed
+    enum that derives `HexVocabulary`, or `HexRefusal` for a refusal. Flag a name list kept
+    by hand next to an enum (`const NAMES`, `fn name(&self) -> &'static str`, a string
+    `match`). Flag a refusal built from a literal code, such as
+    `Hexserror::domain("EmptyName", …)`. Flag a code read back by string matching instead of
+    `T::from_code(err.code())`. Rule: derives.md, errors.md.
+
+11. **Words at the edge only.** A refusal stays a typed value inside the crate, for example
+    `Result<Event, Refusal>` or an actor's outcome. It crosses into `Hexserror` only at the
+    edge, through `hexser::Hexserror::refused(&refusal, message)`. Flag a refusal turned into
+    a `Hexserror` or a string deep inside domain or actor code. Rule: errors.md.
+
+12. **Port markers name their trait.** A `#[derive(HexPort)]` marker carries
+    `#[hex(port_trait = Trait)]`. A template port uses
+    `hex_register_port!(Node, role, port_trait: Trait)`. Without it, the marker can outlive
+    its trait, and no adapter can prove it serves the port. Flag a port marker that stands
+    for a trait and does not name it. Rule: derives.md.
+
+13. **Adapters prove their port with `implements(..)`.** An adapter that serves a port
+    carries `#[hex(implements(PortNode))]`, or `implements: [PortNode]` on the template. This
+    compiles only if the adapter implements the port's trait. Flag an adapter that names its
+    port through `depends_on` onto a port marker: that edge is declared, not proved, and
+    `findings()` reports the adapter as `AdapterWithoutProvedPort`. Flag a wiring cell that
+    checks the served port with `dependency_edge_exists` instead of `implements_edge_exists`.
+    Rule: derives.md, graph-and-ai.md.
+
+14. **A graph cell asserts `findings()` is empty.** A crate that registers components has a
+    test such as
+    `assert_eq!(graph.findings(), Vec::<hexser::GraphFinding>::new())` over
+    `hexser::registry::ComponentRegistry::build_graph()`, or one that names the findings it
+    accepts. Flag a crate with registrations and no such cell. Rule: graph-and-ai.md.
+
+15. **No deprecated doors.** `application::DirectiveHandler`, `ports::UseCase` and
+    `ports::InputPort` are deprecated in 0.7, routed to `application::Actor`. `ports::Query`
+    is deprecated, routed to `application::QueryHandler`. Flag each use, and each
+    `#[allow(deprecated)]` that hides one. Rule: api.md, the migration guide.
+
+16. **No `unsafe`.** `hexser`, `hexser_macros` and `hexser_potions` are each
+    `#![forbid(unsafe_code)]`. Flag `unsafe` in hexser code. In particular, flag
+    `std::env::set_var` or `remove_var` on `HEXSER_INCLUDE_SOURCE_LOCATION`: it takes
+    `unsafe` since edition 2024, and 0.7 reads the variable once per process, so a change at
+    run time is not seen. Set it before the process starts. Rule: errors.md.
 
 ## Optionally build/lint
 
@@ -116,10 +168,14 @@ Present findings grouped by severity, most severe first:
 - **High** — will not compile or is a correctness bug (missing `id` field on a
   `HexEntity`; read via `Repository` that lacks `QueryRepository`; unboxed direct
   `Hexserror` variant; `delete_where` relied on but not overridden; ignored
-  `to_json` `HexResult`; domain depending on adapter/infra).
-- **Medium** — likely wrong at runtime or a mismatched derive/role.
+  `to_json` `HexResult`; domain depending on adapter/infra; a `#[hex(...)]` key the
+  derive does not read; a run-time write to `HEXSER_INCLUDE_SOURCE_LOCATION`).
+- **Medium** — likely wrong at runtime or a mismatched derive/role (an adapter that
+  names its port through `depends_on`; a port marker without `port_trait`; a use of a
+  deprecated door; `unsafe` in hexser code).
 - **Low** — style / best-practice (missing `with_next_step`/`with_suggestion`,
-  deep paths where the prelude suffices).
+  deep paths where the prelude suffices, a hand-written name list or string refusal
+  code, a refusal turned into words before the edge, no graph cell over `findings()`).
 
 For each finding give:
 

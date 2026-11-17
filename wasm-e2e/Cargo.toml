@@ -1,0 +1,41 @@
+# End-to-end WASM probe for hexser.
+#
+# Deliberately a standalone workspace (its own `[workspace]` table, like
+# hexser/examples/realworld_api) so it is cross-compiled on demand by scripts/wasm-e2e.sh and
+# never dragged into `cargo build --workspace` on the host, and so it stays out of the
+# published `hexser` .crate.
+#
+# Revision History
+# - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D10 — hexser is pulled with `macros` only; the wider surface moves behind the default `surface` feature so the probe also runs macros-only.
+# - 2026-09-11T00:00:00Z @AI: Initial probe — executes hexser under wasmtime on wasm32-unknown-unknown and wasm32-wasip1, the check a build-only matrix cannot make.
+
+[workspace]
+
+[package]
+name = "hexser_wasm_e2e"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.85"
+publish = false
+
+[lib]
+name = "hexser_wasm_e2e"
+path = "src/lib.rs"
+# cdylib for the `wasmtime run --invoke` path on wasm32-unknown-unknown (no `_start`);
+# rlib so the wasm32-wasip1 binary below can link the same checks.
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "hexser_wasm_e2e"
+path = "src/main.rs"
+
+[features]
+# `surface` (the default) is what a WASM consumer is documented to be able to use: the defaults
+# (static-di) plus the serde/ai/visualization surfaces, which carry their own clock reads.
+# Built with `--no-default-features`, the probe is the macros-only pin an editor core takes
+# (PRD HEXSER-0.7 D10), and runs every check that needs nothing more.
+default = ["surface"]
+surface = ["hexser/static-di", "hexser/ai", "hexser/visualization", "hexser/serde"]
+
+[dependencies]
+hexser = { path = "../hexser", default-features = false, features = ["macros"] }

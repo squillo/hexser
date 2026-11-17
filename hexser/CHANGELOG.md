@@ -1,3 +1,209 @@
+## [0.7.0] - 2026-11-17
+
+Minor: everything below is additive, except that `#[hex(...)]` keys hexser never read are now
+compile errors. All three crates move to 0.7.0 together. Every family pin is `0.6` or `0.6.x`,
+so a plain `cargo update` moves no one; each owner moves its own pin. The before-and-after for
+each change is in [MIGRATING_0.6_TO_0.7.md](MIGRATING_0.6_TO_0.7.md). Every example in that
+guide is compiled as a doctest.
+
+### Added: the single writer's door, `Actor` (2026-11-17)
+
+- `hexser::application::Actor` (also `hexser::Actor`): `fn handle(&mut self, command, context)
+  -> Self::Outcome`, with associated `Command`, `Context<'a>` and `Outcome`. `&mut self` is the
+  single-writer guarantee, so the door needs no lock. The outcome is the actor's own: an event,
+  a view, `Result<Event, Refusal>`, or `()`.
+- `#[derive(HexActor)]` registers the actor's node in the Application layer, role
+  `DirectiveHandler`. It reads `role` and `depends_on(..)`, and refuses a generic type.
+
+### Added: closed vocabularies and typed refusals (2026-11-17)
+
+- `hexser::domain::Vocabulary` (also `hexser::Vocabulary`) and `#[derive(HexVocabulary)]`, for
+  a command, event or refusal enum:
+  - `CODES` lists the codes in declaration order, and `code()` returns one;
+  - `from_code` reads a code back, and is generated when every variant is a unit variant;
+  - an unknown code is `None`;
+  - `#[hex(code = "...")]` overrides a variant's code, and duplicate codes are a compile error.
+- `hexser::error::Refusal` (also `hexser::Refusal`) and `#[derive(HexRefusal)]`: a vocabulary
+  whose variants carry static guidance, `#[hex(next_step = "...")]` and
+  `#[hex(suggestion = "...")]`.
+- `Hexserror::refused(&refusal, message)` puts a refusal into the existing `Domain` variant,
+  with its code and guidance. `Hexserror::code()` answers for all six variants, so the code
+  reads back to the refusal. `Hexserror` keeps exactly six variants.
+
+### Added: proved edges, on the derives and the templates (2026-11-17)
+
+- `#[hex(port_trait = Trait)]` on `HexPort`, and `port_trait: Trait` on `hex_register_port!`,
+  tie a port marker to its trait.
+- `#[hex(implements(PortNode, ..))]` on `HexAdapter`, and `implements: [..]` on
+  `hex_register_adapter!`/`hex_register_component!`, land an `Implements` edge. They compile
+  only if the adapter implements the port's trait. The edge is carried by
+  `hexser::registry::ImplementsEntry`.
+- `#[hex(depends_on(..))]` on every registration derive, the derive form of 0.6.1's template
+  `depends_on:`.
+- `hexser::templates::implements_edge_exists::<A, P>(&graph)`. It is true only when the edge
+  exists and the port's node is in the graph. It shares one reader with
+  `dependency_edge_exists`.
+
+### Added: the graph says what is wrong with it, `HexGraph::findings()` (2026-11-17)
+
+`findings()` returns `Vec<GraphFinding>` with three variants:
+- `ShortNameCollision`;
+- `AdapterWithoutProvedPort` (an adapter other than a `Mapper` with no `Implements` edge);
+- `EdgeToUnregisteredNode`.
+
+⚠ **Fixed:** two template nodes with one short name in two modules hash to one node id. 0.6
+merged them in silence, because the collision check compared short type names only. A
+collision is now any two registrations that differ in type name or module path. Each is
+recorded as a typed `ShortNameCollision`, and the metadata warning names both module paths.
+
+### Deprecated (2026-11-17)
+
+`application::DirectiveHandler`, `ports::UseCase` and `ports::InputPort` are deprecated, routed
+to `Actor`. `ports::Query` is deprecated, routed to `application::QueryHandler`, which has the
+same shape. None is removed. Each use warns and names its route.
+
+### Changed (2026-11-17)
+
+- ⚠ **`#[hex(...)]` is read strictly.** Before, each derive read only `role` and dropped a
+  parse error in silence, along with any key after it. Now:
+  - an unknown key, a malformed value, or a duplicate single-valued key is a compile error;
+  - a key the derive does not read is a compile error that names the derive that does.
+
+  Only `role` is written across the family today, so this breaks no known crate.
+- ⚠ **`HEXSER_INCLUDE_SOURCE_LOCATION` is read once per process.** A program that changes the
+  variable while it runs is no longer seen. Changing the environment at run time takes `unsafe`
+  since edition 2024. Set the variable before the process starts. The default (off) is unchanged.
+
+### Security (2026-11-17)
+
+- `hexser`, `hexser_macros` and `hexser_potions` are each `#![forbid(unsafe_code)]`, pinned by
+  a test in each crate. The tests' 28 `unsafe` environment writes (13 in `env_control`'s unit
+  tests, 15 in the serde integration test) and the `serial(hexser_env)` lock they needed are gone. The switch-dependent serde tests re-run the test binary with the
+  variable fixed at process start. The agent pack's "no `unsafe`" guideline is now enforced by
+  the compiler.
+- The lockfile moves `tokio` to 1.54.1 (RUSTSEC-2026-0386, `AsyncFd` I/O safety). It also moves
+  `futures-util` to 0.3.34 and `hyper` to 1.12.0, which drops the unmaintained `pin-utils`
+  (RUSTSEC-2026-0441). `cargo audit` and `cargo deny check` pass with no waivers.
+
+### WASM (2026-11-17)
+
+The wasmtime probe (`scripts/wasm-e2e.sh`) executes every 0.7 door on `wasm32-unknown-unknown`
+and `wasm32-wasip1`, twice per target:
+- with the documented surface;
+- macros-only (`default-features = false, features = ["macros"]`), the pin an editor core takes.
+
+The compile matrix gains the macros-only set.
+
+## [0.6.1] - 2026-11-03
+
+A patch: both changes below are additive, and the existing forms keep their behaviour. Only
+`hexser` is republished; `hexser_macros` and `hexser_potions` are unchanged at 0.6.0.
+
+### Registrations can carry their edges: `depends_on: [...]` (2026-11-03)
+
+Added, additively (the existing forms are unchanged, so this is a patch-level change):
+- `hex_register_component!` and its five layer shorthands take an optional trailing
+  `depends_on: [T, ...]`. Each listed type gets one `Depends` edge.
+- `hexser::templates::dependency_id::<D>()` returns the graph id of a registered `D`.
+
+```rust
+hexser::hex_register_port!(UserRepositoryPortNode, hexser::Role::Repository);
+hexser::hex_register_adapter!(PgUserRepo, hexser::Role::Adapter, depends_on: [UserRepositoryPortNode]);
+```
+
+⚠ **Why `dependency_id` and not `NodeId::of`.** A template-registered node is keyed by its
+SHORT type name (`split_type_name`), but `NodeId::of::<T>()` hashes the FULL path. An edge
+built with `NodeId::of` therefore points at an id no node has. `ComponentRegistry::build_graph`
+does not validate edges, so such an edge is silent: `edge_count()` counts it, and
+`edges_to(port)` never finds the adapter. `dependency_id` derives the id from
+`D::node_info().type_name`, exactly as `build_graph` keys nodes. Because it requires
+`D: Registrable`, an edge to an unregistered port is a compile error.
+
+Before this, the only way to declare an edge was a hand-written `Registrable` impl, and downstream
+crates had started to grow private copies of the registration macro to do it.
+
+Graph-reading cells (`templates::tests`) pin both the edge and its absence on the bare form.
+A mutant that builds the id with `NodeId::of` turns the edge cell red.
+
+### One reading door for a wiring cell: `dependency_edge_exists::<A, P>(&graph)` (2026-11-03)
+
+Added, additively:
+- `hexser::templates::dependency_edge_exists::<A, P>(&HexGraph) -> bool`. It is true only when
+  the graph has a `Depends` edge from `A`'s node onto `P`'s node AND `P`'s node is itself in
+  the graph. Both ids come from `dependency_id`.
+
+⚠ **Why the node check.** `build_graph` does not validate edges. An edge onto a type that
+implements `Registrable` without being submitted still counts in `edge_count()`, so an edge
+walk alone would call a port that is in no graph "wired". Downstream crates had started
+writing private `wired` functions; this is the one shared door.
+
+Cells pin the registered edge and its direction on the process-wide graph. On a locally built
+graph they also pin a refusal of a dangling edge and of a non-`Depends` edge, against a control
+that reads as wired.
+
+## [0.6.0] - 2026-09-11
+
+Minor rather than patch: the registration-honesty section below carries a breaking change, and
+cargo treats `0.5.1` as compatible with `0.5.0`. Shipping it as a patch would have broken
+downstream builds on a plain `cargo update`.
+
+### WASM: runs, not just compiles (2026-09-11)
+
+⚠ **Fixed:** hexser trapped on `wasm32-unknown-unknown` the first time anything touched
+`HexGraph::current()`. std routes `SystemTime::now()` through its `unsupported` platform layer
+on that target, where it is a hard `panic!("time not implemented on this platform")` — and
+`GraphMetadata` stamps that clock on the universal graph-construction path, so `HexGraph::new()`
+and the first `HexGraph::current()` both took the whole module down. The `ai`/`mcp` RFC3339
+timestamp read the clock the same way. Both now go through one guard (`src/clock.rs`).
+
+Nothing but a compiler had ever checked the claim. 0.5.0 built clean for both wasm targets under
+every feature combination up to `full` — which is precisely why the trap shipped and why the
+README could keep saying "including on wasm32-unknown-unknown". CI now **executes** hexser under
+wasmtime on `wasm32-unknown-unknown` and `wasm32-wasip1` (`scripts/wasm-e2e.sh`, probe crate in
+`wasm-e2e/`), asserting that `inventory` link-time registration yields a populated graph, that
+static DI builds, that errors render, and that the AI and visualization exports work. Reverting
+the fix turns that job red while the 16-cell compile matrix beside it stays green.
+
+Behaviour to know about on `wasm32-unknown-unknown` (WASI is unaffected — it has a real clock):
+- `GraphMetadata::created_at` is `0`.
+- `ai` timestamps are `1970-01-01T00:00:00Z`.
+
+Both are informational metadata, never correctness inputs. Reading a real browser clock would
+mean `js-sys`/`wasm-bindgen`, which would cost the dependency-free WASM story for one field —
+stamp times at the edge instead.
+
+Also fixed: `cargo clippy --lib --bins -- -D warnings` was failing on `src/templates/mod.rs`,
+where the `fn main` in the registration examples is load-bearing (it is what keeps the
+`hex_register_*!` calls at module scope, which is the point of those examples) rather than the
+boilerplate `needless_doctest_main` takes it for.
+
+### Registration honesty (2026-09-04)
+
+Three paths could report a component as registered while it was absent from
+`HexGraph::current()`. All three now either do the registration or say they cannot. **Two are
+behaviour changes for existing code**:
+
+- `#[derive(HexDomain)]` now honours `#[hex(role = "...")]`. It declared `attributes(hex)` and
+  never read it, so `#[hex(role = "ValueObject")]` compiled clean and registered
+  `Role::Entity`. `#[derive(HexDirective)]` and `#[derive(HexQuery)]` now accept the same
+  attribute, so all five registration derives honour it and only the default differs.
+  ⚠ A graph built before this change reports the DEFAULT role for every overridden type.
+- ⚠ **BREAKING:** a registration derive on a GENERIC type is now a compile error naming the
+  marker-struct remedy. It used to emit the `Registrable` impl and drop the
+  `inventory::submit!`, so the type answered `node_info()` and was in no graph, with no error
+  and no warning. `type_name::<Self>()` on a generic names a monomorphization chosen by a
+  consumer crate, so there is no single honest node to submit — the omission was right and
+  the silence was the defect. Code that derived on a generic must move the derive to a
+  non-generic marker struct or hand-write `impl Registrable`.
+- ⚠ **BEHAVIOUR CHANGE:** `hex_register_component!` (and `hex_register_domain!`,
+  `hex_register_port!`, `hex_register_adapter!`, `hex_register_application!`,
+  `hex_register_infrastructure!`) now emit the `inventory::submit!` they are named for. They
+  emitted only the `Registrable` impl, for every type — so hexser had NO non-derive door into
+  the graph while advertising one. Types registered through them now appear in
+  `HexGraph::current()`; any assertion pinning an exact `node_count()` will see more nodes.
+
+---
+
 ## [0.5.0] - 2026-07-21
 
 ### Hardening pass (2026-07)
@@ -9,7 +215,9 @@ Correctness / reliability:
   returns the correct -32700/-32600 error codes, and runs `hexser/refresh` builds with a
   timeout and bounded stderr.
 - `#[derive(HexDirective)]` no longer emits an unresolved `inventory::submit!`; `#[derive(HexQuery)]`
-  now registers in the graph; derives work on generic types and error clearly on misuse.
+  now registers in the graph; derives error clearly on misuse. (The claim that "derives work on
+  generic types" was true only of the `Registrable` impl — the submission was dropped in silence.
+  See Unreleased.)
 - The DI `Container` no longer holds locks across user provider code (deadlock fix; singletons
   use `OnceCell`).
 - `InMemoryEventBus` routes by event type to all handlers for a topic (was last-subscription-wins),

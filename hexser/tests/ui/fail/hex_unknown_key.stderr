@@ -1,0 +1,5 @@
+error: unknown `#[hex(...)]` key. hexser reads `role`, `depends_on(..)`, `implements(..)` and `port_trait` on a type, and `code`, `next_step` and `suggestion` on an enum variant
+ --> tests/ui/fail/hex_unknown_key.rs:4:7
+  |
+4 | #[hex(rol = "ValueObject")]
+  |       ^^^

@@ -4,6 +4,7 @@
 //! methods to build the architecture graph.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D5 — `build_graph` adds one `Implements` edge per submitted `ImplementsEntry`.
 //! - 2025-10-02T12:00:00Z @AI: Fix HexNode construction to use with_metadata method.
 //! - 2025-10-02T00:00:00Z @AI: Initial ComponentRegistry implementation.
 
@@ -40,6 +41,16 @@ impl ComponentRegistry {
         );
         builder = builder.add_edge(edge);
       }
+    }
+
+    // Proved claims (HEXSER-0.7 D5): each `implements(..)` the compiler checked is one
+    // `Implements` edge, so `Implements` is never a declaration (SB 15/380).
+    for claim in inventory::iter::<crate::registry::implements_entry::ImplementsEntry> {
+      builder = builder.add_edge(crate::graph::hex_edge::HexEdge::new(
+        claim.adapter(),
+        claim.port(),
+        crate::graph::relationship::Relationship::Implements,
+      ));
     }
 
     builder.build()

@@ -1,38 +1,78 @@
 //! Template framework for quickly scaffolding hexser components.
 //!
-//! This module provides lightweight helpers and macros to implement
-//! Registrable for your components without relying on derive macros.
-//! It complements proc-macro derives by offering simple, explicit
-//! building blocks you can use in any context (including no-macros builds).
+//! This module provides lightweight helpers and macros that REGISTER your components
+//! without relying on derive macros: each one emits the `Registrable` impl AND the
+//! `inventory::submit!` that puts the type in `HexGraph::current()`. It complements
+//! proc-macro derives by offering simple, explicit building blocks you can use in any
+//! context (including no-macros builds).
+//!
+//! ⚠ BOTH HALVES ARE THE REGISTRATION. `HexGraph::current()` is built by iterating the
+//! `inventory` registry, so a `Registrable` impl on its own yields a type that answers
+//! `node_info()` correctly and is in NO graph. These macros emitted only the impl until
+//! 2026-09-04: the crate had no non-derive door into the graph at all, while naming these
+//! `hex_register_*`.
+//!
+//! Registration is an ITEM-scope act — the submission is a static discovered at link time —
+//! so invoke these macros at module scope, next to the type, not inside a function body.
 //!
 //! # Quick examples
 //!
 //! ```rust
 //! use hexser::prelude::*;
-//! use hexser::hex_register_domain;
 //!
 //! struct MyEntity { id: u64 }
 //!
-//! // Implement Registrable for a domain Entity using a template macro
+//! // Register a domain Entity using a template macro (module scope, next to the type).
 //! hexser::hex_register_domain!(MyEntity, Role::Entity);
 //!
-//! // Now you can obtain node info for graph registration
-//! let info = <MyEntity as Registrable>::node_info();
-//! assert_eq!(info.layer, Layer::Domain);
-//! assert_eq!(info.role, Role::Entity);
+//! fn main() {
+//!   // The type answers node_info() AND is in the process-wide graph.
+//!   let info = <MyEntity as Registrable>::node_info();
+//!   assert_eq!(info.layer, Layer::Domain);
+//!   assert_eq!(info.role, Role::Entity);
+//!   assert!(
+//!     hexser::HexGraph::current()
+//!       .nodes()
+//!       .any(|n| n.type_name().ends_with("MyEntity"))
+//!   );
+//! }
 //! ```
 //!
 //! ```rust
 //! use hexser::prelude::*;
-//! use hexser::hex_register_adapter;
 //!
 //! struct PgUserRepo;
 //!
-//! // Register as an Adapter implementing a Repository
+//! // Register as an Adapter implementing a Repository.
 //! hexser::hex_register_adapter!(PgUserRepo, Role::Adapter);
+//!
+//! fn main() {
+//!   assert_eq!(
+//!     <PgUserRepo as Registrable>::node_info().layer,
+//!     Layer::Adapter
+//!   );
+//! }
 //! ```
 //!
 //! These helpers are intended as templates: copy, adapt, and extend as needed.
+//!
+//! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D4/D5 — `implements: [PortNode]` on `hex_register_component!` and `hex_register_adapter!` (a compile-time proof that the adapter implements the port node's trait, then one `Implements` edge); `port_trait: Trait` on `hex_register_port!`; `implements_edge_exists::<A, P>`, which shares one private `edge_exists` with `dependency_edge_exists` (behaviour unchanged).
+//! - 2026-11-03T18:00:00Z @AI: `dependency_edge_exists::<A, P>(&HexGraph)`: the one reading door for a wiring cell. True only for a `Depends` edge from `A`'s node onto `P`'s node when `P`'s node is itself in the graph, so a dangling edge never reads as wired. Downstream crates no longer each carry a private `wired` fn. Cells pin the registered edge, its direction, and the refusal of a dangling or non-`Depends` edge.
+//! - 2026-11-03T00:00:00Z @AI: `depends_on: [...]` on `hex_register_component!` and its five layer shorthands, plus `dependency_id::<D>()`: a registration can now carry its edges (adapter -> port node). The dependency id is derived from `D::node_info().type_name`, exactly as `ComponentRegistry::build_graph` keys nodes, because `NodeId::of` hashes the full path while template nodes are keyed by the short name, so an edge built with it dangles silently. The three-argument forms are unchanged. Graph-reading cells pin the edge and its absence.
+//! - 2026-09-11T00:00:00Z @AI: Allow needless_doctest_main — the explicit `fn main` is what keeps the macro invocations at module scope, which is the whole subject of these examples.
+//! - 2026-09-04T00:00:00Z @AI: The hex_register_* macros now emit the inventory submission they
+//!   are named for. They implemented `Registrable` and never submitted, so every type
+//!   "registered" through hexser's own explicit path answered node_info() correctly and was
+//!   absent from every graph query — the same end state as the silently-omitted generic
+//!   submission, reached through the door the crate advertises.
+
+// The `fn main` in the examples above is load-bearing, not boilerplate: rustdoc only skips its
+// implicit wrapper when the snippet declares `main` itself, and skipping it is the only way to
+// invoke `hex_register_*!` at MODULE scope — which is exactly the constraint these examples
+// exist to demonstrate (registration is an item-scope act, see the preamble). Removing the
+// `fn main` to satisfy the lint would move the macro into a function body and teach the misuse.
+#![allow(clippy::needless_doctest_main)]
 
 /// Split a fully-qualified Rust type path into (module_path, type_name).
 ///
@@ -45,10 +85,116 @@ pub fn split_type_name(full: &'static str) -> (&'static str, &'static str) {
   }
 }
 
-/// Core macro to implement Registrable for a type with a specific layer and role.
+/// The graph id of a REGISTERED dependency `D`, derived exactly the way
+/// [`ComponentRegistry::build_graph`](crate::registry::component_registry::ComponentRegistry::build_graph)
+/// derives every node's id: from `D`'s own `NodeInfo::type_name`.
+///
+/// ⚠ Not `NodeId::of::<D>()`. That hashes the FULL type path, while a node registered through
+/// these templates is keyed by its SHORT name (`split_type_name`), so an edge built with
+/// `NodeId::of` points at an id no node has. `build_graph` does not validate edges, so that
+/// edge dangles silently: the graph reports an edge count and no query from the port finds the
+/// adapter. Requiring `D: Registrable` also makes an edge to an unregistered port a compile
+/// error instead of a dangling id.
+pub fn dependency_id<D: crate::registry::Registrable>() -> crate::graph::NodeId {
+  crate::graph::NodeId::from_type_name(D::node_info().type_name)
+}
+
+/// True when `graph` carries a `Depends` edge from registered `A`'s node onto registered `P`'s
+/// node AND `P`'s node is itself in the graph.
+///
+/// This is the reading half of `depends_on:`: a wiring cell asks it "is this adapter wired to
+/// this port?" instead of each crate writing its own edge walk. Both ids come from
+/// [`dependency_id`], so the read keys nodes exactly as `build_graph` does.
+///
+/// ⚠ The node check is load-bearing. `build_graph` does not validate edges, so an edge onto a
+/// type that implements `Registrable` without being submitted still counts in `edge_count()`.
+/// Without the check, that dangling edge would read as wired while the port is in no graph.
+pub fn dependency_edge_exists<A, P>(graph: &crate::graph::HexGraph) -> bool
+where
+  A: crate::registry::Registrable,
+  P: crate::registry::Registrable,
+{
+  edge_exists::<A, P>(graph, crate::graph::Relationship::Depends)
+}
+
+/// True when `graph` carries an `Implements` edge from registered adapter `A`'s node onto
+/// registered port node `P`'s node AND `P`'s node is itself in the graph.
+///
+/// The reading half of `implements(..)` (derive) and `implements: [...]` (template). An
+/// `Implements` edge exists only where the compiler proved that `A` implements `P`'s trait, so
+/// this is never true for a `Depends` edge: declared is not proved (SB 15/380).
+pub fn implements_edge_exists<A, P>(graph: &crate::graph::HexGraph) -> bool
+where
+  A: crate::registry::Registrable,
+  P: crate::registry::Registrable,
+{
+  edge_exists::<A, P>(graph, crate::graph::Relationship::Implements)
+}
+
+/// The one edge walk both readers share: an edge of `relationship` from `A`'s node onto `P`'s
+/// node, with `P`'s node present, so a dangling edge never reads as wired.
+fn edge_exists<A, P>(
+  graph: &crate::graph::HexGraph,
+  relationship: crate::graph::Relationship,
+) -> bool
+where
+  A: crate::registry::Registrable,
+  P: crate::registry::Registrable,
+{
+  let source = dependency_id::<A>();
+  let target = dependency_id::<P>();
+  graph.get_node(&target).is_some()
+    && graph
+      .edges_from(&source)
+      .iter()
+      .any(|edge| *edge.target() == target && edge.relationship() == relationship)
+}
+
+/// Core macro that REGISTERS a type: it implements `Registrable` with the given layer and
+/// role AND submits the component to the inventory registry, so the type is in
+/// `HexGraph::current()`.
+///
+/// ⚠ Both halves are the registration, and this macro emitted only the first until
+/// 2026-09-04 — the type answered `node_info()` correctly and no graph query could find it.
+/// That is the same silent end state as a derive dropping its submission, reached through
+/// the macro the crate itself names `register`.
+///
+/// The type must be CONCRETE: it is used as `ComponentEntry::new::<T>()` at item scope, where
+/// a generic parameter is not in scope, so a generic target is a compile error — the same
+/// polarity `#[derive(HexDomain)]` and its siblings now have. Register a non-generic marker
+/// struct that stands for the component instead.
+///
+/// # Edges: `depends_on: [...]`
+///
+/// The three-argument form registers a NODE with no edges (`dependencies()` is empty), so a
+/// graph built only from it can say an adapter exists and never which port it plugs into.
+/// The `depends_on:` form also declares the component's edges, one `Depends` edge per listed
+/// type. Each listed type must itself be registered (a `Registrable`), typically a
+/// zero-sized `<Port>Node` marker registered with `hex_register_port!`; its id is taken
+/// through [`dependency_id`](crate::templates::dependency_id), so the edge lands on the real node.
+///
+/// ```rust
+/// struct UserRepositoryPortNode;
+/// struct PgUserRepo;
+///
+/// hexser::hex_register_port!(UserRepositoryPortNode, hexser::Role::Repository);
+/// hexser::hex_register_adapter!(PgUserRepo, hexser::Role::Adapter, depends_on: [UserRepositoryPortNode]);
+///
+/// fn main() {
+///   let graph = hexser::HexGraph::current();
+///   let port = hexser::templates::dependency_id::<UserRepositoryPortNode>();
+///   let adapter = hexser::templates::dependency_id::<PgUserRepo>();
+///   assert!(graph.edges_to(&port).iter().any(|e| *e.source() == adapter));
+/// }
+/// ```
+///
+/// Invoke at MODULE scope, next to the type: the submission is a link-time static.
 #[macro_export]
 macro_rules! hex_register_component {
-  ($t:ty, $layer:expr, $role:expr) => {
+  (@register $t:ty, $layer:expr, $role:expr, [$($dep:ty),*]) => {
+    $crate::hex_register_component!(@register $t, $layer, $role, [$($dep),*], []);
+  };
+  (@register $t:ty, $layer:expr, $role:expr, [$($dep:ty),*], [$($port:ty),*]) => {
     impl $crate::registry::Registrable for $t {
       fn node_info() -> $crate::registry::NodeInfo {
         let full = ::std::any::type_name::<Self>();
@@ -56,49 +202,115 @@ macro_rules! hex_register_component {
         $crate::registry::NodeInfo::new($layer, $role, type_name, module_path)
       }
       fn dependencies() -> ::std::vec::Vec<$crate::graph::NodeId> {
-        ::std::vec![]
+        ::std::vec![$($crate::templates::dependency_id::<$dep>()),*]
       }
     }
+
+    $crate::inventory::submit! {
+      $crate::registry::ComponentEntry::new::<$t>()
+    }
+
+    $(
+      // The proof: compiles only if `$t` implements the trait `$port` named with
+      // `port_trait`. Then one proved `Implements` edge.
+      const _: () = <$port>::__hexser_port_trait::<$t>();
+      $crate::inventory::submit! {
+        $crate::registry::ImplementsEntry::new::<$t, $port>()
+      }
+    )*
+  };
+  ($t:ty, $layer:expr, $role:expr) => {
+    $crate::hex_register_component!(@register $t, $layer, $role, [], []);
+  };
+  ($t:ty, $layer:expr, $role:expr, depends_on: [$($dep:ty),+ $(,)?]) => {
+    $crate::hex_register_component!(@register $t, $layer, $role, [$($dep),+], []);
+  };
+  ($t:ty, $layer:expr, $role:expr, implements: [$($port:ty),+ $(,)?]) => {
+    $crate::hex_register_component!(@register $t, $layer, $role, [], [$($port),+]);
+  };
+  ($t:ty, $layer:expr, $role:expr, depends_on: [$($dep:ty),+ $(,)?], implements: [$($port:ty),+ $(,)?]) => {
+    $crate::hex_register_component!(@register $t, $layer, $role, [$($dep),+], [$($port),+]);
   };
 }
 
-/// Convenience macro for Domain-layer components.
+/// Convenience macro for Domain-layer components. Takes the same optional `depends_on: [...]`
+/// as [`hex_register_component!`](crate::hex_register_component).
 #[macro_export]
 macro_rules! hex_register_domain {
   ($t:ty, $role:expr) => {
     $crate::hex_register_component!($t, $crate::graph::Layer::Domain, $role);
   };
+  ($t:ty, $role:expr, depends_on: [$($dep:ty),+ $(,)?]) => {
+    $crate::hex_register_component!($t, $crate::graph::Layer::Domain, $role, depends_on: [$($dep),+]);
+  };
 }
 
-/// Convenience macro for Port-layer components.
+/// Convenience macro for Port-layer components. Takes the same optional `depends_on: [...]`
+/// as [`hex_register_component!`](crate::hex_register_component), or `port_trait: Trait`,
+/// which ties the port node to its trait: delete or rename the trait and the node does not
+/// compile, and adapters can then prove they serve it with `implements: [Node]`.
 #[macro_export]
 macro_rules! hex_register_port {
   ($t:ty, $role:expr) => {
     $crate::hex_register_component!($t, $crate::graph::Layer::Port, $role);
   };
+  ($t:ty, $role:expr, port_trait: $tr:path) => {
+    $crate::hex_register_component!($t, $crate::graph::Layer::Port, $role);
+
+    impl $t {
+      /// The port node's trait, as a bound: `implements` proves an adapter against it.
+      #[doc(hidden)]
+      pub const fn __hexser_port_trait<T: ?::core::marker::Sized + $tr>() {}
+    }
+  };
+  ($t:ty, $role:expr, depends_on: [$($dep:ty),+ $(,)?]) => {
+    $crate::hex_register_component!($t, $crate::graph::Layer::Port, $role, depends_on: [$($dep),+]);
+  };
 }
 
-/// Convenience macro for Adapter-layer components.
+/// Convenience macro for Adapter-layer components. Takes the same optional `depends_on: [...]`
+/// as [`hex_register_component!`](crate::hex_register_component): name the port node(s) the adapter implements, so the graph
+/// carries the adapter → port edge.
 #[macro_export]
 macro_rules! hex_register_adapter {
   ($t:ty, $role:expr) => {
     $crate::hex_register_component!($t, $crate::graph::Layer::Adapter, $role);
   };
+  ($t:ty, $role:expr, depends_on: [$($dep:ty),+ $(,)?]) => {
+    $crate::hex_register_component!($t, $crate::graph::Layer::Adapter, $role, depends_on: [$($dep),+]);
+  };
+  ($t:ty, $role:expr, implements: [$($port:ty),+ $(,)?]) => {
+    $crate::hex_register_component!($t, $crate::graph::Layer::Adapter, $role, implements: [$($port),+]);
+  };
+  ($t:ty, $role:expr, depends_on: [$($dep:ty),+ $(,)?], implements: [$($port:ty),+ $(,)?]) => {
+    $crate::hex_register_component!(
+      $t, $crate::graph::Layer::Adapter, $role,
+      depends_on: [$($dep),+], implements: [$($port),+]
+    );
+  };
 }
 
-/// Convenience macro for Application-layer components.
+/// Convenience macro for Application-layer components. Takes the same optional
+/// `depends_on: [...]` as [`hex_register_component!`](crate::hex_register_component).
 #[macro_export]
 macro_rules! hex_register_application {
   ($t:ty, $role:expr) => {
     $crate::hex_register_component!($t, $crate::graph::Layer::Application, $role);
   };
+  ($t:ty, $role:expr, depends_on: [$($dep:ty),+ $(,)?]) => {
+    $crate::hex_register_component!($t, $crate::graph::Layer::Application, $role, depends_on: [$($dep),+]);
+  };
 }
 
-/// Convenience macro for Infrastructure-layer components.
+/// Convenience macro for Infrastructure-layer components. Takes the same optional
+/// `depends_on: [...]` as [`hex_register_component!`](crate::hex_register_component).
 #[macro_export]
 macro_rules! hex_register_infrastructure {
   ($t:ty, $role:expr) => {
     $crate::hex_register_component!($t, $crate::graph::Layer::Infrastructure, $role);
+  };
+  ($t:ty, $role:expr, depends_on: [$($dep:ty),+ $(,)?]) => {
+    $crate::hex_register_component!($t, $crate::graph::Layer::Infrastructure, $role, depends_on: [$($dep),+]);
   };
 }
 
@@ -137,5 +349,133 @@ mod tests {
     let (m2, n2) = super::split_type_name("Baz");
     assert_eq!(m2, "");
     assert_eq!(n2, "Baz");
+  }
+
+  // Edge cells for `depends_on:`. The names are deliberately distinctive: the graph is
+  // process-wide, and template-registered nodes are keyed by their SHORT type name.
+  struct TemplatesEdgeCellPortNode;
+  struct TemplatesEdgeCellWiredAdapter;
+  struct TemplatesEdgeCellBareAdapter;
+
+  hex_register_port!(TemplatesEdgeCellPortNode, Role::OutputPort);
+  hex_register_adapter!(TemplatesEdgeCellWiredAdapter, Role::Adapter, depends_on: [TemplatesEdgeCellPortNode]);
+  hex_register_adapter!(TemplatesEdgeCellBareAdapter, Role::Adapter);
+
+  /// WHY: `depends_on:` exists so the graph carries the adapter -> port edge; a node-presence
+  /// cell says nothing about wiring. MUTATION: drop `depends_on:` from the wired adapter, or
+  /// derive the dependency id with `NodeId::of` instead of `dependency_id` => red (the edge
+  /// then targets an id no node has).
+  #[test]
+  fn an_adapter_registered_with_depends_on_has_an_edge_onto_its_real_port_node() {
+    let graph = crate::HexGraph::current();
+    let port = super::dependency_id::<TemplatesEdgeCellPortNode>();
+    let adapter = super::dependency_id::<TemplatesEdgeCellWiredAdapter>();
+    std::assert!(
+      graph.nodes().any(|n| *n.id() == port),
+      "the port node the edge targets is a node in the graph"
+    );
+    std::assert!(
+      graph.edges_to(&port).iter().any(|e| *e.source() == adapter),
+      "the adapter -> port edge lands on the registered port node"
+    );
+  }
+
+  /// WHY: the three-argument form keeps its behaviour (a node with no edges).
+  /// MUTATION: make the bare arm emit a dependency => red.
+  #[test]
+  fn an_adapter_registered_without_depends_on_has_no_edges() {
+    std::assert!(<TemplatesEdgeCellBareAdapter as Registrable>::dependencies().is_empty());
+    let graph = crate::HexGraph::current();
+    std::assert!(
+      graph
+        .edges_from(&super::dependency_id::<TemplatesEdgeCellBareAdapter>())
+        .is_empty()
+    );
+  }
+
+  /// WHY: the reading door must say true for the registered edge only, in its direction.
+  /// MUTATION: return `true` unconditionally => the bare cell goes red; swap source and target
+  /// => the direction cells go red.
+  #[test]
+  fn dependency_edge_exists_reads_the_registered_edge_in_its_direction() {
+    let graph = crate::HexGraph::current();
+    std::assert!(
+      super::dependency_edge_exists::<TemplatesEdgeCellWiredAdapter, TemplatesEdgeCellPortNode>(
+        &graph
+      ),
+      "the depends_on edge reads as wired"
+    );
+    std::assert!(
+      !super::dependency_edge_exists::<TemplatesEdgeCellBareAdapter, TemplatesEdgeCellPortNode>(
+        &graph
+      ),
+      "an adapter registered without depends_on is not wired"
+    );
+    std::assert!(
+      !super::dependency_edge_exists::<TemplatesEdgeCellPortNode, TemplatesEdgeCellWiredAdapter>(
+        &graph
+      ),
+      "the edge has a direction: the port does not depend on its adapter"
+    );
+  }
+
+  /// WHY: a dangling edge, or an edge of another relationship, is not wiring. The graph is
+  /// built locally so no dangling edge enters the process-wide one other cells read.
+  /// MUTATION: drop the node check => the dangling cell goes red; drop the relationship
+  /// check => the `Implements` cell goes red. The control keeps both refusals honest.
+  #[test]
+  fn dependency_edge_exists_refuses_a_dangling_or_non_depends_edge() {
+    let adapter = super::dependency_id::<TemplatesEdgeCellWiredAdapter>();
+    let port = super::dependency_id::<TemplatesEdgeCellPortNode>();
+    let adapter_node = || {
+      crate::graph::HexNode::new(
+        adapter,
+        crate::graph::Layer::Adapter,
+        Role::Adapter,
+        "TemplatesEdgeCellWiredAdapter",
+        "",
+      )
+    };
+    let port_node = || {
+      crate::graph::HexNode::new(
+        port,
+        crate::graph::Layer::Port,
+        Role::OutputPort,
+        "TemplatesEdgeCellPortNode",
+        "",
+      )
+    };
+    let edge = |relationship| crate::graph::HexEdge::new(adapter, port, relationship);
+    let wired =
+      super::dependency_edge_exists::<TemplatesEdgeCellWiredAdapter, TemplatesEdgeCellPortNode>;
+
+    let control = crate::graph::GraphBuilder::new()
+      .with_node(adapter_node())
+      .with_node(port_node())
+      .with_edge(edge(crate::graph::Relationship::Depends))
+      .build();
+    std::assert!(
+      wired(&control),
+      "control: both nodes and a Depends edge read as wired"
+    );
+
+    let dangling = crate::graph::GraphBuilder::new()
+      .with_node(adapter_node())
+      .with_edge(edge(crate::graph::Relationship::Depends))
+      .build();
+    std::assert!(
+      !wired(&dangling),
+      "an edge onto an id with no node is not wiring"
+    );
+
+    let implements = crate::graph::GraphBuilder::new()
+      .with_node(adapter_node())
+      .with_node(port_node())
+      .with_edge(edge(crate::graph::Relationship::Implements))
+      .build();
+    std::assert!(
+      !wired(&implements),
+      "only a Depends edge is a dependency edge"
+    );
   }
 }

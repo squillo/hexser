@@ -5,7 +5,12 @@
 //! debugging information (like source file paths and line numbers) while
 //! development environments can include them for easier debugging.
 //!
+//! The switch is read ONCE per process, at first use: a real program fixes its environment at
+//! start, and since edition 2024 changing it at run time takes `unsafe`. The rule itself is the
+//! pure, private `includes_location`, tested without touching the environment.
+//!
 //! Revision History
+//! - 2026-11-17T16:20:28Z @AI: HEXSER-0.7 D9 — read the switch once per process (`OnceLock`) instead of on every serialized error; split the rule into pure `includes_location` and `skip_location_when` so the tests need no `unsafe` env writes (13 removed) and no `serial_test` lock.
 //! - 2026-07-20T00:00:00Z @AI: Serialize env-mutating tests with #[serial(hexser_env)]; fix rustdoc (backtick generics, text code block); add /// why on tests.
 //! - 2025-10-09T21:51:00Z @AI: Initial implementation for conditional source location serialization.
 
@@ -13,6 +18,9 @@
 ///
 /// Returns true if the HEXSER_INCLUDE_SOURCE_LOCATION environment variable
 /// is set to "1" or "true" (case-insensitive). Returns false otherwise.
+///
+/// The variable is read once per process, at the first call; a later change to the
+/// environment is not seen.
 ///
 /// # Security Note
 ///
@@ -28,9 +36,23 @@
 /// std::assert_eq!(result, false);
 /// ```
 pub fn should_include_source_location() -> bool {
-  std::env::var("HEXSER_INCLUDE_SOURCE_LOCATION")
-    .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-    .unwrap_or(false)
+  static INCLUDE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+  *INCLUDE.get_or_init(|| {
+    includes_location(
+      std::env::var("HEXSER_INCLUDE_SOURCE_LOCATION")
+        .ok()
+        .as_deref(),
+    )
+  })
+}
+
+/// The switch's rule: on for `"1"` or `"true"` in any letter case, off for anything else and
+/// when unset. Pure, so it is tested without touching the process environment.
+fn includes_location(value: std::option::Option<&str>) -> bool {
+  match value {
+    std::option::Option::Some(v) => v == "1" || v.eq_ignore_ascii_case("true"),
+    std::option::Option::None => false,
+  }
 }
 
 /// Helper function for serde skip_serializing_if attribute.
@@ -49,125 +71,67 @@ pub fn should_include_source_location() -> bool {
 pub fn should_skip_location(
   location: &Option<crate::error::source_location::SourceLocation>,
 ) -> bool {
-  location.is_none() || !should_include_source_location()
+  skip_location_when(location, should_include_source_location())
+}
+
+/// Skip a location that is absent, or present while the switch is off. Pure.
+#[cfg(feature = "serde")]
+fn skip_location_when(
+  location: &std::option::Option<crate::error::source_location::SourceLocation>,
+  include: bool,
+) -> bool {
+  location.is_none() || !include
 }
 
 #[cfg(test)]
 mod tests {
-  use super::*;
+  // These tests read no process environment and write none: the switch's rule is a pure
+  // function of the variable's value, so it is tested as one. The end-to-end reading of the
+  // real environment is tests/env_controlled_serde_test.rs, which re-runs its own binary with
+  // the variable fixed at process start.
 
-  // These tests mutate the process-global HEXSER_INCLUDE_SOURCE_LOCATION variable while
-  // `should_include_source_location` reads it. Cargo runs tests in parallel threads within
-  // a binary, so they must be serialized against each other (and any other reader of this
-  // var) to avoid interleaving that flips the observed value. `#[serial(hexser_env)]` locks
-  // all env-touching tests in this process onto one key.
-
-  /// why: with the var unset, the crate must default to NOT leaking source locations
-  /// (privacy-safe default); guards the `unwrap_or(false)` fallback.
+  /// why: "1" and "true" in any letter case are the documented opt-ins; each must turn the
+  /// switch on.
   #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_should_include_source_location_default() {
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-    assert!(!should_include_source_location());
-  }
-
-  /// why: "1" is the documented opt-in value and must enable inclusion.
-  #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_should_include_source_location_enabled_with_1() {
-    unsafe {
-      std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "1");
-    }
-    assert!(should_include_source_location());
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
+  fn the_switch_is_on_only_for_1_or_true_in_any_case() {
+    for value in ["1", "true", "TRUE", "True", "tRuE"] {
+      std::assert!(
+        super::includes_location(std::option::Option::Some(value)),
+        "{value:?} must turn the switch on"
+      );
     }
   }
 
-  /// why: "true" is the documented opt-in value and must enable inclusion.
+  /// why: unset, empty and every other value keep source locations out of serialized errors
+  /// (the privacy-safe default), so a typo or padding never leaks a file path.
   #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_should_include_source_location_enabled_with_true() {
-    unsafe {
-      std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "true");
-    }
-    assert!(should_include_source_location());
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
+  fn the_switch_is_off_when_unset_or_for_any_other_value() {
+    std::assert!(!super::includes_location(std::option::Option::None));
+    for value in ["", "0", "false", "yes", "on", " 1", "1 ", "truee"] {
+      std::assert!(
+        !super::includes_location(std::option::Option::Some(value)),
+        "{value:?} must leave the switch off"
+      );
     }
   }
 
-  /// why: matching must be case-insensitive so "TRUE" also opts in (documented behavior).
-  #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_should_include_source_location_enabled_with_true_uppercase() {
-    unsafe {
-      std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "TRUE");
-    }
-    assert!(should_include_source_location());
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-  }
-
-  /// why: any value other than the accepted opt-ins (e.g. "false") must NOT enable
-  /// inclusion, so a typo can never accidentally leak locations.
-  #[test]
-  #[serial_test::serial(hexser_env)]
-  fn test_should_include_source_location_disabled_with_other_value() {
-    unsafe {
-      std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "false");
-    }
-    assert!(!should_include_source_location());
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-  }
-
-  /// why: a `None` location is always skipped regardless of the env toggle.
+  /// why: an error with no location has nothing to serialize, whatever the switch says.
   #[test]
   #[cfg(feature = "serde")]
-  #[serial_test::serial(hexser_env)]
-  fn test_should_skip_location_when_none() {
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-    let location: Option<crate::error::source_location::SourceLocation> = None;
-    assert!(should_skip_location(&location));
+  fn a_missing_location_is_always_skipped() {
+    std::assert!(super::skip_location_when(&std::option::Option::None, true));
+    std::assert!(super::skip_location_when(&std::option::Option::None, false));
   }
 
-  /// why: a present location must still be skipped when inclusion is disabled (default),
-  /// so serialized errors don't leak file paths by accident.
+  /// why: a present location is serialized only when the switch is on, so serialized errors
+  /// do not leak file paths by default.
   #[test]
   #[cfg(feature = "serde")]
-  #[serial_test::serial(hexser_env)]
-  fn test_should_skip_location_when_some_but_disabled() {
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
-    let location = Some(crate::error::source_location::SourceLocation::new(
+  fn a_present_location_is_skipped_unless_the_switch_is_on() {
+    let location = std::option::Option::Some(crate::error::source_location::SourceLocation::new(
       "test.rs", 1, 1,
     ));
-    assert!(should_skip_location(&location));
-  }
-
-  /// why: a present location must be serialized (not skipped) only when inclusion is
-  /// explicitly enabled.
-  #[test]
-  #[cfg(feature = "serde")]
-  #[serial_test::serial(hexser_env)]
-  fn test_should_not_skip_location_when_some_and_enabled() {
-    unsafe {
-      std::env::set_var("HEXSER_INCLUDE_SOURCE_LOCATION", "1");
-    }
-    let location = Some(crate::error::source_location::SourceLocation::new(
-      "test.rs", 1, 1,
-    ));
-    assert!(!should_skip_location(&location));
-    unsafe {
-      std::env::remove_var("HEXSER_INCLUDE_SOURCE_LOCATION");
-    }
+    std::assert!(super::skip_location_when(&location, false));
+    std::assert!(!super::skip_location_when(&location, true));
   }
 }

@@ -6,6 +6,7 @@
 # and pass but are not style-gated.
 #
 # Revision History
+# - 2026-09-11T00:00:00Z @AI: Add wasm-e2e job — the WASM claim is now gated by EXECUTING the module under wasmtime, not just building it.
 # - 2026-07-21T00:00:00Z @AI: Rework CI — read toolchain from rust-toolchain.toml, add push-on-main + feature-matrix + doctest coverage + realworld example + cargo-deny; scope clippy -D warnings to lib+bins.
 # - 2025-10-09T08:27:00Z @AI: Add artifact storage for binaries, documentation, and clippy reports.
 
@@ -123,6 +124,22 @@ jobs:
           rustflags: ""
       - run: cargo test
         working-directory: hexser/examples/realworld_api
+
+  # WASM: builds AND runs. A build-only wasm check passed for five releases while
+  # `HexGraph::current()` trapped on wasm32-unknown-unknown (std's `SystemTime::now()` is a hard
+  # panic there), so this job executes the module under wasmtime on both wasm targets.
+  wasm-e2e:
+    name: WASM e2e (wasmtime)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          cache-key: wasm-e2e
+          rustflags: ""
+      - run: rustup target add wasm32-unknown-unknown wasm32-wasip1
+      - uses: bytecodealliance/actions/wasmtime/setup@v1
+      - run: scripts/wasm-e2e.sh
 
   # Documentation builds with warnings denied.
   docs:

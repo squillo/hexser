@@ -5,6 +5,7 @@
 //! and adapters, ensuring proper separation of concerns and functionality.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D7 — `#[allow(deprecated)]` on the two modules that exercise `DirectiveHandler`.
 //! - 2025-10-12T18:37:00Z @AI: Add comprehensive Application trait integration test with full CQRS flow.
 //! - 2025-10-02T21:45:00Z @AI: Enhance HexAggregate macro test to use hex(invariants) attribute for custom validation.
 //! - 2025-10-02T21:30:00Z @AI: Fix conflicting Aggregate implementations, remove derive from custom invariant test.
@@ -277,6 +278,7 @@ mod port_adapter_integration {
 }
 
 #[cfg(test)]
+#[allow(deprecated)] // exercises DirectiveHandler, deprecated in 0.7 (HEXSER-0.7 D7)
 mod cqrs_integration {
   use hexser::{Directive, DirectiveHandler, QueryHandler};
 
@@ -377,6 +379,7 @@ mod error_integration {
 }
 
 #[cfg(test)]
+#[allow(deprecated)] // exercises DirectiveHandler, deprecated in 0.7 (HEXSER-0.7 D7)
 mod application_integration {
   use hexser::{
     Application, Directive, DirectiveHandler, HexEntity, HexResult, QueryHandler, Repository,

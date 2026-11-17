@@ -1,6 +1,6 @@
 # hexser graph, introspection and AI
 
-How to inspect the architecture graph hexser builds from registered components, render it, and export it for AI agents. All types below are from the `graph`, `showcase`, and `ai` modules of hexser 0.5. MCP is out of scope here — see mcp.md.
+How to inspect the architecture graph hexser builds from registered components, render it, and export it for AI agents. All types below are from the `graph`, `showcase`, and `ai` modules of hexser 0.5 and later; 0.7 additions are marked. MCP is out of scope here — see mcp.md.
 
 Most graph types are in the prelude: `use hexser::prelude::*;` gives you `HexGraph`, `HexNode`, `HexEdge`, `NodeId`, `Layer`, `Role`, `Relationship`, `GraphBuilder`, `GraphMetadata`, plus the showcase traits `Describable`, `PrettyPrint`, `ArcGraphExt`, `Inspectable`. `Visualizable` is the one exception — it is NOT re-exported (full path below).
 
@@ -65,6 +65,43 @@ let _meta: &GraphMetadata = graph.metadata();
 Also available: `HexGraph::new()` (empty graph) and `HexGraph::builder()` (see below).
 
 `pretty_print(&self)` prints a per-layer summary to stdout — handy for a quick sanity check that your components registered.
+
+## What is wrong with the graph: `findings()` (0.7)
+
+A graph never refuses to build. `HexGraph::findings(&self) -> Vec<GraphFinding>` returns what is wrong with it, as values. It is empty for a sound graph. `GraphFinding` is at `hexser::GraphFinding` and `hexser::graph::GraphFinding`. It is not in the prelude.
+
+| Variant | Means |
+| --- | --- |
+| `ShortNameCollision { id, kept_type_name, kept_module_path, dropped_type_name, dropped_module_path }` | two registrations hashed to one node id. Two template nodes with one short name in two modules are a finding; 0.6 merged them in silence. The 0.6 warning string in `metadata().warnings()` is still written, and it now names both module paths. |
+| `AdapterWithoutProvedPort { adapter }` | an Adapter-layer node, other than a `Mapper`, with no `Implements` edge. An adapter linked to its port only by `depends_on` is one. |
+| `EdgeToUnregisteredNode { source, target, relationship }` | an edge whose end is not a node of this graph. |
+
+Keep one graph cell that asserts the list is empty:
+
+```rust
+/// why: the architecture holds no collision, no unproved adapter, and no dangling edge.
+#[test]
+fn the_architecture_graph_has_no_findings() {
+    let graph = hexser::registry::ComponentRegistry::build_graph();
+    assert_eq!(graph.findings(), Vec::<hexser::GraphFinding>::new());
+}
+```
+
+A cell may instead name the findings it accepts.
+
+## Wiring cells: `implements_edge_exists` (0.7)
+
+`#[hex(implements(PortNode))]` on a `HexAdapter`, or `implements: [PortNode]` on `hex_register_adapter!`, lands a `Relationship::Implements` edge. It compiles only if the adapter implements the trait the port marker names with `port_trait`. `depends_on(..)` lands a `Relationship::Depends` edge. Read each with its own door:
+
+```rust
+let graph = hexser::registry::ComponentRegistry::build_graph();
+assert!(hexser::templates::implements_edge_exists::<MemorySink, SinkPortNode>(&graph));
+assert!(!hexser::templates::dependency_edge_exists::<MemorySink, SinkPortNode>(&graph));
+```
+
+- Each is true only when the edge exists and the port's node is in the graph.
+- A `Depends` edge never reads as `Implements`, and an `Implements` edge never reads as `Depends`.
+- The `Implements` edge is carried by `hexser::registry::ImplementsEntry`, collected through `inventory` like every registration.
 
 ## Building a graph by hand
 
@@ -148,7 +185,7 @@ println!("{}", graph.to_ascii_art()); // always works
 Enable `visualization` for structured exports. These are inherent methods on `HexGraph`:
 
 ```rust
-// Cargo.toml: hexser = { version = "0.5", features = ["visualization"] }
+// Cargo.toml: hexser = { version = "0.7", features = ["visualization"] }
 use hexser::prelude::*;
 
 let graph = HexGraph::current();
@@ -170,7 +207,7 @@ Enable `ai` (implies `serde` + `serde_json`) to turn the graph into an agent-rea
 `AIContext` (`hexser::ai::AIContext`) fields: `architecture`, `version`, `components: Vec<ComponentInfo>`, `relationships`, `constraints`, `suggestions`, `metadata`. Related types: `ComponentInfo` (which now carries `methods: Vec<MethodInfo>`), `MethodInfo`, `ParameterInfo`, `RelationshipInfo`, `ConstraintSet`, `Suggestion`, `SuggestionType`, `Priority`, `ContextMetadata`.
 
 ```rust
-// Cargo.toml: hexser = { version = "0.5", features = ["ai"] }
+// Cargo.toml: hexser = { version = "0.7", features = ["ai"] }
 use hexser::prelude::*;
 
 let graph = HexGraph::current();
@@ -226,4 +263,4 @@ Both require the `ai` feature. For the MCP server that serves these over JSON-RP
 
 - `visualization` (= `serde` + `serde_json`): `HexGraph::to_dot` / `to_mermaid` / `to_json` / `save_visualization`, and working `Visualizable::to_dot` / `to_mermaid`. `to_ascii_art` and all query methods need no feature.
 - `ai` (= `serde` + `serde_json`): `HexGraph::to_ai_context`, `AIContext`, `ContextBuilder`, `AgentPack`, and the `hex-ai-export` / `hex-ai-pack` bins.
-- Graph construction/querying (`HexGraph::current` / `install` / `rebuild_current`, counts, `nodes_by_layer` / `nodes_by_role`, `edges_from` / `edges_to`, `pretty_print`, `GraphBuilder`) works on default features.
+- Graph construction/querying (`HexGraph::current` / `install` / `rebuild_current`, counts, `nodes_by_layer` / `nodes_by_role`, `edges_from` / `edges_to`, `pretty_print`, `GraphBuilder`) works on default features. So do `dependency_edge_exists` and the 0.7 doors `findings()` and `implements_edge_exists`. Every 0.7 door runs on wasm32 with `features = ["macros"]` only.

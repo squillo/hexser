@@ -1,0 +1,5 @@
+error[E0405]: cannot find trait `DeletedSinkPort` in this scope
+ --> tests/ui/fail/port_trait_missing.rs:4:20
+  |
+4 | #[hex(port_trait = DeletedSinkPort)]
+  |                    ^^^^^^^^^^^^^^^ not found in this scope

@@ -334,17 +334,23 @@ Hexser uses granular features to minimize dependencies and support WASM:
 - `default = ["macros", "static-di"]` - Core experience
 - `macros` - Derive macros (pulls in `hexser_macros`)
 - `static-di` - Zero-cost DI (no dependencies)
-- `container` - Dynamic DI with tokio (not WASM-friendly)
-- `ai` - Context export with serde/chrono
+- `container` - Dynamic DI with tokio (compiles for wasm, but prefer `static-di` there)
+- `ai` - Context export with serde/serde_json
 - `mcp` - MCP server (requires `ai`)
 - `async` - Async trait variants
 - `visualization` - Graph export
 - `full` - All features
 
-**WASM compatibility:**
-- Core crate + `macros` + `static-di` = fully WASM-compatible
-- `container` feature uses tokio → not WASM-friendly
-- Always prefer `static-di` for WASM targets
+**WASM compatibility** (gated in CI by *executing* the module under wasmtime — `scripts/wasm-e2e.sh`,
+probe in `wasm-e2e/`; a build-only gate is not enough, see `src/clock.rs`):
+- `wasm32-unknown-unknown` and `wasm32-wasip1` both run the default set (`macros` + `static-di`):
+  `inventory` link-time registration works and `HexGraph::current()` returns a populated graph.
+- Every feature combination through `full` compiles for both targets. `container` pulls tokio,
+  so prefer `static-di` on wasm.
+- `wasm32-unknown-unknown` has no clock behind std: `GraphMetadata::created_at` is `0` and `ai`
+  timestamps are the epoch. WASI has a real clock. Both routes go through `crate::clock`.
+- Host-only surfaces degrade to errors rather than panics under wasm: `save_visualization`
+  (`std::fs`) and the MCP `hexser/refresh` rebuild (`std::process`).
 
 **Implementation:**
 

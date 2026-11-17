@@ -1,0 +1,5 @@
+error: `#[derive(HexDomain)]` does not read `#[hex(implements)]` (it reads `role`, `depends_on`); `implements` is read by HexAdapter
+  --> tests/ui/fail/hex_key_on_wrong_derive.rs:12:7
+   |
+12 | #[hex(implements(SinkPortNode))]
+   |       ^^^^^^^^^^

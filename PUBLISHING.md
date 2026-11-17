@@ -30,9 +30,12 @@ Notes
 ## 2) Versioning and consistency
 
 Current versions (as committed):
-- hexser_macros: 0.5.0
-- hexser: 0.5.0 (depends on hexser_macros = "0.5.0")
-- hexser_potions: 0.5.0 (depends on hexser = "0.5.0")
+- hexser_macros: 0.6.0
+- hexser: 0.6.1 (depends on hexser_macros = "0.6.0")
+- hexser_potions: 0.6.0 (depends on hexser = "0.6.0", which 0.6.1 satisfies)
+
+0.6.1 is a hexser-only patch: nothing in hexser_macros or hexser_potions changed, so neither is
+republished, and the workspace rows stay at 0.6.0. Publish only `cargo publish -p hexser`.
 
 Note: dependency versions are unified at the workspace level (`[workspace.dependencies]` in the
 root `Cargo.toml`), so bump them there.
@@ -60,7 +63,7 @@ cargo publish -p hexser_macros
 2. Wait for indexing
 - crates.io indexing can take a few minutes. Verify that the specific version is visible either on crates.io or via:
 ```
-cargo search hexser_macros | grep 0.5.0
+cargo search hexser_macros | grep 0.6.0
 ```
 
 3. Publish the main crate
@@ -105,8 +108,8 @@ export CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 - After each publish, confirm the crate page on crates.io and docs.rs build status.
 - Create and push a signed tag (example):
 ```
-git tag -s v0.5.0 -m "hexser 0.5.0 release"
-git push origin v0.5.0
+git tag -s v0.6.0 -m "hexser 0.6.0 release"
+git push origin v0.6.0
 ```
 
 ---

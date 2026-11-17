@@ -5,6 +5,8 @@
 //! `#[hex(role = "Mapper")]`.
 //!
 //! Revision History
+//! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D5 — `#[hex(implements(PortNode, ..))]`: a compile-time proof that the adapter implements each port node's trait, then one `Implements` edge per port; through `codegen::registration`.
+//! - 2026-09-04T00:00:00Z @AI: Pass the derive name to the shared codegen (generic-target compile error names the derive).
 //! - 2026-07-20T00:00:00Z @AI: Parse #[hex(role = "...")] override; use shared codegen; fully-qualified paths; generics-safe.
 //! - 2025-10-02T00:00:00Z @AI: Initial HexAdapter derive implementation.
 
@@ -19,13 +21,16 @@ pub fn derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let name = &input.ident;
   let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
-  let role = crate::common::codegen::role_override(&input.attrs)
-    .unwrap_or_else(|| quote::quote!(::hexser::graph::Role::Adapter));
-
-  let registration = crate::common::codegen::registrable_and_submit(
+  let registration = crate::common::codegen::registration(
     &input,
+    "HexAdapter",
     quote::quote!(::hexser::graph::Layer::Adapter),
-    role,
+    quote::quote!(::hexser::graph::Role::Adapter),
+    &[
+      crate::common::attrs::Key::Role,
+      crate::common::attrs::Key::DependsOn,
+      crate::common::attrs::Key::Implements,
+    ],
   );
 
   let expanded = quote::quote! {
