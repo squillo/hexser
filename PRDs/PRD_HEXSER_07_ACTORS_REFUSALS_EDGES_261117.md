@@ -1,6 +1,6 @@
 ---
 prd_id: HEXSER-0.7
-status: BUILT and gated green on the branch (§11 gate record). APPROVED by Scott's cards (Q1 plan and landing; Q2 node keys). Q3 was answered with an audit order; the audit is §12. Landing per D12; the publish has its own card.
+status: LANDED AND PUBLISHED 2026-11-17. main b5c16f5, tag v0.7.0 (annotated, signed by Scott), and hexser, hexser_macros and hexser_potions 0.7.0 live on crates.io. APPROVED by Scott's cards (Q1 plan and landing; Q2 node keys; Q4 removal at 0.8.0, census-gated; Q5 publish after the follow-up and the tag; Q6 Dependabot). Q3 was answered with an audit order; the audit is §12.
 card: HEXSER-0.7 (stc work, workspace proj-88d79f7d8225b85a; posts 241850, 242039, 242296)
 checkout: /Users/scott/@squillo/n-rust/nlang_hex, branch hardening/pr0-signal-260720 at 3c2f628 (Scott's card, 2026-11-17)
 scope: hexser, hexser_macros, hexser_potions, wasm-e2e/, scripts/wasm-e2e.sh, plugins/hexser
@@ -476,8 +476,9 @@ Still Scott's, each a card when it comes:
   - ~~The README's long tutorial still shows `DirectiveHandler` in three blocks~~ — moved to `Actor` in the follow-up; the README's code blocks are illustrative and not compiled, as before 0.7.
   - `HexAggregate` now reads `#[hex]` through the strict reader (follow-up, `tests/ui/fail/aggregate_hex_key.rs`). Like `HexVocabulary` it tolerates the four type-level keys a sibling derive reads; a derive cannot see its siblings, so on a type that derives only `HexAggregate` those four keys have no reader.
   - Cargo manifests, the CHANGELOG and the READMEs carry no Revision History block, as before 0.7; none was invented.
-  - The system map rows (§13) are staged, not written; they wait for the merge.
-  - The crates.io publish is carded (Q5): it follows the follow-up's merge and the v0.7.0 tag, hexser_macros, then hexser, then hexser_potions.
+  - The system map rows (§13) are handed to Tirith ORCH (seq 245262), not yet written; Tirith owns the file.
+  - ~~The crates.io publish~~ — done under Q5 (landing record above).
+  - The 0.8.0 removal waits on the census; each lane moves its own pin.
   - `hex_register_port!` takes `port_trait:` or `depends_on:`, not both; no arm combines them.
   - A generic adapter is not registered by the derive (0.6 rule), so it carries no `implements` edge; the docs say so and offer no workaround.
 - **Follow-up record (2026-11-17T18:32:30Z, `stc run`, one cargo at a time):**
@@ -489,6 +490,7 @@ Still Scott's, each a card when it comes:
   - Dependabot then reopened #13's group as #16, lock-only, with newer patches (`inventory` 0.3.25, `serde_json` 1.0.154, `uuid` 1.26.1, `arc-swap` 1.9.5). Those exact versions are taken into this branch, not merged as a second lockfile diff, so one tree is gated with all of them. Re-gated: clippy `--all-targets -D warnings`, audit, deny exit 0; tests 346 / 457 / 337, 0 failed; wasm-e2e PASS. #16 then holds nothing main lacks;
   - gates: `fmt --check`, clippy `--all-targets -D warnings`, `cargo doc -D warnings`, all 17 examples run: exit 0; tests 346 default, 457 all-features, 337 macros-only, 0 failed; trybuild green with the new case; `scripts/wasm-e2e.sh` PASS on both targets, surface and macros-only, with no `unsafe` export.
 - **A flake found after #17 merged (2026-11-17T19:16:44Z):** main's push CI failed twice (after #2 and after #5) on the same two `templates` cells: "the port node the edge targets is a node in the graph". Cause: `test_arcswap_16_thread_read_during_install` installs 64 synthetic graphs into the process-wide `ArcSwap`. Its `serial(hexser_arch)` lock covered only the other `current()` identity cell, never the unit tests that read the registered graph, so they could load a synthetic graph mid-run. It is latent since 0.6.1 and was not caused by any Dependabot bump. Red first: 37 of 300 local runs of the lib binary failed at 32 threads. Fix: both arch cells move to `tests/arch_install_test.rs`, a process of their own, and become one cell, so `serial_test` leaves the dev-dependencies. After: 0 of 300 full lib runs failed. Re-gated: fmt, clippy `--all-targets -D warnings`, audit, deny exit 0; tests 345 / 456 / 336, 0 failed (one fewer: two cells became one).
+- **Landing record (2026-11-17T20:46:41Z):** #18 (the flake fix, plus `std::hint::black_box` in the benches, which criterion 0.7 needs) merged as c4e26a5. Dependabot recreated #7 (criterion 0.7) only after three asks. Its head failed the same race and the deprecated `criterion::black_box`, so main was merged into its branch (`gh pr update-branch`). Its updated head 5181a5c was green on all 10 checks, and it merged as b5c16f5. Main's push CI is green at c4e26a5 and b5c16f5. Dependabot closed #16 itself once main carried its versions, so no PR is open. v0.7.0 is an annotated tag signed by Scott at b5c16f5, made in his own terminal because signing here timed out at the passphrase prompt. Published in order, each after the previous one was on the index: hexser_macros, hexser, hexser_potions, all 0.7.0, MSRV 1.85, confirmed live on the sparse index. Ledger: the §13 rows went to Tirith ORCH f5693f2e as a `[SYSTEM-MAP]` note on BUILD-LOCK-TURNS (seq 245262), and the pin-move notice went to the lanes on HEXSER-0.7 (seq 245264).
 - **Census for the 0.8.0 removal (Q4), textual, 2026-11-17:** across family files that mention hexser (snapshot `_*` copies excluded), `DirectiveHandler` 63 uses in 30 files, `UseCase` 164/84, `InputPort` 127/58, `ports::Query` 1/1, `.add_node(` 104/38, `.add_edge(` 7/3, `from_type_name(` 708/659 (most in squillo_os's generated `hex_arch.rs` copies). It is an upper bound: the words also match other crates' items. The census of record is the deprecation-warning count each lane's build prints once it moves to 0.7. A crate built with `-D warnings` sees each as an error, so its owner either moves to the route or allows `deprecated` at the use.
 - **plugins/hexser (D11):** every command and reference moved to 0.7, the manifests to 0.7.0. The scaffold (`/hexser:new`) now emits a `port_trait` node, an `implements` proof and a `findings()` cell, so a fresh slice has no finding. The plugin docs' complete examples (SKILL.md's minimal shape, add-usecase's actor, patterns.md's end-to-end program and actor, the new.md scaffold) were compiled and run verbatim in a throwaway test target, then deleted; the rest are marked sketches. The 0.4 → 0.5 reference keeps its `0.6` landing pin by design.
 
@@ -547,6 +549,7 @@ Scan 34750d39 covered 211 of 211 files under nlang_hex.
 ## 13. Compliance evidence staged for the system map
 
 The system map is /Users/scott/@squillo/squillo-system-map/src/map/table.n.md, with 148 controls rows, written by Tirith ORCH f5693f2e with the keeper's certificate.
+- **Handed over 2026-11-17 (seq 245262):** the three rows below went to Tirith ORCH f5693f2e after the merge and the publish, for Tirith to write with the keeper's certificate. This lane does not write the file.
 - **These rows are written only after the merge, and only by that path.** A row for a control the code does not yet carry is never written as its evidence (the tunnel lane's rule, 239472).
 - **No new ids.** Every framework and control id below already occurs in the file: A.8.28 ×11, A.8.15 ×26, CC8.1 ×10, 164.312(b) ×21, and the HECVAT-4 themes.
 
@@ -557,6 +560,8 @@ The system map is /Users/scott/@squillo/squillo-system-map/src/map/table.n.md, w
 | E3 | SOC2-TSC-2017, CC8.1 | an architecture graph reports, as closed typed findings, an adapter with no proved port, an edge to an unregistered node, and two registrations sharing one short name | R04-R08, R25-R27; each lane's graph cell that asserts `findings()` | intersects ISO27001-2022+A1-2024:A.8.28; HECVAT-4:documentation and assurance theme |
 
 ## Revision History
+
+- 2026-11-17T20:46:41Z @AI (the hexser lane, claude_code:2423a90f): landed and published. #18, then #7, merged. v0.7.0 tagged (signed by Scott). The three crates are on crates.io at 0.7.0. The §13 rows went to Tirith and the pin-move notice to the lanes (§11 landing record).
 
 - 2026-11-17T18:32:30Z @AI (the hexser lane, claude_code:2423a90f): Q4-Q6 recorded verbatim; the follow-up built and gated (§11 follow-up record); Dependabot handled per Q6; the forwarders read; the census for 0.8.0 taken; the probe's `unsafe` export removed.
 
