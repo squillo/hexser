@@ -93,9 +93,10 @@ for removal in 0.8.0, once no family crate still uses them.
 - Dev and CI dependencies move: `criterion` 0.7, `reqwest` 0.13 (dev only),
   `actions/checkout` 7, `actions/upload-artifact` 7 and `setup-rust-toolchain` 2.
 - The lockfile takes the semver-compatible bumps Dependabot's group proposed: `quote` 1.0.47,
-  `proc-macro2` 1.0.107, `inventory` 0.3.24, `serde` 1.0.229, `serde_json` 1.0.151 (which
-  replaces `ryu` with `zmij`), `indexmap` 2.14.2, `async-trait` 0.1.92, `uuid` 1.26.0 and
-  `trybuild` 1.0.119. `tokio` stays at 1.54.1. `cargo audit` and `cargo deny check` stay clean.
+  `proc-macro2` 1.0.107, `inventory` 0.3.25, `serde` 1.0.229, `serde_json` 1.0.154 (which
+  replaces `ryu` with `zmij`), `arc-swap` 1.9.5, `indexmap` 2.14.2, `async-trait` 0.1.92,
+  `uuid` 1.26.1 and `trybuild` 1.0.119. `tokio` stays at 1.54.1. `cargo audit` and
+  `cargo deny check` stay clean.
 - CI runs clippy on every target with warnings denied, examples and tests included.
 
 ### WASM (2026-11-17)
