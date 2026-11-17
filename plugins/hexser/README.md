@@ -2,7 +2,7 @@
 
 A Claude Code plugin for [**hexser**](https://github.com/squillo/hexser), the
 zero-boilerplate Hexagonal Architecture framework for Rust. It teaches Claude the
-hexser 0.5 API and grain so it writes code that compiles the first time, and it adds
+hexser 0.7 API and grain so it writes code that compiles the first time, and it adds
 slash commands for scaffolding, review, visualization, migration, and MCP wiring.
 
 ## Install
@@ -24,17 +24,22 @@ auto-activates whenever you work on Rust code that uses `hexser`.
 Auto-invoked when you edit hexser code or a `Cargo.toml` that lists `hexser`. It carries
 the "golden rules" that prevent the common mistakes (e.g. `#[derive(HexEntity)]` requires
 an `id` field; `Repository` is save-only and reads live on `QueryRepository`; error
-variants are boxed) and routes to seven fact-checked reference docs:
+variants are boxed; writes go through `Actor`; adapters prove their port with
+`implements(..)`) and routes to seven fact-checked reference docs:
 
 | Reference | Covers |
 |-----------|--------|
 | `patterns.md` | Domain → Port → Adapter → use-case, full compiling example |
-| `api.md` | Prelude exports, core trait signatures, features table |
-| `derives.md` | Every derive macro: what it generates, roles, gotchas |
-| `errors.md` | `Hexserror`, layer errors, codes, rich-error builders |
-| `graph-and-ai.md` | `HexGraph`, DOT/Mermaid/JSON, `AIContext`/`AgentPack` |
+| `api.md` | Prelude exports, core trait signatures (incl. `Actor`), deprecations, features table |
+| `derives.md` | Every derive macro: what it generates, the `#[hex(...)]` keys it reads, gotchas |
+| `errors.md` | `Hexserror`, layer errors, codes, rich-error builders, `Hexserror::refused` |
+| `graph-and-ai.md` | `HexGraph`, `findings()`, DOT/Mermaid/JSON, `AIContext`/`AgentPack` |
 | `mcp.md` | Running & wiring the hexser MCP server |
 | `migration-0.4-to-0.5.md` | Every 0.4 → 0.5 breaking change and its fix |
+
+For 0.6 → 0.7, the source of truth is
+[`MIGRATING_0.6_TO_0.7.md`](https://github.com/squillo/hexser/blob/main/hexser/MIGRATING_0.6_TO_0.7.md)
+in the hexser repository. `/hexser:migrate` carries its steps.
 
 ### Commands
 
@@ -42,10 +47,10 @@ variants are boxed) and routes to seven fact-checked reference docs:
 |---------|------|
 | `/hexser:new` | Scaffold a hexser project or a Domain/Port/Adapter slice |
 | `/hexser:add-adapter` | Implement an adapter for an existing port |
-| `/hexser:add-usecase` | Add a CQRS Directive + handler (or a Query) |
+| `/hexser:add-usecase` | Add a write-side `Actor` (or a read-side Query + `QueryHandler`) |
 | `/hexser:review` | Review code against hexser best practices & layering |
 | `/hexser:graph` | Render the architecture graph (pretty-print / DOT / Mermaid) |
-| `/hexser:migrate` | Migrate a crate from hexser 0.4 to 0.5 |
+| `/hexser:migrate` | Migrate a crate from hexser 0.6 to 0.7 (or the older 0.4 to 0.5) |
 | `/hexser:mcp-setup` | Install & wire the hexser MCP server for this project |
 
 ## The MCP angle
@@ -59,7 +64,7 @@ non-hexser repos). See `skills/hexser/references/mcp.md`.
 ## Requirements
 
 - Rust (edition 2024, rustc ≥ 1.85) and `cargo` on PATH.
-- `hexser = "0.6"` in the target project. The MCP server additionally needs the `mcp` feature.
+- `hexser = "0.7"` in the target project. The MCP server additionally needs the `mcp` feature.
 
 ## License
 

@@ -1,24 +1,26 @@
-# hexser API reference (0.5)
+# hexser API reference (0.7)
 
-Condensed, accurate surface for hexser `0.6.0` (edition 2024, rust-version 1.85). Prefer `use hexser::prelude::*;`; use qualified paths only for items not in the prelude. For error constructors and codes see errors.md; for derives and registration see derives.md.
+Condensed, accurate surface for hexser `0.7.0` (edition 2024, rust-version 1.85). Prefer `use hexser::prelude::*;`; use qualified paths only for items not in the prelude. For error constructors and codes see errors.md; for derives and registration see derives.md. For the move from 0.6, see `MIGRATING_0.6_TO_0.7.md` in the hexser repository.
 
 ## 1. Prelude
 
-`use hexser::prelude::*;` re-exports (defined inline in `hexser/src/lib.rs:135-174`):
+`use hexser::prelude::*;` re-exports (defined inline in `hexser/src/lib.rs:157-198`):
 
 - **Errors/result:** `HexResult`, `Hexserror`
 - **Domain traits:** `Aggregate`, `DomainEvent`, `DomainService`, `HexEntity`, `HexValueItem`
-- **Port traits/types:** `Direction`, `FindOptions`, `InputPort`, `OutputPort`, `Query`, `QueryRepository`, `Repository`, `Sort`, `UseCase`
+- **Port traits/types:** `Direction`, `FindOptions`, `InputPort` (deprecated), `OutputPort`, `Query` (deprecated), `QueryRepository`, `Repository`, `Sort`, `UseCase` (deprecated)
 - **Adapter traits:** `Adapter`, `Mapper`
-- **Application traits:** `Application`, `Directive`, `DirectiveHandler`, `QueryHandler`
+- **Application traits:** `Application`, `Directive`, `DirectiveHandler` (deprecated), `QueryHandler`
 - **Infrastructure:** `Config`
 - **Graph types:** `GraphBuilder`, `GraphMetadata`, `HexEdge`, `HexGraph`, `HexNode`, `Layer`, `NodeId`, `Relationship`, `Role`
 - **Showcase:** `ArcGraphExt`, `Describable`, `Inspectable`, `PrettyPrint`
 - **Registry:** `ComponentEntry`, `ComponentRegistry`, `NodeInfo`, `Registrable`
-- **Derive macros** (feature `macros`, default on): `HexAdapter`, `HexAggregate`, `HexDirective`, `HexDomain`, `HexEntity`, `HexPort`, `HexQuery`, `HexRepository`, `HexValueItem`
+- **Derive macros** (feature `macros`, default on): `HexActor`, `HexAdapter`, `HexAggregate`, `HexDirective`, `HexDomain`, `HexEntity`, `HexPort`, `HexQuery`, `HexRefusal`, `HexRepository`, `HexValueItem`, `HexVocabulary`
 - **Feature-gated:** `AIContext`, `ContextBuilder` (feature `ai`); `Container`, `Provider`, `Scope` (feature `container`); `StaticBuilder`, `StaticContainer` (feature `static-di`, default on)
 
 **Not in the prelude** — at crate root, use qualified: `hexser::HexEntity`, `hexser::HexResult`, `hexser::Hexserror`, `hexser::inventory`, `hexser::error_codes`, and all derives (qualified). `Visualizable` is **not** re-exported — full path is `hexser::showcase::visualizable::Visualizable`.
+
+**New in 0.7, at the crate root and NOT in the prelude:** `hexser::Actor` (`hexser::application::Actor`), `hexser::Vocabulary` (`hexser::domain::Vocabulary`), `hexser::Refusal` (`hexser::error::Refusal`), and `hexser::GraphFinding` (`hexser::graph::GraphFinding`). They stay out of the prelude so a glob import cannot collide with a type of yours with the same name.
 
 ## 2. Domain traits
 
@@ -53,6 +55,17 @@ pub trait DomainService {}
 ```
 
 `#[derive(HexEntity)]` requires a struct field literally named `id` and takes `type Id` from it. No `id` field (or a non-struct) is a compile error — there is no silent `String` default (`hexser_macros/src/derive/entity.rs:19-40`).
+
+```rust
+// Vocabulary (domain/vocabulary.rs, 0.7) — a closed set of named values.
+// Derive it with #[derive(HexVocabulary)], or #[derive(HexRefusal)] for a refusal.
+pub trait Vocabulary: core::fmt::Debug + 'static {
+    const CODES: &'static [&'static str]; // every code, in declaration order
+    fn code(&self) -> &'static str;       // the variant's name, or its #[hex(code = "...")]
+}
+```
+
+The derive also writes an inherent `from_code(&str) -> Option<Self>` when every variant is a unit variant. An unknown code is `None`.
 
 ## 3. Ports
 
@@ -97,7 +110,7 @@ pub enum Direction { Asc, Desc }
 ```
 
 ```rust
-// InputPort<Input, Output> (ports/input_port.rs:38)
+// InputPort<Input, Output> (ports/input_port.rs) — DEPRECATED in 0.7, use application::Actor.
 pub trait InputPort<Input, Output> {
     fn execute(&self, input: Input) -> HexResult<Output>;
 }
@@ -107,30 +120,43 @@ pub trait OutputPort<Request, Response> {
     fn send(&self, request: Request) -> HexResult<Response>;
 }
 
-// UseCase<Input, Output> (ports/use_case.rs:38)
+// UseCase<Input, Output> (ports/use_case.rs) — DEPRECATED in 0.7, use application::Actor.
 pub trait UseCase<Input, Output> {
     fn execute(&self, input: Input) -> HexResult<Output>;
 }
 
-// Query<Params, Result> (ports/query.rs:39) — READ-side Query lives in ports.
+// Query<Params, Result> (ports/query.rs) — DEPRECATED in 0.7, use application::QueryHandler
+// (the same shape).
 pub trait Query<Params, Result> {
     fn query(&self, params: Params) -> HexResult<Result>;
 }
 ```
 
+The deprecated traits still compile and work in 0.7. Each use prints a warning naming its route. None is removed. `#[allow(deprecated)]` on an item keeps a 0.6 call site quiet while you move it.
+
 Feature-gated extras: CloudEvents ports (`ports/events/`): `CloudEventsEnvelope`, `EventPublisher`, `EventSubscriber`, `EventCodec`, `EventRouter`, `CLOUDEVENTS_SPEC_VERSION`. MCP `McpServer` port (feature `mcp`, `ports/mcp_server.rs`).
 
 ## 4. Application / CQRS
 
-`hexser/src/application/`. Pattern (`examples/tutorial_04`): `#[derive(HexDirective)]` on the command struct plus a hand-written `impl DirectiveHandler<...>`; `#[derive(HexQuery)]` on the query struct plus a hand-written `impl QueryHandler<...>`.
+`hexser/src/application/`. 0.7 pattern: a hand-written `impl hexser::application::Actor` for the write side, with `#[derive(HexActor)]` registering its node; `#[derive(HexQuery)]` on the query struct plus a hand-written `impl QueryHandler<...>` for the read side. `examples/tutorial_04_application.rs` and `examples/cqrs_pattern.rs` show it. The 0.6 pattern, `#[derive(HexDirective)]` plus a hand-written `impl DirectiveHandler<...>`, still compiles and warns.
 
 ```rust
+// Actor (application/actor.rs, 0.7) — the single writer's door.
+// One command in, by value; what the actor decided out. `&mut self` is the one write site,
+// so no lock. The trait imposes no Result, no Hexserror, and no Send or Sync bound.
+pub trait Actor {
+    type Command;
+    type Context<'a>;  // what the writer borrows for one call; `()` when it holds its ports
+    type Outcome;      // an event, a view, Result<Event, Refusal>, or ()
+    fn handle(&mut self, command: Self::Command, context: Self::Context<'_>) -> Self::Outcome;
+}
+
 // Directive (command) (application/directive.rs:38) — renamed from Command.
 pub trait Directive {
     fn validate(&self) -> HexResult<()>;
 }
 
-// DirectiveHandler<D> (application/directive_handler.rs:46)
+// DirectiveHandler<D> (application/directive_handler.rs) — DEPRECATED in 0.7, use Actor.
 pub trait DirectiveHandler<D> where D: Directive {
     fn handle(&self, directive: D) -> HexResult<()>;
 }
@@ -165,7 +191,7 @@ pub trait Mapper<From, To> {
 }
 ```
 
-Provided adapters: `InMemoryEventBus` (always compiled), `McpStdioServer` (feature `mcp`). There is **no** generic `InMemoryRepository` — write an in-memory repo per entity. `#[derive(HexAdapter)]` defaults to `Role::Adapter`; override with `#[hex(role = "Mapper")]`.
+Provided adapters: `InMemoryEventBus` (always compiled), `McpStdioServer` (feature `mcp`). There is **no** generic `InMemoryRepository` — write an in-memory repo per entity. `#[derive(HexAdapter)]` defaults to `Role::Adapter`; override with `#[hex(role = "Mapper")]`. In 0.7 an adapter proves the port it serves with `#[hex(implements(PortNode))]`, against the trait the port marker names with `#[hex(port_trait = Trait)]` (see derives.md).
 
 ## 6. HexResult
 
@@ -174,6 +200,8 @@ pub type HexResult<T> = Result<T, Hexserror>;
 ```
 
 `Hexserror` (`error/hex_error.rs:47`) is an enum where every variant payload is `Box<…>`: `Domain(Box<DomainError>) | Port(Box<PortError>) | Adapter(Box<AdapterError>) | Validation(Box<ValidationError>) | NotFound(Box<NotFoundError>) | Conflict(Box<ConflictError>)`. It implements `Display` + `std::error::Error` (source chaining), and derives `Serialize`/`Deserialize` under feature `serde`. See errors.md for constructors, builders, and error codes.
+
+New in 0.7, still six variants: `Hexserror::refused(&refusal, message)` puts a `Refusal` into the existing `Domain` variant with its code and guidance, and `err.code()` returns the code of any variant. `hexser::error::Refusal: Vocabulary` adds `next_steps()` and `suggestions()`, both `&'static [&'static str]`. See errors.md.
 
 ## 7. Features
 
@@ -194,6 +222,8 @@ From `hexser/Cargo.toml`.
 
 Bins: `hex-ai-export` and `hex-ai-pack` need `ai`; `hex-mcp-server` needs `mcp`. Default features are WASM-friendly — keep `container`/`async` off for wasm.
 
-WASM: `wasm32-unknown-unknown` and `wasm32-wasip1` are verified by *running* hexser under wasmtime in CI (`scripts/wasm-e2e.sh`), not just building it. `inventory` registration works on both. `wasm32-unknown-unknown` has no std clock, so `GraphMetadata::created_at` is `0` and `ai` timestamps are the epoch; WASI reports real times. `save_visualization` (`std::fs`) errors under wasm — use `to_dot()`/`to_mermaid()`/`to_json()`.
+WASM: `wasm32-unknown-unknown` and `wasm32-wasip1` are verified by *running* hexser under wasmtime in CI (`scripts/wasm-e2e.sh`), not just building it. Every 0.7 door runs there with `default-features = false, features = ["macros"]` only. `inventory` registration works on both. `wasm32-unknown-unknown` has no std clock, so `GraphMetadata::created_at` is `0` and `ai` timestamps are the epoch; WASI reports real times. `save_visualization` (`std::fs`) errors under wasm — use `to_dot()`/`to_mermaid()`/`to_json()`.
 
 DI: `static-di` (default) gives `StaticContainer<T>` (`get`/`get_mut`/`into_inner`/`map`), `StaticBuilder`, and the `hex_static!{…}` macro (`src/static_di.rs`). `container` gives the runtime `Container`, `Provider`, `Scope`, `ContainerError`, `AsyncProvider` (`src/container/mod.rs`).
+
+Safety (0.7): `hexser`, `hexser_macros` and `hexser_potions` are each `#![forbid(unsafe_code)]`. `HEXSER_INCLUDE_SOURCE_LOCATION` is read once per process, so set it before the process starts (see errors.md).

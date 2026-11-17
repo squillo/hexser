@@ -6,14 +6,46 @@ The derive macros ship with the `macros` feature (on by default) and are re-expo
 use hexser::prelude::*;
 ```
 
-This brings `HexAdapter`, `HexAggregate`, `HexDirective`, `HexDomain`, `HexEntity`, `HexPort`, `HexQuery`, `HexRepository`, and `HexValueItem` into scope. They target structs and enums only — deriving on a `union` is a compile error.
+This brings `HexActor`, `HexAdapter`, `HexAggregate`, `HexDirective`, `HexDomain`, `HexEntity`, `HexPort`, `HexQuery`, `HexRefusal`, `HexRepository`, `HexValueItem`, and `HexVocabulary` into scope. They target structs and enums only — deriving on a `union` is a compile error. `HexVocabulary` and `HexRefusal` target enums only.
 
-Two families of derive exist:
+Three families of derive exist:
 
-- **Registration derives** (`HexDomain`, `HexPort`, `HexAdapter`, `HexDirective`, `HexQuery`) emit `impl Registrable for T` *and* `inventory::submit!(ComponentEntry::new::<T>())`, so the type shows up in the process-wide `HexGraph`. **All five honour `#[hex(role = "...")]`**; only the default role differs.
+- **Registration derives** (`HexDomain`, `HexPort`, `HexAdapter`, `HexDirective`, `HexQuery`, `HexActor`) emit `impl Registrable for T` *and* `inventory::submit!(ComponentEntry::new::<T>())`, so the type shows up in the process-wide `HexGraph`. **All six honour `#[hex(role = "...")]` and `#[hex(depends_on(..))]`**; only the default role differs.
 - **Trait derives** (`HexEntity`, `HexValueItem`, `HexAggregate`) emit a domain trait impl and do **no** registration.
+- **Vocabulary derives** (`HexVocabulary`, `HexRefusal`, new in 0.7) name the variants of a closed enum and do **no** registration.
 
 `HexRepository` is a special case: a pure marker that emits nothing.
+
+## `#[hex(...)]` keys (read strictly in 0.7)
+
+0.7 has one reader for every derive. An unknown key, a malformed value, or a single-valued key (`role`, `port_trait`, `code`) written twice is a compile error. So is a key the derive does not read; the error names the derive that does. In 0.6 each derive read only `role` and dropped the rest in silence.
+
+| Key | Where | Read by |
+| --- | --- | --- |
+| `role = "Variant"` | the type | the six registration derives |
+| `depends_on(Type, ..)` | the type | the six registration derives; lands one `Depends` edge per type |
+| `port_trait = Trait` | the type | `HexPort` |
+| `implements(PortNode, ..)` | the type | `HexAdapter` |
+| `code = "..."` | an enum variant | `HexVocabulary`, `HexRefusal` |
+| `next_step = "..."`, `suggestion = "..."` (repeatable) | an enum variant | `HexRefusal` |
+
+```rust,compile_fail
+#[derive(hexser::HexDomain)]
+#[hex(rol = "Entity")] // ERROR: unknown key
+struct Typo;
+```
+
+Each type named in `depends_on(..)` must itself be registered:
+
+```rust
+struct RepoPortNode;
+hexser::hex_register_port!(RepoPortNode, hexser::Role::Repository);
+
+#[derive(hexser::HexDirective)]
+#[hex(depends_on(RepoPortNode))]
+struct RenameDirective;
+// hexser::templates::dependency_edge_exists::<RenameDirective, RepoPortNode>(&graph) == true
+```
 
 ## Registrable and inventory (what registration means)
 
@@ -97,6 +129,16 @@ use hexser::prelude::*;
 struct GreetPort;
 ```
 
+**`port_trait` (0.7).** A port marker names the trait it stands for. Delete or rename the trait and the marker does not compile. Adapters then prove they serve the port with `implements(..)`. A generic trait or a trait with associated types is accepted.
+
+```rust
+pub trait SinkPort { fn append(&mut self, fact: u32); }
+
+#[derive(hexser::HexPort)]
+#[hex(role = "OutputPort", port_trait = SinkPort)]
+struct SinkPortNode;
+```
+
 ## HexAdapter
 
 - **Generates:** `impl Registrable` + inventory submission **and** `impl Adapter for T {}`.
@@ -114,6 +156,19 @@ struct InMemoryUserRepository { users: Vec<User> }
 #[derive(HexAdapter)]
 #[hex(role = "Mapper")]
 struct UserDtoMapper;
+```
+
+**`implements(..)` (0.7).** An adapter proves the port it serves. It compiles only if the port marker has `port_trait` and the adapter implements that trait. It lands an `Implements` edge, carried by `hexser::registry::ImplementsEntry`. Use it in place of a `depends_on` onto a port marker: that edge is declared, not proved, and `HexGraph::findings()` reports the adapter as `AdapterWithoutProvedPort`.
+
+```rust
+#[derive(hexser::HexAdapter)]
+#[hex(implements(SinkPortNode))]
+struct MemorySink { facts: Vec<u32> }
+
+impl SinkPort for MemorySink {
+  fn append(&mut self, fact: u32) { self.facts.push(fact); }
+}
+// hexser::templates::implements_edge_exists::<MemorySink, SinkPortNode>(&graph) == true
 ```
 
 ## HexRepository
@@ -138,7 +193,7 @@ struct UserRepositoryPort; // HexPort registers it as Layer::Port / Role::Reposi
 - **Layer/Role:** `Layer::Application`, default `Role::Directive`.
 - **Override:** `#[hex(role = "...")]` (any `Role` variant).
 
-The generated `validate` always returns `Ok(())`. Hand-write your own `impl Directive` (instead of deriving) when a directive needs real validation, and pair with a hand-written `impl DirectiveHandler<D>` to execute it (see patterns.md).
+The generated `validate` always returns `Ok(())`. Hand-write your own `impl Directive` (instead of deriving) when a directive needs real validation. To execute a write in 0.7, implement `hexser::application::Actor` (see HexActor below). `DirectiveHandler` is deprecated in 0.7, routed to `Actor`.
 
 ```rust
 use hexser::prelude::*;
@@ -168,6 +223,31 @@ use hexser::prelude::*;
 #[derive(HexQuery)]
 struct ListActiveTodosQuery;
 ```
+
+## HexActor (0.7)
+
+- **Generates:** `impl Registrable` + inventory submission only. It emits **no** `Actor` impl: the actor's command, context and outcome are its own.
+- **Requires:** a non-generic struct or enum. A generic type is a compile error, so a generic actor registers a non-generic marker.
+- **Layer/Role:** `Layer::Application`, default `Role::DirectiveHandler`.
+- **Reads:** `#[hex(role = "...")]` and `#[hex(depends_on(..))]`.
+
+```rust
+struct Deck { name: String }
+
+impl hexser::application::Actor for Deck {
+  type Command = String;
+  type Context<'a> = ();
+  type Outcome = ();
+
+  fn handle(&mut self, name: String, _context: ()) -> Self::Outcome { self.name = name; }
+}
+
+/// The actor's node in the architecture graph.
+#[derive(hexser::HexActor)]
+struct DeckActorNode;
+```
+
+See api.md for the `Actor` trait.
 
 ## HexEntity
 
@@ -229,6 +309,52 @@ use hexser::prelude::*;
 struct Order { id: String, items: Vec<String> }
 ```
 
+## HexVocabulary (0.7)
+
+- **Generates:** `impl hexser::domain::Vocabulary` (`const CODES`, `fn code(&self)`), and, when every variant is a unit variant, an inherent `fn from_code(code: &str) -> Option<Self>`.
+- **Requires:** an enum. A struct or union is a compile error.
+- **Layer/Role:** none — no registration.
+- **Reads:** `#[hex(code = "...")]` on a variant. It replaces the variant's name as its code, everywhere the code appears.
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, hexser::HexVocabulary)]
+enum Ask {
+  Open,
+  #[hex(code = "ASK_CLOSE")]
+  Close,
+}
+// <Ask as hexser::domain::Vocabulary>::CODES == &["Open", "ASK_CLOSE"]
+// hexser::domain::Vocabulary::code(&Ask::Close) == "ASK_CLOSE"
+// Ask::from_code("ASK_CLOSE") == Some(Ask::Close); Ask::from_code("Close") == None
+```
+
+- `CODES` lists the codes in declaration order.
+- An unknown code reads back as `None`, never as a guessed variant.
+- Data-carrying variants still have codes. `from_code` is then not generated.
+- `#[non_exhaustive]` enums are accepted.
+- Two variants with the same code are a compile error.
+- It writes no `Display` and no `Default`.
+
+## HexRefusal (0.7)
+
+- **Generates:** everything `HexVocabulary` generates, plus `impl hexser::error::Refusal` with the static guidance. Do not derive both on one enum.
+- **Requires:** an enum.
+- **Layer/Role:** none — no registration.
+- **Reads:** `#[hex(code = "...")]`, `#[hex(next_step = "...")]` and `#[hex(suggestion = "...")]` on a variant. `next_step` and `suggestion` may each be written more than once.
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, hexser::HexRefusal)]
+enum EditRefusal {
+  #[hex(next_step = "Type a name", suggestion = "A name is 1 to 64 characters")]
+  EmptyName,
+  #[hex(code = "E_NAME_TOO_LONG")]
+  NameTooLong,
+}
+// hexser::error::Refusal::next_steps(&EditRefusal::EmptyName) == &["Type a name"]
+```
+
+A refusal stays a value inside the crate. At the edge it crosses into `Hexserror` through `Hexserror::refused` (see errors.md).
+
 See errors.md for building rich `Hexserror` values inside hand-written `validate`/`check_invariants`, and patterns.md for wiring directives, queries, and repositories end to end.
 
 ## Registering without a derive: `hex_register_*`
@@ -266,6 +392,30 @@ private edge walk. To list the edges, use
 ⚠ Build the id with `dependency_id`, **never `NodeId::of`**. Template-registered nodes are
 keyed by their short type name, while `NodeId::of` hashes the full path, so an id built with
 it names no node, and `build_graph` does not validate edges.
+
+**0.7: `port_trait:` and `implements: [...]`.** The `depends_on:` edge above is declared, not
+proved, and `HexGraph::findings()` reports such an adapter as `AdapterWithoutProvedPort`. In
+0.7 the port marker names its trait, and the adapter names the port it serves with
+`implements:`. That compiles only if the adapter implements the trait. It lands an
+`Implements` edge.
+
+```rust
+pub trait SinkPort { fn append(&mut self, fact: u32); }
+
+struct SinkPortNode;
+hexser::hex_register_port!(SinkPortNode, hexser::Role::OutputPort, port_trait: SinkPort);
+
+struct FileSink;
+impl SinkPort for FileSink { fn append(&mut self, _fact: u32) {} }
+hexser::hex_register_adapter!(FileSink, hexser::Role::Adapter, implements: [SinkPortNode]);
+```
+
+- Read it with `hexser::templates::implements_edge_exists::<FileSink, SinkPortNode>(&graph)`.
+  It is true only when the edge exists and the port's node is in the graph. A `Depends` edge
+  never reads as `Implements`, and an `Implements` edge never reads as `Depends`.
+- `hex_register_adapter!` and `hex_register_component!` take `implements: [..]`, and
+  `depends_on: [..], implements: [..]`.
+- `hex_register_port!` takes `port_trait:` or `depends_on:`, not both.
 
 ⚠ **Until 2026-09-04 these emitted the `Registrable` impl and NO submission — for every
 type, not only generics.** A component "registered" through hexser's own advertised

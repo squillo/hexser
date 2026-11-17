@@ -13,7 +13,7 @@ use hexser::prelude::*; // brings HexResult and Hexserror into scope
 fn find(&self, id: &str) -> HexResult<Option<User>> { /* ... */ }
 ```
 
-Every trait method in hexser (`save`, `validate`, `check_invariants`, `handle`, `execute`, `map`, ...) returns `HexResult<T>`. Use `?` to propagate.
+Every trait method in hexser (`save`, `validate`, `check_invariants`, `handle`, `execute`, `map`, ...) returns `HexResult<T>`. Use `?` to propagate. The exception is `Actor::handle` (0.7): it returns the actor's own `Outcome`, which need not be a `HexResult`.
 
 ## The `Hexserror` enum
 
@@ -101,6 +101,45 @@ let wrapped = Hexserror::adapter("E_HEX_205", "connection failed")
     .with_source(std::io::Error::new(std::io::ErrorKind::Other, "socket closed"));
 ```
 
+## Refusals: `HexRefusal` and `Hexserror::refused` (0.7)
+
+A refusal is a closed enum whose variants carry static guidance. Derive it with `#[derive(hexser::HexRefusal)]` (see derives.md). It stays a typed value inside your crate. At the edge it crosses into `Hexserror` through `Hexserror::refused(&refusal, message)`:
+
+- it builds the existing `Domain` variant, so `Hexserror` keeps its six variants and an exhaustive match still compiles;
+- its code is the refusal's code;
+- its message is the edge's words;
+- the refusal's static `next_step` and `suggestion` guidance is copied.
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, hexser::HexRefusal)]
+enum EditRefusal {
+  #[hex(next_step = "Type a name", suggestion = "A name is 1 to 64 characters")]
+  EmptyName,
+  #[hex(code = "E_NAME_TOO_LONG")]
+  NameTooLong,
+}
+
+let err = hexser::Hexserror::refused(&EditRefusal::EmptyName, "The deck needs a name");
+assert!(matches!(err, hexser::Hexserror::Domain(_)));
+assert_eq!(err.code(), "EmptyName");
+assert_eq!(EditRefusal::from_code(err.code()), Some(EditRefusal::EmptyName));
+```
+
+This replaces a refusal written as strings at the call site, such as `Hexserror::domain("EmptyName", "...").with_next_step("Type a name")`.
+
+The trait behind the derive, `hexser::error::Refusal` (also `hexser::Refusal`, not in the prelude), extends `hexser::domain::Vocabulary`:
+
+```rust
+pub trait Refusal: Vocabulary {
+    fn next_steps(&self) -> &'static [&'static str] { &[] }
+    fn suggestions(&self) -> &'static [&'static str] { &[] }
+}
+```
+
+## `Hexserror::code()` (0.7)
+
+`err.code() -> &str` returns the error's code, whichever of the six variants carries it. Use it to read a refusal back with `R::from_code(err.code())`.
+
 ## Layer error types
 
 The inner payloads are the layer error types in `hexser/src/error/layer_error.rs`:
@@ -177,4 +216,10 @@ Hexserror::domain("E_HEX_001", "Order must have items")
 
 ## Serde source-location note
 
-When errors are serialized (feature `serde`), source locations are **hidden by default**. Set the environment variable `HEXSER_INCLUDE_SOURCE_LOCATION=1` to include them in the serialized output.
+When errors are serialized (feature `serde`), source locations are **hidden by default**. Set the environment variable `HEXSER_INCLUDE_SOURCE_LOCATION=1` to include them in the serialized output. It is off unless set to `1` or `true` (in any case).
+
+In 0.7 the variable is **read once per process**, the first time it is needed. A change made while the program runs is not seen. Changing the environment at run time takes `unsafe` since edition 2024, and hexser forbids `unsafe` in all three crates. Set the variable before the process starts:
+
+```bash
+HEXSER_INCLUDE_SOURCE_LOCATION=1 cargo test
+```
