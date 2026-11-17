@@ -6,6 +6,7 @@
 //! is deleted, or when the guide and the code stop naming the same thing.
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 Q4 — section 8 names the three deprecated aliases and the 0.8.0 boundary, each checked against its source.
 //! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 R30 — initial cell.
 
 /// The guide, as shipped in the `hexser` package.
@@ -167,6 +168,21 @@ const SECTIONS: &[(&str, &[Item])] = &[
         "| `ports::Query` | `application::QueryHandler`",
         include_str!("../src/ports/query.rs"),
         "since = \"0.7.0\"",
+      ),
+      (
+        "| `GraphBuilder::add_node` | `GraphBuilder::with_node`",
+        include_str!("../src/graph/builder.rs"),
+        "use `GraphBuilder::with_node`, the same call. Scheduled for removal in 0.8.0.",
+      ),
+      (
+        "| `NodeId::from_type_name` | `NodeId::from_name`",
+        include_str!("../src/graph/node_id.rs"),
+        "use `NodeId::from_name`, the same hash. Scheduled for removal in 0.8.0.",
+      ),
+      (
+        "scheduled for removal in 0.8.0",
+        include_str!("../src/application/directive_handler.rs"),
+        "Scheduled for removal in 0.8.0.",
       ),
     ],
   ),

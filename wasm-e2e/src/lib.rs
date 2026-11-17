@@ -8,13 +8,17 @@
 //!
 //! `run_checks` must never print. `println!` panics when it cannot write, and stdout is one of
 //! the std surfaces `wasm32-unknown-unknown` does not have — printing here would re-introduce
-//! exactly the kind of trap this crate exists to catch. The wasip1 binary in `main.rs` does the
-//! reporting; the cdylib entry point returns a number.
+//! exactly the kind of trap this crate exists to catch. The binary in `main.rs` is the one
+//! entry point on both targets: it reports on wasip1, and on `wasm32-unknown-unknown` it is
+//! invoked as the module's exported `main`, where a failed check traps.
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 (house rule: no `unsafe`) — drop the `#[unsafe(no_mangle)]` `probe` export; a `wasm32-unknown-unknown` bin already exports `main`, which runs the same checks. The probe is now `#![forbid(unsafe_code)]`.
 //! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D10 — the static-DI, AI-timestamp and visualization checks run under the default `surface` feature only; every other check, the 0.7 doors included, also runs macros-only.
 //! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D10 (R29) — execute the 0.7 doors under wasmtime: an `Actor` of the Deck and Tables shapes, a `HexVocabulary` round trip, a `HexRefusal` through `Hexserror` and back, a `port_trait` port node, an `implements` edge read back, and an empty `findings()`.
 //! - 2026-09-11T00:00:00Z @AI: Initial probe covering graph construction, metadata clock, static DI, errors, AI timestamps and visualization export.
+
+#![forbid(unsafe_code)]
 
 /// A domain entity registered through `inventory` at link time.
 ///
@@ -345,18 +349,4 @@ fn check_proved_edges() {
     "a Depends edge read as Implements under wasm"
   );
   std::assert_eq!(graph.findings(), std::vec::Vec::new());
-}
-
-/// Entry point for `wasm32-unknown-unknown`, which has no `_start` to run.
-///
-/// Invoked as `wasmtime run --invoke probe`. A failed check panics, which wasm lowers to an
-/// `unreachable` trap and wasmtime reports as a non-zero exit.
-///
-/// # Safety
-///
-/// Takes no arguments and returns a plain `u32`, so there is no pointer or lifetime contract
-/// for a caller to violate; `no_mangle` is required only so the export keeps the name `probe`.
-#[unsafe(no_mangle)]
-pub extern "C" fn probe() -> u32 {
-  run_checks()
 }

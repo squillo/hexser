@@ -1,11 +1,12 @@
 # CI for the hexser workspace.
 #
 # Toolchain is read from rust-toolchain.toml (single source of truth — no stable/nightly
-# split-brain). The shipped crate (lib + bins) is held to zero clippy/doc warnings; examples
-# and test fixtures (which legitimately print and carry illustrative unused fields) must compile
-# and pass but are not style-gated.
+# split-brain). Every target (lib, bins, tests, examples, benches) is held to zero clippy
+# warnings, and the lib to zero doc warnings. Examples print by design: each carries
+# `#![allow(clippy::disallowed_macros)]`, which clippy.toml's own reason permits for CLI code.
 #
 # Revision History
+# - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy gates `--all-targets`, so examples and tests can no longer collect warnings unseen (538 cleared in the 0.7 follow-up).
 # - 2026-09-11T00:00:00Z @AI: Add wasm-e2e job — the WASM claim is now gated by EXECUTING the module under wasmtime, not just building it.
 # - 2026-07-21T00:00:00Z @AI: Rework CI — read toolchain from rust-toolchain.toml, add push-on-main + feature-matrix + doctest coverage + realworld example + cargo-deny; scope clippy -D warnings to lib+bins.
 # - 2025-10-09T08:27:00Z @AI: Add artifact storage for binaries, documentation, and clippy reports.
@@ -32,16 +33,16 @@ jobs:
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: cargo fmt --all -- --check
 
-  # Clippy on the shipped crate (library + binaries) with warnings denied.
+  # Clippy on every target (library, binaries, tests, examples, benches) with warnings denied.
   clippy:
-    name: Clippy (lib + bins)
+    name: Clippy (all targets)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: clippy
-      - run: cargo clippy --workspace --all-features --lib --bins -- -D warnings
+      - run: cargo clippy --workspace --all-features --all-targets -- -D warnings
 
   # Tests with default features. No --all-targets, so doctests run.
   test-default:

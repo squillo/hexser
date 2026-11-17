@@ -6,6 +6,7 @@
 //! output ports to provide concrete implementations using specific technologies.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: the test request is a unit struct; its `data` field was never read.
 //! - 2025-10-01T00:00:00Z @AI: Initial OutputPort trait definition for secondary ports.
 
 /// Trait for output ports that define interfaces to external systems.
@@ -47,9 +48,7 @@ pub trait OutputPort<Request, Response> {
 mod tests {
   use super::*;
 
-  struct TestRequest {
-    data: String,
-  }
+  struct TestRequest;
 
   struct TestResponse {
     status: String,
@@ -68,9 +67,7 @@ mod tests {
   #[test]
   fn test_output_port_send() {
     let port = TestOutputPort;
-    let request = TestRequest {
-      data: String::from("test"),
-    };
+    let request = TestRequest;
     let response = port.send(request).unwrap();
     assert_eq!(response.status, "success");
   }

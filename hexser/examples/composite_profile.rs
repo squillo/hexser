@@ -12,7 +12,11 @@
 //! Run with: cargo run --example composite_profile
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example); print the profile's `id`/`created_at` and the cached profile; keep the SQL error as the source; `#[allow(dead_code)]` on `LruCache::invalidate`.
 //! - 2025-10-08T22:43:00Z @AI: Extract composite profile example from README to standalone file per user request.
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 /// User preferences from NoSQL store
 #[derive(Clone, std::fmt::Debug)]
@@ -186,6 +190,8 @@ impl LruCache {
     cache.insert(key, (profile, now));
   }
 
+  // why: the cache-invalidation strategy the prose describes; the demo never updates preferences.
+  #[allow(dead_code)]
   fn invalidate(&self, key: &str) {
     let mut cache = self.cache.lock().unwrap();
     cache.remove(key);
@@ -225,6 +231,7 @@ impl ProfileRepository for CompositeProfileRepository {
         "Failed to fetch core profile from SQL",
       )
       .with_next_step("Check SQL database connectivity")
+      .with_source(e)
     })?;
 
     // 3) Enrich with preferences from NoSQL (optional, degrade gracefully)
@@ -288,9 +295,11 @@ fn main() -> hexser::result::hex_result::HexResult<()> {
 
   let profile = repo.find_by_id("user-001")?;
   std::println!(
-    "   ✓ Profile fetched: {} ({})",
+    "   ✓ Profile fetched: {} ({}), id={}, created_at={}",
     profile.username,
-    profile.email
+    profile.email,
+    profile.id,
+    profile.created_at
   );
   std::println!(
     "   ✓ Preferences: theme={}, language={}, notifications={}",
@@ -301,7 +310,10 @@ fn main() -> hexser::result::hex_result::HexResult<()> {
 
   std::println!("\n5. Demonstration - Cache Hit:");
   let profile2 = repo.find_by_id("user-001")?;
-  std::println!("   ✓ Profile fetched from cache (no database queries)");
+  std::println!(
+    "   ✓ Profile fetched from cache (no database queries): {}",
+    profile2.username
+  );
 
   std::println!("\n6. Demonstration - NoSQL Failure (Graceful Degradation):");
   let sql_db2 = MockSqlDatabase::new();

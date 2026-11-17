@@ -3,6 +3,7 @@
 //! Exports graphs to JSON format compatible with D3.js.
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 (SB 15/203) — call the canonical `with_node`/`with_edge`/`NodeId::from_name`; their aliases are deprecated.
 //! - 2025-10-02T16:00:00Z @AI: Initial JSON exporter implementation.
 
 /// JSON format exporter
@@ -94,7 +95,7 @@ mod tests {
   #[test]
   fn test_json_export() {
     let graph = crate::graph::builder::GraphBuilder::new()
-      .add_node(crate::graph::hex_node::HexNode::new(
+      .with_node(crate::graph::hex_node::HexNode::new(
         crate::graph::node_id::NodeId::from_name("Test"),
         crate::graph::layer::Layer::Domain,
         crate::graph::role::Role::Entity,

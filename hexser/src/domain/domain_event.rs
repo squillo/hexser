@@ -6,6 +6,7 @@
 //! bounded contexts. Events capture the intent and meaning behind state changes.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: drop the test event's unread `email` field.
 //! - 2025-10-01T00:00:00Z @AI: Initial DomainEvent trait definition with metadata.
 
 /// Trait for domain events representing significant occurrences.
@@ -48,7 +49,6 @@ mod tests {
 
   struct TestUserCreated {
     user_id: String,
-    email: String,
   }
 
   impl DomainEvent for TestUserCreated {
@@ -65,7 +65,6 @@ mod tests {
   fn test_domain_event_type() {
     let event = TestUserCreated {
       user_id: String::from("123"),
-      email: String::from("test@example.com"),
     };
     assert_eq!(event.event_type(), "UserCreated");
   }
@@ -74,7 +73,6 @@ mod tests {
   fn test_domain_event_aggregate_id() {
     let event = TestUserCreated {
       user_id: String::from("123"),
-      email: String::from("test@example.com"),
     };
     assert_eq!(event.aggregate_id(), "123");
   }

@@ -5,6 +5,12 @@
 //! and basic queries for analyzing the architecture.
 //!
 //! Run with: `cargo run --example graph_example`
+//!
+//! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example).
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 fn main() -> hexser::HexResult<()> {
   println!("=== Hexagonal Architecture Graph Example ===\n");

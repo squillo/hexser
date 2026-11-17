@@ -6,6 +6,8 @@
 //! Queries should be optimized for reading and may use different data models.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: the found test asserts the returned `name`, not only that a result came back.
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 Q4 — the deprecation note names its removal boundary, 0.8.0 (N_BOOK 3/16/5; deletion waits for a family census reading zero uses).
 //! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D7 — `#[deprecated]`, routed to `QueryHandler` (two read doors with one shape, 0 impls in the family). Unit tests keep exercising it under `#[allow(deprecated)]`.
 //! - 2025-10-01T00:00:00Z @AI: Initial Query trait definition for CQRS read operations.
 
@@ -39,7 +41,7 @@
 /// ```
 #[deprecated(
   since = "0.7.0",
-  note = "use `hexser::application::QueryHandler`, which has the same shape. See MIGRATING_0.6_TO_0.7.md; removal is left to a later version."
+  note = "use `hexser::application::QueryHandler`, which has the same shape. See MIGRATING_0.6_TO_0.7.md. Scheduled for removal in 0.8.0."
 )]
 pub trait Query<Params, Result> {
   /// Execute the query with the given parameters.
@@ -83,7 +85,7 @@ mod tests {
     let query = TestQuery;
     let params = TestQueryParams { id: 1 };
     let result = query.query(params).unwrap();
-    assert!(result.is_some());
+    assert_eq!(result.map(|r| r.name), Some(String::from("Found")));
   }
 
   #[test]

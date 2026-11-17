@@ -6,6 +6,7 @@
 //! Use cases are similar to InputPort but emphasize the business operation aspect.
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 Q4 — the deprecation note names its removal boundary, 0.8.0 (N_BOOK 3/16/5; deletion waits for a family census reading zero uses).
 //! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D7 — `#[deprecated]`, routed to `Actor` (the same job through `&self`; SB 15/203: route, then unreach, then delete). Unit tests keep exercising it under `#[allow(deprecated)]`.
 //! - 2025-10-01T00:00:00Z @AI: Initial UseCase trait definition as business operation contract.
 
@@ -38,7 +39,7 @@
 /// ```
 #[deprecated(
   since = "0.7.0",
-  note = "use `hexser::application::Actor`: one writer through `&mut self`, with its own command, context and outcome. See MIGRATING_0.6_TO_0.7.md; removal is left to a later version."
+  note = "use `hexser::application::Actor`: one writer through `&mut self`, with its own command, context and outcome. See MIGRATING_0.6_TO_0.7.md. Scheduled for removal in 0.8.0."
 )]
 pub trait UseCase<Input, Output> {
   /// Execute the use case with the given input.

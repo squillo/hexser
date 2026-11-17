@@ -30,8 +30,10 @@
 
   Every derive that reads `#[hex(...)]` reads it through one strict reader (`common/attrs.rs`):
   an unknown key, a malformed value, a duplicate single-valued key, or a key the derive does
-  not read is a compile error. `HexAggregate` declares the attribute but reads no key, so on a
-  type that derives only `HexAggregate` a `#[hex(...)]` is still ignored. The crate is
+  not read is a compile error. `HexAggregate` and `HexVocabulary` read no type-level key of
+  their own: they leave `role`, `depends_on`, `implements` and `port_trait` to a sibling derive
+  on the same type and refuse every other key. A derive cannot see its siblings, so on a type
+  that derives only one of them a sibling's key has no reader. The crate is
   `#![forbid(unsafe_code)]`.
 
   These registrations are consumed by `hexser` at link time via the `inventory` crate's

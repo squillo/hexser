@@ -6,6 +6,7 @@
 //! while maintaining a consistent encoding/decoding interface.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: drop the test event's unread `value` field; the mock codec encodes headers only.
 //! - 2025-10-09T14:51:00Z @AI: Initial EventCodec port trait definition.
 
 /// Port trait for encoding and decoding CloudEvents envelopes.
@@ -161,7 +162,6 @@ mod tests {
 
   struct TestEvent {
     id: std::string::String,
-    value: std::string::String,
   }
 
   impl crate::domain::DomainEvent for TestEvent {
@@ -232,7 +232,6 @@ mod tests {
     let codec = MockCodec;
     let event = TestEvent {
       id: std::string::String::from("test-123"),
-      value: std::string::String::from("test value"),
     };
 
     let envelope = super::super::CloudEventsEnvelope::from_domain_event(
@@ -271,7 +270,6 @@ mod tests {
     let codec = MockCodec;
     let event = TestEvent {
       id: std::string::String::from("test-456"),
-      value: std::string::String::from("roundtrip test"),
     };
 
     let original = super::super::CloudEventsEnvelope::from_domain_event(

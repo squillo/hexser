@@ -11,7 +11,11 @@
 //! Run with: cargo run --example auth_integration
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example); the demo reads `password_hash` and calls `find_by_email`; `#[allow(dead_code)]` on the Step 4 `AppContext` struct and impl.
 //! - 2025-10-08T22:43:00Z @AI: Extract auth integration example from README to standalone file per user request.
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 /// User entity representing authenticated users
 #[derive(Clone, std::fmt::Debug)]
@@ -155,11 +159,15 @@ impl SessionPort for InMemorySessionAdapter {
 }
 
 /// Application context wiring adapters together
+// why: Step 4 of the lesson shows this wiring shape; the demo below drives the adapters directly.
+#[allow(dead_code)]
 struct AppContext {
   user_repo: std::boxed::Box<dyn UserRepository>,
   session_port: std::boxed::Box<dyn SessionPort>,
 }
 
+// why: the constructor belongs to the Step 4 wiring shape; the demo does not build an AppContext.
+#[allow(dead_code)]
 impl AppContext {
   fn new_in_memory() -> Self {
     Self {
@@ -203,11 +211,20 @@ fn main() -> hexser::result::hex_result::HexResult<()> {
     &mut user_repo,
     user.clone(),
   )?;
-  std::println!("   ✓ User created: {} ({})", user.username, user.email);
+  std::println!(
+    "   ✓ User created: {} ({}), password stored as a bcrypt hash: {}",
+    user.username,
+    user.email,
+    user.password_hash.starts_with("$2b$")
+  );
 
   // Find user by username
   let found = user_repo.find_by_username("alice")?;
   std::println!("   ✓ User found by username: {:?}", found.is_some());
+
+  // Find user by email
+  let found_by_email = user_repo.find_by_email("alice@example.com")?;
+  std::println!("   ✓ User found by email: {:?}", found_by_email.is_some());
 
   // Create session
   let token = session_adapter.create_session(&user.id, 3600)?;

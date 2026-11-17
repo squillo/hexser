@@ -10,9 +10,13 @@
 //! Run with: cargo run --example weather_adapter
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example); print `observed_at_iso`; call `get_forecast` with an empty city, which is refused before any network call.
 //! - 2025-10-08T23:04:00Z @AI: Remove rest-adapter feature gates; reqwest is now a dev-dependency.
 //! - 2025-10-08T22:54:00Z @AI: Make example self-contained with internal type definitions.
 //! - 2025-10-08T22:43:00Z @AI: Extract weather adapter example from README to standalone file per user request.
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 use hexser::error::RichError;
 
@@ -187,6 +191,10 @@ fn main() -> hexser::result::hex_result::HexResult<()> {
   std::println!("   Created forecast: {}", forecast.city());
   std::println!("   Temperature: {}°C", forecast.temperature_c());
   std::println!("   Condition: {}", forecast.condition());
+  std::println!(
+    "   Observed at: {}",
+    forecast.observed_at_iso().unwrap_or("unknown")
+  );
 
   // Demonstrate the port (interface)
   std::println!("\n2. Port Definition (WeatherPort trait):");
@@ -204,12 +212,17 @@ fn main() -> hexser::result::hex_result::HexResult<()> {
   std::println!("   Note: This example would connect to a real API endpoint");
   std::println!("   For demonstration, we show the adapter structure:");
 
-  let _adapter =
+  let adapter =
     RestWeatherAdapter::new(std::string::String::from("https://api.example.com/weather"));
 
   std::println!("   ✓ Adapter created with base URL");
   std::println!("   ✓ HTTP client configured with 10s timeout");
   std::println!("   ✓ Ready to fetch forecasts");
+
+  // Calling through the port: an empty city is refused before any network call.
+  if let std::result::Result::Err(e) = adapter.get_forecast("  ") {
+    std::println!("   ✓ Empty city refused through WeatherPort: {e}");
+  }
 
   // In a real scenario, you would call:
   // let forecast = adapter.get_forecast("London")?;

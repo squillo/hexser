@@ -2,6 +2,12 @@
 //!
 //! This example demonstrates that all error types can be serialized
 //! and deserialized using Serde when the serde feature is enabled.
+//!
+//! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example).
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 #[cfg(feature = "serde")]
 fn main() {

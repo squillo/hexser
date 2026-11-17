@@ -431,11 +431,15 @@ The 280 existing unit tests and every integration test stay green, except the en
 | Q2 | Template node identity (F-A) | Scott: "Report it, keys unchanged (Recommended)". D6 makes it a typed finding |
 | Q3 | The `&self` writer doors | Scott ordered the audit (§0). The audit's reading: SB 15/203 decides it, so the doors are deprecated in 0.7 and `ports::Query` is added to the set (D7). Deprecation is not a semver break, so it is not a breaking change for Scott's card. Removal is |
 
+| Q4 | When the deprecated doors leave the API (canon: SB 15/203 unreach-before-delete; N_BOOK 3/16/5 `#[deprecated]` = scheduled, boundary named) | Scott: "0.8.0, census-gated (Recommended)". Each note names 0.8.0; deletion waits for a family census reading zero uses |
+| Q5 | The crates.io publish (canon: SB 15/437 a published version is burned; SB 15/412; every family pin is registry `"0.6"`) | Scott: "After follow-up, v0.7.0 tag (Recommended)": hexser_macros, then hexser, then hexser_potions |
+| Q6 | The seven Dependabot PRs (precedent: nlang_x seq 62106, "Lockfile bumps first, manifest bumps second") | Scott: "Rebase and merge all seven". Each rebased diff is verified before its merge: no tokio below 1.53.3, and syn 3 passes trybuild |
+
+Answered by canon or precedent, no card (2026-11-17): the merge method (seq 62106, "Merge commits, keep the branch"); the alias deprecations (SB 15/203); the probe's `#[unsafe(no_mangle)]` (house rule; the bin exports `main`); the all-targets clippy debt (`clippy.toml`'s own text and the house rule); `HexAggregate`'s silent `#[hex]` (A14); the README tutorial (D11); the §13 rows (§13's own path).
+
 Still Scott's, each a card when it comes:
-- the crates.io publish;
-- removing the deprecated doors (0.8);
 - any re-key of template nodes;
-- merging or closing the 7 open dependabot PRs (§11).
+- the 0.8.0 deletion itself, once its census reads zero.
 
 ## 10. Risks, said plainly
 
@@ -454,14 +458,12 @@ Still Scott's, each a card when it comes:
 
 - **Not measured:**
   - what `hexser::prelude::*` brings into use across the family;
-  - the 29 pass-through forwarders the simplify census flags (§12), which this audit did not read one by one;
+  - ~~the 29 pass-through forwarders~~ — re-measured in the follow-up (scan a0ef5d29, the pass-through arm emits 35; the in-memory scan 34750d39 was gone). Read one by one: two pairs were two public names for one job (`GraphBuilder::add_node`/`with_node`, `add_edge`/`with_edge`) and one more (`NodeId::from_type_name`/`from_name`). All three aliases are deprecated (SB 15/203). The rest are accessors, `Default` impls, proc-macro entry points and trait defaults: one name each, no second door;
   - Security, Reliability and Speed on the simplify instrument, which reports them NOT-MEASURED for this root. This audit measured them by hand instead (§12);
   - generated code, and trees outside §4.
-- **Seen, not acted on:**
-  - Seven dependabot PRs have been open on squillo/hexser since 2026-07-21 to 2026-09-15 (#2, #3, #5, #6, #7, #13, #14). syn 3 (#6) is a major bump for the macro crate, and reqwest (#5) and criterion (#7) are dev-dependencies only.
-  - 0.7 takes none of them. `cargo audit` and `cargo deny` at the gate decide whether one is a security fix, and merging or closing any of them is an outward act with its own card.
+- **Dependabot (Q6, "Rebase and merge all seven"):** each was rebased on the merged main and merged as a merge commit once its own head was green: #2 (5e42ee2), #3 (0b72d1a), #6 syn 3 (89dc287); #5, #7 and #14 as recorded in the follow-up record below. #13 was closed BY DEPENDABOT on rebase ("these dependencies are updatable in another way") while nine of its ten lock bumps were still behind main; the follow-up applies those nine by `cargo update --precise`. Its tenth, tokio 1.50.0, would be a downgrade from 1.54.1 back into RUSTSEC-2026-0386's range and is not taken. Main already carried syn 2 and syn 3 (tokio-macros 2.7.2), so #6 adds no second syn to this workspace.
   - squillo/hexser has no open issues.
-- **Kept, said plainly:** the wasm-e2e probe's `#[unsafe(no_mangle)]` export (D9).
+- **~~Kept~~ removed:** the wasm-e2e probe's `#[unsafe(no_mangle)]` export (D9). A `wasm32-unknown-unknown` binary already exports `main`; the script invokes it (`wasmtime run --invoke main <module> 0 0`) and the probe is `#![forbid(unsafe_code)]`. Falsified: a failed check inside an exported `main` exits 134 (abort trap).
 - **Gate record (2026-11-17, `stc run`, one cargo at a time):**
   - `fmt --check`, CI clippy (`--lib --bins -D warnings`), the 10-cell `cargo check` feature matrix, release bins, `--examples`, `cargo doc` with `-D warnings`: all exit 0;
   - `cargo test --workspace`: 345 passed, 0 failed, 2 ignored;
@@ -471,13 +473,20 @@ Still Scott's, each a card when it comes:
   - `scripts/wasm-e2e.sh`: 18 compile cells, and the probe executed on both targets, surface and macros-only;
   - `cargo audit` and `cargo deny check`: clean after A15, no waivers.
 - **Not done, said plainly:**
-  - The README's long tutorial still shows `DirectiveHandler` in three blocks, each under a 0.7 note; the canonical examples moved (A16).
-  - `HexAggregate` declares `#[hex]` and reads no key, so on a type that derives only it, a `#[hex(...)]` is still ignored.
+  - ~~The README's long tutorial still shows `DirectiveHandler` in three blocks~~ — moved to `Actor` in the follow-up; the README's code blocks are illustrative and not compiled, as before 0.7.
+  - `HexAggregate` now reads `#[hex]` through the strict reader (follow-up, `tests/ui/fail/aggregate_hex_key.rs`). Like `HexVocabulary` it tolerates the four type-level keys a sibling derive reads; a derive cannot see its siblings, so on a type that derives only `HexAggregate` those four keys have no reader.
   - Cargo manifests, the CHANGELOG and the READMEs carry no Revision History block, as before 0.7; none was invented.
   - The system map rows (§13) are staged, not written; they wait for the merge.
-  - The crates.io publish waits for its own card.
+  - The crates.io publish is carded (Q5): it follows the follow-up's merge and the v0.7.0 tag, hexser_macros, then hexser, then hexser_potions.
   - `hex_register_port!` takes `port_trait:` or `depends_on:`, not both; no arm combines them.
   - A generic adapter is not registered by the derive (0.6 rule), so it carries no `implements` edge; the docs say so and offer no workaround.
+- **Follow-up record (2026-11-17T18:32:30Z, `stc run`, one cargo at a time):**
+  - the aliases deprecated and every in-repo caller moved to the canonical name; every deprecation note names 0.8.0 (Q4); the guide's §8, its walk, the deprecated-doors cell (now with an alias arm), the CHANGELOG and the plugin reference say the same;
+  - `HexAggregate` through the strict reader, written red first (`aggregate_hex_key.rs` compiled; now refused with the derive's own words);
+  - the README's write-side tutorial blocks are `Actor`s; `UseCase`, `InputPort` and `ports::Query` are marked deprecated in its tree;
+  - clippy `--all-targets`: 538 warnings cleared (464 prints in examples, allowed per file by clippy.toml's own CLI-code reason; the rest fixed, or allowed on one item with a why in examples only); CI now runs `cargo clippy --workspace --all-features --all-targets -- -D warnings`;
+  - gates: `fmt --check`, clippy `--all-targets -D warnings`, `cargo doc -D warnings`, all 17 examples run: exit 0; tests 346 default, 457 all-features, 337 macros-only, 0 failed; trybuild green with the new case; `scripts/wasm-e2e.sh` PASS on both targets, surface and macros-only, with no `unsafe` export.
+- **Census for the 0.8.0 removal (Q4), textual, 2026-11-17:** across family files that mention hexser (snapshot `_*` copies excluded), `DirectiveHandler` 63 uses in 30 files, `UseCase` 164/84, `InputPort` 127/58, `ports::Query` 1/1, `.add_node(` 104/38, `.add_edge(` 7/3, `from_type_name(` 708/659 (most in squillo_os's generated `hex_arch.rs` copies). It is an upper bound: the words also match other crates' items. The census of record is the deprecation-warning count each lane's build prints once it moves to 0.7. A crate built with `-D warnings` sees each as an error, so its owner either moves to the route or allows `deprecated` at the use.
 - **plugins/hexser (D11):** every command and reference moved to 0.7, the manifests to 0.7.0. The scaffold (`/hexser:new`) now emits a `port_trait` node, an `implements` proof and a `findings()` cell, so a fresh slice has no finding. The plugin docs' complete examples (SKILL.md's minimal shape, add-usecase's actor, patterns.md's end-to-end program and actor, the new.md scaffold) were compiled and run verbatim in a throwaway test target, then deleted; the rest are marked sketches. The 0.4 → 0.5 reference keeps its `0.6` landing pin by design.
 
 ## 12. The audit (Scott's Q3 order)
@@ -545,6 +554,8 @@ The system map is /Users/scott/@squillo/squillo-system-map/src/map/table.n.md, w
 | E3 | SOC2-TSC-2017, CC8.1 | an architecture graph reports, as closed typed findings, an adapter with no proved port, an edge to an unregistered node, and two registrations sharing one short name | R04-R08, R25-R27; each lane's graph cell that asserts `findings()` | intersects ISO27001-2022+A1-2024:A.8.28; HECVAT-4:documentation and assurance theme |
 
 ## Revision History
+
+- 2026-11-17T18:32:30Z @AI (the hexser lane, claude_code:2423a90f): Q4-Q6 recorded verbatim; the follow-up built and gated (§11 follow-up record); Dependabot handled per Q6; the forwarders read; the census for 0.8.0 taken; the probe's `unsafe` export removed.
 
 - 2026-11-17T17:07:54Z @AI (the hexser lane, claude_code:2423a90f): built P0-P7 and ran the gates (§11).
   - D6's collision fields, R03's name, D10 as built, and the guide's location (D11) now match the code.

@@ -6,7 +6,11 @@
 //! Run with: cargo run --example tutorial_03_adapters
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example); look one todo up by id and print its title; drop the unused `new`; `#[allow(dead_code)]` on the unused `TodoSortKey`.
 //! - 2025-10-07T11:54:00Z @AI: Migrate to v0.4 QueryRepository API; remove id-centric Repository methods; update example usage.
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 use hexser::prelude::*;
 
@@ -31,10 +35,6 @@ struct InMemoryTodoRepository {
 }
 
 impl InMemoryTodoRepository {
-  fn new() -> Self {
-    Self { todos: Vec::new() }
-  }
-
   fn with_todos(todos: Vec<Todo>) -> Self {
     Self { todos }
   }
@@ -56,6 +56,8 @@ enum TodoFilter {
   All,
   ById(String),
 }
+// why: QueryRepository needs a sort-key type; this adapter ignores sorting, so no key is built.
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 enum TodoSortKey {
   Id,
@@ -131,6 +133,15 @@ fn main() {
   .unwrap()
   .len();
   println!("  Total todos: {total}");
+  let second =
+    <InMemoryTodoRepository as hexser::ports::repository::QueryRepository<Todo>>::find_one(
+      &repo,
+      &TodoFilter::ById(String::from("2")),
+    )
+    .unwrap();
+  if let Some(todo) = second {
+    println!("  Todo 2: {}", todo.title);
+  }
   println!("  Active todos: {}", repo.find_active().unwrap().len());
   println!("  Completed: {}", repo.count_completed().unwrap());
 

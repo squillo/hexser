@@ -6,6 +6,7 @@
 //! for consuming CloudEvents v1.0 envelopes with back-pressure support.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: name the mock's boxed handler type `TestHandler` (type_complexity).
 //! - 2025-10-09T15:12:00Z @AI: Fix doc test to use trait import for subscribe/poll methods.
 //! - 2025-10-09T14:51:00Z @AI: Initial EventSubscriber port trait definition.
 
@@ -177,16 +178,13 @@ mod tests {
     }
   }
 
+  /// A boxed handler for one test envelope, as `EventSubscriber::subscribe` takes it.
+  type TestHandler =
+    std::boxed::Box<dyn Fn(super::super::CloudEventsEnvelope<TestEvent>) -> crate::HexResult<()>>;
+
   struct MockSubscriber {
     events: std::cell::RefCell<std::vec::Vec<super::super::CloudEventsEnvelope<TestEvent>>>,
-    handlers: std::cell::RefCell<
-      std::collections::HashMap<
-        std::string::String,
-        std::boxed::Box<
-          dyn Fn(super::super::CloudEventsEnvelope<TestEvent>) -> crate::HexResult<()>,
-        >,
-      >,
-    >,
+    handlers: std::cell::RefCell<std::collections::HashMap<std::string::String, TestHandler>>,
   }
 
   impl MockSubscriber {

@@ -14,6 +14,7 @@
 //!   this graph. Asked for by the formula lane (240776 item 3).
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 (SB 15/203) — call the canonical `with_node`/`with_edge`/`NodeId::from_name`; their aliases are deprecated.
 //! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D6 — initial findings and their cells (R04-R08).
 
 /// Something wrong with a graph, as a value. Read with [`HexGraph::findings`](crate::graph::HexGraph::findings).
@@ -58,7 +59,7 @@ mod tests {
     role: crate::graph::role::Role,
   ) -> crate::graph::hex_node::HexNode {
     crate::graph::hex_node::HexNode::new(
-      crate::graph::node_id::NodeId::from_type_name(name),
+      crate::graph::node_id::NodeId::from_name(name),
       layer,
       role,
       name,
@@ -90,8 +91,8 @@ mod tests {
     relationship: crate::graph::relationship::Relationship,
   ) -> crate::graph::hex_edge::HexEdge {
     crate::graph::hex_edge::HexEdge::new(
-      crate::graph::node_id::NodeId::from_type_name(from),
-      crate::graph::node_id::NodeId::from_type_name(to),
+      crate::graph::node_id::NodeId::from_name(from),
+      crate::graph::node_id::NodeId::from_name(to),
       relationship,
     )
   }
@@ -120,7 +121,7 @@ mod tests {
     std::assert_eq!(
       graph.findings(),
       std::vec![super::GraphFinding::ShortNameCollision {
-        id: crate::graph::node_id::NodeId::from_type_name("FeedNode"),
+        id: crate::graph::node_id::NodeId::from_name("FeedNode"),
         kept_type_name: std::string::String::from("FeedNode"),
         kept_module_path: std::string::String::from("flo_view"),
         dropped_type_name: std::string::String::from("FeedNode"),
@@ -173,7 +174,7 @@ mod tests {
       .build();
     let findings = graph.findings();
     let unproved = |name: &str| super::GraphFinding::AdapterWithoutProvedPort {
-      adapter: crate::graph::node_id::NodeId::from_type_name(name),
+      adapter: crate::graph::node_id::NodeId::from_name(name),
     };
     std::assert!(findings.contains(&unproved("DeclaredOnly")));
     std::assert!(findings.contains(&unproved("Bare")));
@@ -211,13 +212,13 @@ mod tests {
       graph.findings(),
       std::vec![
         super::GraphFinding::EdgeToUnregisteredNode {
-          source: crate::graph::node_id::NodeId::from_type_name("Proved"),
-          target: crate::graph::node_id::NodeId::from_type_name("GonePortNode"),
+          source: crate::graph::node_id::NodeId::from_name("Proved"),
+          target: crate::graph::node_id::NodeId::from_name("GonePortNode"),
           relationship: crate::graph::relationship::Relationship::Depends,
         },
         super::GraphFinding::EdgeToUnregisteredNode {
-          source: crate::graph::node_id::NodeId::from_type_name("Ghost"),
-          target: crate::graph::node_id::NodeId::from_type_name("SinkPortNode"),
+          source: crate::graph::node_id::NodeId::from_name("Ghost"),
+          target: crate::graph::node_id::NodeId::from_name("SinkPortNode"),
           relationship: crate::graph::relationship::Relationship::Depends,
         },
       ]

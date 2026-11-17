@@ -5,6 +5,7 @@
 //! Primary entry point for AI agent integration.
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 (SB 15/203) — call the canonical `with_node`/`with_edge`/`NodeId::from_name`; their aliases are deprecated.
 //! - 2025-10-10T20:28:00Z @AI: Add methods field to ComponentInfo with empty placeholder for future method extraction.
 //! - 2025-10-02T19:00:00Z @AI: Fix test add_edge calls to use HexEdge constructor, fix Relationship typo, fix edges iteration.
 //! - 2025-10-02T18:30:00Z @AI: Add comprehensive documentation and tests for all functions.
@@ -268,7 +269,7 @@ mod tests {
   #[test]
   fn test_build_complete_context() {
     let graph = crate::graph::builder::GraphBuilder::new()
-      .add_node(crate::graph::hex_node::HexNode::new(
+      .with_node(crate::graph::hex_node::HexNode::new(
         crate::graph::node_id::NodeId::from_name("TestEntity"),
         crate::graph::layer::Layer::Domain,
         crate::graph::role::Role::Entity,
@@ -289,7 +290,7 @@ mod tests {
   #[test]
   fn test_build_components() {
     let graph = crate::graph::builder::GraphBuilder::new()
-      .add_node(crate::graph::hex_node::HexNode::new(
+      .with_node(crate::graph::hex_node::HexNode::new(
         crate::graph::node_id::NodeId::from_name("User"),
         crate::graph::layer::Layer::Domain,
         crate::graph::role::Role::Entity,
@@ -310,21 +311,21 @@ mod tests {
   #[test]
   fn test_build_relationships() {
     let graph = crate::graph::builder::GraphBuilder::new()
-      .add_node(crate::graph::hex_node::HexNode::new(
+      .with_node(crate::graph::hex_node::HexNode::new(
         crate::graph::node_id::NodeId::from_name("User"),
         crate::graph::layer::Layer::Domain,
         crate::graph::role::Role::Entity,
         "User",
         "domain",
       ))
-      .add_node(crate::graph::hex_node::HexNode::new(
+      .with_node(crate::graph::hex_node::HexNode::new(
         crate::graph::node_id::NodeId::from_name("UserRepo"),
         crate::graph::layer::Layer::Port,
         crate::graph::role::Role::Repository,
         "UserRepo",
         "ports",
       ))
-      .add_edge(crate::graph::hex_edge::HexEdge::new(
+      .with_edge(crate::graph::hex_edge::HexEdge::new(
         crate::graph::node_id::NodeId::from_name("UserRepo"),
         crate::graph::node_id::NodeId::from_name("User"),
         crate::graph::relationship::Relationship::Depends,
@@ -392,21 +393,21 @@ mod tests {
   #[test]
   fn test_validate_relationship() {
     let graph = crate::graph::builder::GraphBuilder::new()
-      .add_node(crate::graph::hex_node::HexNode::new(
+      .with_node(crate::graph::hex_node::HexNode::new(
         crate::graph::node_id::NodeId::from_name("A"),
         crate::graph::layer::Layer::Domain,
         crate::graph::role::Role::Entity,
         "A",
         "domain",
       ))
-      .add_node(crate::graph::hex_node::HexNode::new(
+      .with_node(crate::graph::hex_node::HexNode::new(
         crate::graph::node_id::NodeId::from_name("B"),
         crate::graph::layer::Layer::Port,
         crate::graph::role::Role::Repository,
         "B",
         "ports",
       ))
-      .add_edge(crate::graph::hex_edge::HexEdge::new(
+      .with_edge(crate::graph::hex_edge::HexEdge::new(
         crate::graph::node_id::NodeId::from_name("A"),
         crate::graph::node_id::NodeId::from_name("B"),
         crate::graph::relationship::Relationship::Depends,
@@ -421,7 +422,7 @@ mod tests {
   #[test]
   fn test_generate_suggestions_with_ports_no_adapters() {
     let graph = crate::graph::builder::GraphBuilder::new()
-      .add_node(crate::graph::hex_node::HexNode::new(
+      .with_node(crate::graph::hex_node::HexNode::new(
         crate::graph::node_id::NodeId::from_name("UserRepository"),
         crate::graph::layer::Layer::Port,
         crate::graph::role::Role::Repository,
@@ -443,14 +444,14 @@ mod tests {
   #[test]
   fn test_generate_suggestions_balanced_architecture() {
     let graph = crate::graph::builder::GraphBuilder::new()
-      .add_node(crate::graph::hex_node::HexNode::new(
+      .with_node(crate::graph::hex_node::HexNode::new(
         crate::graph::node_id::NodeId::from_name("UserRepository"),
         crate::graph::layer::Layer::Port,
         crate::graph::role::Role::Repository,
         "UserRepository",
         "ports",
       ))
-      .add_node(crate::graph::hex_node::HexNode::new(
+      .with_node(crate::graph::hex_node::HexNode::new(
         crate::graph::node_id::NodeId::from_name("PostgresUserRepo"),
         crate::graph::layer::Layer::Adapter,
         crate::graph::role::Role::Adapter,

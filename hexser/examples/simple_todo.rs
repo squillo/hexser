@@ -7,7 +7,11 @@
 //! Run with: `cargo run --example simple_todo`
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example); `#[allow(dead_code)]` on the unused `TodoSortKey`.
 //! - 2025-10-07T11:56:00Z @AI: Migrate to v0.4 QueryRepository API; remove use statements and id-centric methods; update example flow.
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 fn main() -> hexser::HexResult<()> {
   println!("=== Simple TODO Application ===\n");
@@ -108,6 +112,8 @@ enum TodoFilter {
   All,
   ById(String),
 }
+// why: QueryRepository needs a sort-key type; this adapter ignores sorting, so no key is built.
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 enum TodoSortKey {
   Id,

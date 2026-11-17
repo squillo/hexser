@@ -6,6 +6,7 @@
 //! compile time, with fallback to string-based IDs for dynamic cases.
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 (SB 15/203, Q4) — `from_type_name` deprecated: documented as equivalent to `from_name`; removal scheduled for 0.8.0.
 //! - 2026-07-20T00:00:00Z @AI: Derive Ord/PartialOrd so NodeId can key a deterministic BTreeMap in the graph.
 //! - 2025-10-02T12:00:00Z @AI: Add from_type_name method for registry compatibility.
 //! - 2025-10-01T00:00:00Z @AI: Initial NodeId struct with type-based identification.
@@ -50,6 +51,10 @@ impl NodeId {
   ///
   /// This is equivalent to from_name but provides clearer semantics
   /// when working with type names from NodeInfo.
+  #[deprecated(
+    since = "0.7.0",
+    note = "use `NodeId::from_name`, the same hash. Scheduled for removal in 0.8.0."
+  )]
   pub fn from_type_name(type_name: &str) -> Self {
     Self::from_name(type_name)
   }

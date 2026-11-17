@@ -4,6 +4,7 @@
 //! components, enabling documentation and analysis.
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 (SB 15/203) — call the canonical `with_node`/`with_edge`/`NodeId::from_name`; their aliases are deprecated.
 //! - 2026-07-20T00:00:00Z @AI: Fix infinite recursion (stack overflow) when the `visualization` feature is off: delegate to the inherent methods via UFCS when enabled, return an actionable error when not.
 //! - 2025-10-02T17:00:00Z @AI: Initial Visualizable trait implementation.
 
@@ -90,7 +91,7 @@ mod tests {
 
   fn sample_graph() -> crate::graph::hex_graph::HexGraph {
     crate::graph::builder::GraphBuilder::new()
-      .add_node(crate::graph::hex_node::HexNode::new(
+      .with_node(crate::graph::hex_node::HexNode::new(
         crate::graph::node_id::NodeId::from_name("Test"),
         crate::graph::layer::Layer::Domain,
         crate::graph::role::Role::Entity,
