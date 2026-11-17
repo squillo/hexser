@@ -6,6 +6,7 @@
 //! using GraphBuilder and cannot be modified after creation.
 //!
 //! Revision History
+//! - 2026-11-17T19:16:44Z @AI: HEXSER-0.7 — the two cells that need the process-wide graph to themselves (`current()` identity, 16 readers during `install`) move to `tests/arch_install_test.rs`, their own process: beside the unit tests that read the registered graph they raced them (37 of 300 runs failed).
 //! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D6 — `findings()` returns what is wrong as closed `GraphFinding` values: the collisions `build` recorded, adapters with no proved port, and edges to unregistered nodes, in O(nodes + edges).
 //! - 2026-07-21T00:00:00Z @AI: PRD-272 §1.5/§3.G — current() moves OnceLock→`LazyLock<ArcSwap<HexGraph>>` (wait-free RCU, self-programming hot-swap via install()/rebuild_current(), SOLE write site per N_BOOK §23); adjacency IndexMap (§3.H).
 //! - 2026-07-20T00:00:00Z @AI: Cache current() via OnceLock; BTreeMap nodes for deterministic iteration; O(degree) edges_from/edges_to via precomputed adjacency indices.
@@ -408,70 +409,6 @@ mod tests {
       crate::graph::node_id::NodeId::from_name(to),
       crate::graph::relationship::Relationship::Depends,
     )
-  }
-
-  /// why: two back-to-back `current()` loads with no intervening `install()` must return Arcs to
-  /// the same graph allocation (wait-free `load_full` of the ArcSwap), so request handlers don't
-  /// re-walk inventory. `#[serial]` keeps a concurrent `install()` from another test out of the
-  /// window between the two loads.
-  #[test]
-  #[serial_test::serial(hexser_arch)]
-  fn test_current_is_cached_same_arc() {
-    let a = HexGraph::current();
-    let b = HexGraph::current();
-    assert!(
-      std::sync::Arc::ptr_eq(&a, &b),
-      "current() must return the same graph Arc when nothing was installed between loads"
-    );
-  }
-
-  /// why: LESSON #16 — every NEW RCU (ArcSwap) surface requires a 16-OS-thread regression test.
-  /// 16 threads hammer `current()` (wait-free reads) while one thread repeatedly `install()`s a
-  /// distinct graph; assert no torn read / no panic, every observed graph is internally
-  /// consistent, and the final `current()` reflects the last install. `#[serial]` isolates this
-  /// mutation from the identity test above.
-  #[test]
-  #[serial_test::serial(hexser_arch)]
-  fn test_arcswap_16_thread_read_during_install() {
-    // Snapshot the pre-test graph so we can restore it (other tests read the global arch).
-    let original = HexGraph::current();
-
-    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let mut readers = std::vec::Vec::new();
-    for _ in 0..16 {
-      let stop = std::sync::Arc::clone(&stop);
-      readers.push(std::thread::spawn(move || {
-        while !stop.load(std::sync::atomic::Ordering::Relaxed) {
-          // Wait-free read; node_count() dereferences inner — a torn read would panic/segfault.
-          let g = HexGraph::current();
-          let _ = g.node_count();
-          let _ = g.edge_count();
-        }
-      }));
-    }
-
-    // Sole writer: install graphs of increasing size, so the last install is identifiable.
-    for i in 1..=64u32 {
-      let mut builder = HexGraph::builder();
-      for n in 0..i {
-        builder = builder.with_node(node(&format!("N{n}"), crate::graph::layer::Layer::Domain));
-      }
-      HexGraph::install(builder.build());
-    }
-
-    stop.store(true, std::sync::atomic::Ordering::Relaxed);
-    for r in readers {
-      r.join().expect("reader thread must not panic");
-    }
-
-    assert_eq!(
-      HexGraph::current().node_count(),
-      64,
-      "final current() must reflect the last install"
-    );
-
-    // Restore the original graph for any test that reads the global arch afterwards.
-    HexGraph::install((*original).clone());
   }
 
   /// why: edges_from/edges_to must return exactly the incident edges via the adjacency index,

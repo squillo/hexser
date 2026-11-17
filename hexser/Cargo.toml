@@ -34,7 +34,6 @@ reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
-serial_test = { workspace = true }
 trybuild = { workspace = true }
 criterion = { workspace = true }
 
