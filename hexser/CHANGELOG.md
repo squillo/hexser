@@ -98,6 +98,11 @@ for removal in 0.8.0, once no family crate still uses them.
   `uuid` 1.26.1 and `trybuild` 1.0.119. `tokio` stays at 1.54.1. `cargo audit` and
   `cargo deny check` stay clean.
 - CI runs clippy on every target with warnings denied, examples and tests included.
+- A race in hexser's own test suite is fixed. The cell that installs synthetic graphs into the
+  process-wide `HexGraph` ran beside unit tests that read the registered graph, so a reader
+  could see an installed graph without its nodes (37 of 300 local runs; two pushes to main).
+  The cell now runs in its own test process (`tests/arch_install_test.rs`), and the
+  `serial_test` dev-dependency it needed is gone. The library itself is unchanged.
 
 ### WASM (2026-11-17)
 
