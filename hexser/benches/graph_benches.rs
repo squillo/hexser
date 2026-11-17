@@ -8,6 +8,7 @@
 //! Run with: `cargo bench -p hexser --features ai`
 //!
 //! Revision History
+//! - 2026-11-17T19:20:14Z @AI: HEXSER-0.7 — `std::hint::black_box` in place of `criterion::black_box`, which criterion 0.7 (Dependabot #7) deprecates; the std one also serves criterion 0.5.
 //! - 2026-07-20T00:00:00Z @AI: Add criterion benches for edges_from and to_ai_context on a synthetic graph.
 
 /// Build a synthetic graph of `n` nodes in a chain (edge i -> i+1) plus a hub node that every
@@ -38,8 +39,8 @@ fn bench_edges_from(c: &mut criterion::Criterion) {
   let mid = hexser::graph::node_id::NodeId::from_name("N100");
   c.bench_function("edges_from/200-node-chain", |b| {
     b.iter(|| {
-      let edges = graph.edges_from(criterion::black_box(&mid));
-      criterion::black_box(edges.len())
+      let edges = graph.edges_from(std::hint::black_box(&mid));
+      std::hint::black_box(edges.len())
     })
   });
 }
@@ -49,7 +50,7 @@ fn bench_to_ai_context(c: &mut criterion::Criterion) {
   c.bench_function("to_ai_context/200-node-chain", |b| {
     b.iter(|| {
       let ctx = graph.to_ai_context().unwrap();
-      criterion::black_box(ctx.components.len())
+      std::hint::black_box(ctx.components.len())
     })
   });
 }
