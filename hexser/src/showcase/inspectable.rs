@@ -5,6 +5,7 @@
 //! access to dependencies, metadata, and architectural context.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: rename the nested test module `tests` to `layer_info_tests` (module_inception).
 //! - 2025-10-02T12:30:00Z @AI: Remove duplicate implementations, simplify trait.
 //! - 2025-10-02T12:00:00Z @AI: Initial Inspectable trait implementation.
 
@@ -130,7 +131,7 @@ mod tests {
   }
 
   #[cfg(test)]
-  mod tests {
+  mod layer_info_tests {
     use super::*;
 
     #[test]

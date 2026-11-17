@@ -6,6 +6,7 @@
 # published `hexser` .crate.
 #
 # Revision History
+# - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 — no cdylib: its only purpose was the `#[unsafe(no_mangle)]` `probe` export, now replaced by the binary's exported `main`.
 # - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D10 — hexser is pulled with `macros` only; the wider surface moves behind the default `surface` feature so the probe also runs macros-only.
 # - 2026-09-11T00:00:00Z @AI: Initial probe — executes hexser under wasmtime on wasm32-unknown-unknown and wasm32-wasip1, the check a build-only matrix cannot make.
 
@@ -21,9 +22,8 @@ publish = false
 [lib]
 name = "hexser_wasm_e2e"
 path = "src/lib.rs"
-# cdylib for the `wasmtime run --invoke` path on wasm32-unknown-unknown (no `_start`);
-# rlib so the wasm32-wasip1 binary below can link the same checks.
-crate-type = ["cdylib", "rlib"]
+# The binary below is the entry point on both targets, so the library is a plain rlib. On
+# wasm32-unknown-unknown the binary's `main` is the module's exported `main` (no `_start`).
 
 [[bin]]
 name = "hexser_wasm_e2e"

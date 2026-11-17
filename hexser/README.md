@@ -160,9 +160,10 @@ doctest.
 - **The graph says what is wrong with it.** `HexGraph::findings()` returns typed
   `GraphFinding`s: a short-name collision, an adapter with no proved port, an edge to an
   unregistered node.
-- **Deprecated, not removed:** `DirectiveHandler`, `UseCase` and `InputPort` (use `Actor`), and
-  `ports::Query` (use `QueryHandler`). Some tutorial sections below still show
-  `DirectiveHandler`; they compile on 0.7, with a deprecation warning.
+- **Deprecated, not removed:** `DirectiveHandler`, `UseCase` and `InputPort` (use `Actor`),
+  `ports::Query` (use `QueryHandler`), and the aliases `GraphBuilder::add_node`/`add_edge`
+  (use `with_node`/`with_edge`) and `NodeId::from_type_name` (use `from_name`). Each still
+  compiles, with a warning naming its route, and is scheduled for removal in 0.8.0.
 - **Safe and portable.** All three crates are `#![forbid(unsafe_code)]`. Every 0.7 door runs
   under wasmtime on `wasm32-unknown-unknown` and `wasm32-wasip1` with `features = ["macros"]`.
 
@@ -571,10 +572,10 @@ trait OrderRepository: Repository<Order> {
 Use Cases - Business operations:
 
 ```rust
-// Note: derives apply to structs/enums, not traits — do not put a derive on the trait.
-// Register with a marker struct: `#[derive(HexPort)] struct PlaceOrderPort;`
-trait PlaceOrder: UseCase<PlaceOrderInput, PlaceOrderOutput> {}
-
+// A business operation's input and output are plain types. The operation itself is one
+// `Actor` in the application layer (Part 2 step 4): `type Command = PlaceOrderInput` and
+// `type Outcome = HexResult<PlaceOrderOutput>`. `ports::UseCase` is deprecated in 0.7 and
+// scheduled for removal in 0.8.0.
 struct PlaceOrderInput {
   customer_id: CustomerId,
   items: Vec<OrderItem>,
@@ -705,39 +706,40 @@ impl Directive for PlaceOrderDirective {
 }
 ```
 
-Directive Handler:
+The single writer (`Actor`):
 
-> **0.7:** `DirectiveHandler` is deprecated. New code writes an `Actor` (see
-> [What's new in 0.7](#whats-new-in-07) and `examples/cqrs_pattern.rs`). The form below still
-> compiles, with a deprecation warning.
-
-There is no `HexDirectiveHandler` derive — `DirectiveHandler<D>` is a plain trait (see
-`hexser::application::DirectiveHandler`); implement it directly, as `examples/cqrs_pattern.rs` does:
+An `Actor` is the one writer for its state. It takes `&mut self`, so it saves without
+interior mutability, and it names its own command, the context a call lends it, and its
+outcome (see `hexser::application::Actor` and `examples/cqrs_pattern.rs`). Add
+`#[derive(HexActor)]` to put the writer in the architecture graph. `DirectiveHandler` is
+deprecated in 0.7 and scheduled for removal in 0.8.0.
 
 ```rust
-struct PlaceOrderHandler {
+struct OrderDesk {
   order_repo: Box<dyn OrderRepository>,
   payment_port: Box<dyn PaymentPort>,
 }
 
-impl DirectiveHandler<PlaceOrderDirective> for PlaceOrderHandler {
-  fn handle(&self, directive: PlaceOrderDirective) -> HexResult<()> {
+impl hexser::application::Actor for OrderDesk {
+  type Command = PlaceOrderDirective;
+  type Context<'a> = ();
+  type Outcome = HexResult<OrderId>;
+
+  fn handle(&mut self, directive: PlaceOrderDirective, _context: ()) -> Self::Outcome {
     // Validate
     directive.validate()?;
 
-    // Create domain object
+    // Create the domain object and check its invariants
     let order = Order::new(directive.customer_id, directive.items)?;
-
-    // Check invariants
     order.check_invariants()?;
 
-    // Save
-    self.order_repo.save(order)?;
-
-    // Side effects
+    // Side effects first, while `order` is still ours to read
     self.payment_port.charge(order.total(), &order.payment_method)?;
 
-    Ok(())
+    // Save, and say what was decided
+    let id = order.id.clone();
+    self.order_repo.save(order)?;
+    Ok(id)
   }
 }
 ```
@@ -789,11 +791,7 @@ impl DatabaseConfig {
 
 hexser supports Command Query Responsibility Segregation (CQRS) out of the box.
 
-Write Side (Directives):
-
-> **0.7:** `DirectiveHandler` is deprecated. New code writes an `Actor` (see
-> [What's new in 0.7](#whats-new-in-07) and `examples/cqrs_pattern.rs`). The form below still
-> compiles, with a deprecation warning.
+Write Side (Directives, written by one `Actor`):
 
 ```rust
 // Directive represents intent to change state.
@@ -812,21 +810,23 @@ impl Directive for UpdateUserEmail {
   }
 }
 
-// Handler executes the directive. There is no `HexDirectiveHandler` derive —
-// `DirectiveHandler<D>` is a plain trait; implement it directly.
-struct UpdateUserEmailHandler {
+// The single writer for users executes the directive through `&mut self`.
+struct UserWriter {
   repo: Box<dyn UserRepository>,
 }
 
-impl DirectiveHandler<UpdateUserEmail> for UpdateUserEmailHandler {
-  fn handle(&self, directive: UpdateUserEmail) -> HexResult<()> {
+impl hexser::application::Actor for UserWriter {
+  type Command = UpdateUserEmail;
+  type Context<'a> = ();
+  type Outcome = HexResult<()>;
+
+  fn handle(&mut self, directive: UpdateUserEmail, _context: ()) -> Self::Outcome {
+    directive.validate()?;
     let mut user = self.repo.find_by_id(&directive.user_id)?
       .ok_or_else(|| Hexserror::not_found("User", &directive.user_id))?;
 
     user.email = directive.new_email;
-    self.repo.save(user)?;
-
-    Ok(())
+    self.repo.save(user)
   }
 }
 ```
@@ -1432,25 +1432,29 @@ impl Directive for CreateTodoDirective {
     }
 }
 
-// There is no `HexDirectiveHandler` derive — `DirectiveHandler<D>` is a plain trait;
-// implement it directly.
-struct CreateTodoHandler {
+// The single writer for todos: `&mut self`, its own command, and the id it decided.
+struct TodoWriter {
     repo: Box<dyn TodoRepository>,
 }
 
-impl DirectiveHandler<CreateTodoDirective> for CreateTodoHandler {
-    fn handle(&self, directive: CreateTodoDirective) -> HexResult<()> {
+impl hexser::application::Actor for TodoWriter {
+    type Command = CreateTodoDirective;
+    type Context<'a> = ();
+    type Outcome = HexResult<TodoId>;
+
+    fn handle(&mut self, directive: CreateTodoDirective, _context: ()) -> Self::Outcome {
         directive.validate()?;
 
+        let id = TodoId::new();
         let todo = Todo {
-            id: TodoId::new(),
+            id: id.clone(),
             title: directive.title,
             description: directive.description,
             completed: false,
         };
 
         self.repo.save(todo)?;
-        Ok(())
+        Ok(id)
     }
 }
 ```
@@ -1543,9 +1547,9 @@ hexser/
 │
 ├── ports/               [Interface Definitions]
 │   ├── Repository       - Persistence abstraction
-│   ├── UseCase          - Business operations
-│   ├── Query            - Read-only operations (CQRS)
-│   ├── InputPort        - Entry points
+│   ├── UseCase          - Deprecated (use application::Actor; removed in 0.8.0)
+│   ├── Query            - Deprecated (use application::QueryHandler; removed in 0.8.0)
+│   ├── InputPort        - Deprecated (use application::Actor; removed in 0.8.0)
 │   └── OutputPort       - External system interfaces
 │
 ├── adapters/            [Concrete Implementations]

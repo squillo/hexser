@@ -7,8 +7,12 @@
 //! Run with: `cargo run --example cqrs_pattern`
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example); print the saved user's id and the found view's id.
 //! - 2026-11-17T16:59:59Z @AI: HEXSER-0.7 — the write side is an `Actor` that owns its repository (`&mut self`) and refuses with a `HexRefusal`, in place of the deprecated `DirectiveHandler`, whose `&self` left the save unwritten.
 //! - 2025-10-07T13:02:00Z @AI: Migrate to v0.4 Repository by removing id-centric methods; no behavior change.
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 use hexser::QueryHandler;
 
@@ -62,7 +66,10 @@ fn main() -> hexser::HexResult<()> {
 
   println!("\nQuerying user...");
   if let Some(user_view) = query_handler.handle(find_query)? {
-    println!("✓ Found user: {} ({})", user_view.name, user_view.email);
+    println!(
+      "✓ Found user: {} ({}), id {}",
+      user_view.name, user_view.email, user_view.id
+    );
   }
 
   println!("\n✅ CQRS example completed!");
@@ -135,7 +142,7 @@ impl hexser::application::Actor for UserWriter {
       email: directive.email,
       name: directive.name,
     };
-    println!("Saving user: {} <{}>", user.name, user.email);
+    println!("Saving user {}: {} <{}>", user.id, user.name, user.email);
     hexser::ports::Repository::save(&mut self.repository, user)?;
     Ok(UserCreated { id })
   }

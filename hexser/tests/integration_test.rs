@@ -5,6 +5,7 @@
 //! and adapters, ensuring proper separation of concerns and functionality.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: assert through the fields the tests build (`user.email`, the found todo's `title`/`done`, the view's `title`); drop unread aggregate fields; `TodoSortKey` offers no keys.
 //! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D7 — `#[allow(deprecated)]` on the two modules that exercise `DirectiveHandler`.
 //! - 2025-10-12T18:37:00Z @AI: Add comprehensive Application trait integration test with full CQRS flow.
 //! - 2025-10-02T21:45:00Z @AI: Enhance HexAggregate macro test to use hex(invariants) attribute for custom validation.
@@ -39,13 +40,13 @@ mod domain_integration {
     }
 
     let email = Email(String::from("test@example.com"));
-    assert!(email.validate().is_ok());
 
     let user = User {
       id: String::from("1"),
       email,
     };
 
+    assert!(user.email.validate().is_ok());
     let _id: <User as hexser::HexEntity>::Id = user.id;
   }
 
@@ -54,7 +55,6 @@ mod domain_integration {
   fn test_aggregate_invariants() {
     #[derive(hexser_macros::HexAggregate)]
     struct Order {
-      id: String,
       items: Vec<String>,
     }
 
@@ -75,15 +75,11 @@ mod domain_integration {
     }
 
     let valid_order = Order {
-      id: String::from("1"),
       items: vec![String::from("item1")],
     };
     assert!(valid_order.check_invariants().is_ok());
 
-    let invalid_order = Order {
-      id: String::from("2"),
-      items: vec![],
-    };
+    let invalid_order = Order { items: vec![] };
     assert!(invalid_order.check_invariants().is_err());
   }
 
@@ -91,19 +87,13 @@ mod domain_integration {
   #[test]
   fn test_hex_aggregate_derive_default() {
     #[derive(hexser_macros::HexAggregate)]
-    struct SimpleAggregate {
-      id: String,
-      value: i32,
-    }
+    struct SimpleAggregate;
 
     impl hexser::HexEntity for SimpleAggregate {
       type Id = String;
     }
 
-    let aggregate = SimpleAggregate {
-      id: String::from("1"),
-      value: 42,
-    };
+    let aggregate = SimpleAggregate;
 
     assert!(aggregate.check_invariants().is_ok());
   }
@@ -145,10 +135,9 @@ mod port_adapter_integration {
       All,
       ById(String),
     }
+    // This adapter ignores sorting, so it offers no sort keys.
     #[derive(Clone, Copy)]
-    enum TodoSortKey {
-      Id,
-    }
+    enum TodoSortKey {}
 
     impl hexser::ports::repository::QueryRepository<Todo> for InMemoryTodoRepository {
       type Filter = TodoFilter;
@@ -193,14 +182,15 @@ mod port_adapter_integration {
     };
 
     assert!(repo.save(todo).is_ok());
-    assert!(
+    let found =
       <InMemoryTodoRepository as hexser::ports::repository::QueryRepository<Todo>>::find_one(
         &repo,
-        &TodoFilter::ById(String::from("1"))
+        &TodoFilter::ById(String::from("1")),
       )
       .unwrap()
-      .is_some()
-    );
+      .expect("the saved todo is found by id");
+    assert_eq!(found.title, "Test");
+    assert!(!found.done);
     assert_eq!(
       <InMemoryTodoRepository as hexser::ports::repository::QueryRepository<Todo>>::find(
         &repo,
@@ -356,7 +346,7 @@ mod cqrs_integration {
     };
 
     let result = handler.handle(query).unwrap();
-    assert!(result.is_some());
+    assert_eq!(result.map(|t| t.title), Some(String::from("Test")));
   }
 }
 

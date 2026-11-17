@@ -7,6 +7,7 @@
 //! One trait must fit all three without a lock, a forced `Result`, or `Hexserror`.
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 (SB 15/203) — call the canonical `with_node`/`with_edge`/`NodeId::from_name`; their aliases are deprecated.
 //! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 R09, R11 — initial cells, written red.
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -201,6 +202,6 @@ fn a_hex_actor_node_is_application_layer_directive_handler_by_name() {
   std::assert_eq!(node.role(), hexser::graph::Role::DirectiveHandler);
   std::assert!(node.type_name().ends_with("DeckActorNode"));
 
-  let absent = hexser::graph::NodeId::from_type_name(std::any::type_name::<NeverRegistered>());
+  let absent = hexser::graph::NodeId::from_name(std::any::type_name::<NeverRegistered>());
   std::assert!(graph.get_node(&absent).is_none());
 }

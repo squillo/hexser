@@ -3,6 +3,9 @@
 //! Tests derive macros by actually using them in compiled code.
 //! This is the correct way to test proc macros since they require
 //! the full compiler infrastructure to function properly.
+//!
+//! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: replace each `assert!(true)` with an assertion on the derived entity's `Id`; drop unread fixture fields.
 
 #[cfg(feature = "macros")]
 mod macro_tests {
@@ -14,24 +17,22 @@ mod macro_tests {
     #[derive(HexAggregate, HexEntity)]
     struct TestAggregate {
       id: String,
-      value: i32,
     }
 
     let agg = TestAggregate {
       id: String::from("test"),
-      value: 42,
     };
 
     // Should compile and have default implementation
     assert!(agg.check_invariants().is_ok());
+    let id: <TestAggregate as hexser::domain::HexEntity>::Id = agg.id;
+    assert_eq!(id, "test");
   }
 
   #[test]
   fn test_hex_domain_derive() {
     #[derive(HexDomain)]
-    struct TestDomain {
-      name: String,
-    }
+    struct TestDomain;
 
     // Should compile with Registrable trait
     let info = TestDomain::node_info();
@@ -62,8 +63,12 @@ mod macro_tests {
       id: String,
     }
 
-    // If this test compiles, macros work
-    assert!(true);
+    // The derives compiled; the entity's `Id` is the type of its `id` field.
+    let item = EntityItem {
+      id: String::from("item-1"),
+    };
+    let id: <EntityItem as hexser::domain::HexEntity>::Id = item.id;
+    assert_eq!(id, "item-1");
   }
 
   #[test]
@@ -72,18 +77,16 @@ mod macro_tests {
     #[derive(HexEntity)]
     struct User {
       id: String,
-      email: String,
     }
 
     let user = User {
       id: String::from("user-001"),
-      email: String::from("test@example.com"),
     };
 
     // Verify the HexEntity trait is implemented
     // The associated type Id should be String (detected from id field)
-    let _id_type: <User as hexser::HexEntity>::Id = user.id;
-    assert!(true);
+    let id: <User as hexser::HexEntity>::Id = user.id;
+    assert_eq!(id, "user-001");
   }
 
   #[test]
@@ -92,13 +95,9 @@ mod macro_tests {
     #[derive(HexEntity)]
     struct Order {
       id: u64,
-      total: f64,
     }
 
-    let order = Order {
-      id: 12345,
-      total: 99.99,
-    };
+    let order = Order { id: 12345 };
 
     // Verify the associated type is u64
     let id: <Order as hexser::domain::HexEntity>::Id = order.id;
@@ -109,9 +108,9 @@ mod macro_tests {
   fn test_hex_value_item_derive_default_validation() {
     // Test that #[derive(HexValueItem)] provides default validation
     #[derive(HexValueItem, Clone)]
-    struct Email(String);
+    struct Email;
 
-    let email = Email(String::from("test@example.com"));
+    let email = Email;
 
     // Default validation should return Ok(())
     assert!(email.validate().is_ok());
@@ -162,9 +161,9 @@ mod macro_tests {
     };
 
     // Both should have HexEntity trait implemented
-    let _: <QualifiedEntity as hexser::domain::HexEntity>::Id = e1.id;
-    let _: <PreludeEntity as hexser::domain::HexEntity>::Id = e2.id;
-
-    assert!(true);
+    let qualified: <QualifiedEntity as hexser::domain::HexEntity>::Id = e1.id;
+    let prelude: <PreludeEntity as hexser::domain::HexEntity>::Id = e2.id;
+    assert_eq!(qualified, "1");
+    assert_eq!(prelude, "2");
   }
 }

@@ -4,6 +4,12 @@
 //! Time: 5 minutes
 //!
 //! Run with: `cargo run --example tutorial_01_entity`
+//!
+//! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example).
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 fn main() -> hexser::HexResult<()> {
   println!("=== Tutorial 01: Your First Entity ===\n");

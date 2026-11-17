@@ -60,7 +60,10 @@ recorded as a typed `ShortNameCollision`, and the metadata warning names both mo
 
 `application::DirectiveHandler`, `ports::UseCase` and `ports::InputPort` are deprecated, routed
 to `Actor`. `ports::Query` is deprecated, routed to `application::QueryHandler`, which has the
-same shape. None is removed. Each use warns and names its route.
+same shape. Three aliases are deprecated too, because each was a second public name for one job:
+`GraphBuilder::add_node`/`add_edge` (use `with_node`/`with_edge`) and `NodeId::from_type_name`
+(use `from_name`). None is removed. Each use warns and names its route. All seven are scheduled
+for removal in 0.8.0, once no family crate still uses them.
 
 ### Changed (2026-11-17)
 
@@ -70,6 +73,9 @@ same shape. None is removed. Each use warns and names its route.
   - a key the derive does not read is a compile error that names the derive that does.
 
   Only `role` is written across the family today, so this breaks no known crate.
+  `HexAggregate` reads no key of its own; it leaves the four type-level keys (`role`,
+  `depends_on`, `implements`, `port_trait`) to a sibling derive and refuses every other key.
+- `hexser_macros` builds on `syn` 3. `syn` 3's MSRV is 1.71, under hexser's 1.85.
 - ⚠ **`HEXSER_INCLUDE_SOURCE_LOCATION` is read once per process.** A program that changes the
   variable while it runs is no longer seen. Changing the environment at run time takes `unsafe`
   since edition 2024. Set the variable before the process starts. The default (off) is unchanged.
@@ -84,6 +90,14 @@ same shape. None is removed. Each use warns and names its route.
 - The lockfile moves `tokio` to 1.54.1 (RUSTSEC-2026-0386, `AsyncFd` I/O safety). It also moves
   `futures-util` to 0.3.34 and `hyper` to 1.12.0, which drops the unmaintained `pin-utils`
   (RUSTSEC-2026-0441). `cargo audit` and `cargo deny check` pass with no waivers.
+- Dev and CI dependencies move: `criterion` 0.7, `reqwest` 0.13 (dev only),
+  `actions/checkout` 7, `actions/upload-artifact` 7 and `setup-rust-toolchain` 2.
+- The lockfile takes the semver-compatible bumps Dependabot's group proposed: `quote` 1.0.47,
+  `proc-macro2` 1.0.107, `inventory` 0.3.25, `serde` 1.0.229, `serde_json` 1.0.154 (which
+  replaces `ryu` with `zmij`), `arc-swap` 1.9.5, `indexmap` 2.14.2, `async-trait` 0.1.92,
+  `uuid` 1.26.1 and `trybuild` 1.0.119. `tokio` stays at 1.54.1. `cargo audit` and
+  `cargo deny check` stay clean.
+- CI runs clippy on every target with warnings denied, examples and tests included.
 
 ### WASM (2026-11-17)
 
@@ -92,7 +106,9 @@ and `wasm32-wasip1`, twice per target:
 - with the documented surface;
 - macros-only (`default-features = false, features = ["macros"]`), the pin an editor core takes.
 
-The compile matrix gains the macros-only set.
+The compile matrix gains the macros-only set. The probe needs no `unsafe`: on
+`wasm32-unknown-unknown` the linker exports the binary's own `main`, which the script invokes,
+so the `#[unsafe(no_mangle)]` export is gone and the probe is `#![forbid(unsafe_code)]` too.
 
 ## [0.6.1] - 2026-11-03
 

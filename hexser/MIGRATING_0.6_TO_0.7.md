@@ -4,7 +4,7 @@
 three exceptions:
 
 - an `#[hex(...)]` key hexser never read is now a compile error (see "`#[hex(...)]` is read strictly");
-- uses of four duplicate traits now print deprecation warnings (see "Four doors are deprecated");
+- uses of four duplicate traits and three duplicate names now print deprecation warnings (see "Four doors are deprecated");
 - `HEXSER_INCLUDE_SOURCE_LOCATION` is read once per process (see "The location switch is read once").
 
 Every family pin today is `0.6` or `0.6.x`, so `cargo update` does not move anyone to 0.7.
@@ -362,7 +362,8 @@ fn main() {
 ## 8. Four doors are deprecated
 
 Each still compiles and works, and each use prints a warning naming its route. None is
-removed in 0.7. Removal will be a later version's decision.
+removed in 0.7. Each is scheduled for removal in 0.8.0, and the deletion waits until no
+family crate still uses it.
 
 | Deprecated | Route to |
 |---|---|
@@ -370,6 +371,14 @@ removed in 0.7. Removal will be a later version's decision.
 | `ports::UseCase` | `application::Actor` |
 | `ports::InputPort` | `application::Actor` |
 | `ports::Query` | `application::QueryHandler` (the same shape) |
+
+Three names were two names for one job, and the alias is deprecated on the same schedule:
+
+| Deprecated | Route to |
+|---|---|
+| `GraphBuilder::add_node` | `GraphBuilder::with_node` (the same call) |
+| `GraphBuilder::add_edge` | `GraphBuilder::with_edge` (the same call) |
+| `NodeId::from_type_name` | `NodeId::from_name` (the same hash) |
 
 To keep a 0.6 call site quiet while you move it, put `#[allow(deprecated)]` on the item.
 

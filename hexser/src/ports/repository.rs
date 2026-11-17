@@ -6,6 +6,7 @@
 //! aggregates and typically provide CRUD operations plus domain-specific queries.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: the save-and-find test also exercises the `And`/`NameEquals` filters and the `Id` sort key it declares.
 //! - 2026-07-21T00:00:00Z @AI: delete_where default now errors (E_HEX_103) instead of silently returning Ok(0) — an unimplemented delete no longer masquerades as success.
 //! - 2025-10-01T00:00:00Z @AI: Initial Repository trait definition with generic entity type.
 //! - 2025-10-06T00:00:00Z @AI: Introduced filter-based generic query API (separate QueryRepository trait), sorting and pagination.
@@ -265,6 +266,46 @@ mod tests {
       )
       .unwrap();
     assert!(found.is_some());
+
+    // find_one by a compound filter: every part must match
+    let matched =
+      <TestRepository as crate::ports::repository::QueryRepository<TestEntity>>::find_one(
+        &repo,
+        &TestFilter::And(vec![
+          TestFilter::ById(1),
+          TestFilter::NameEquals(String::from("A")),
+        ]),
+      )
+      .unwrap();
+    assert_eq!(matched.map(|e| e.id), Some(1));
+    let mismatch =
+      <TestRepository as crate::ports::repository::QueryRepository<TestEntity>>::find_one(
+        &repo,
+        &TestFilter::And(vec![
+          TestFilter::ById(1),
+          TestFilter::NameEquals(String::from("B")),
+        ]),
+      )
+      .unwrap();
+    assert!(mismatch.is_none());
+
+    // find sorted by id, descending
+    let by_id_desc =
+      <TestRepository as crate::ports::repository::QueryRepository<TestEntity>>::find(
+        &repo,
+        &TestFilter::All,
+        crate::ports::repository::FindOptions {
+          sort: Some(vec![crate::ports::repository::Sort {
+            key: TestSortKey::Id,
+            direction: crate::ports::repository::Direction::Desc,
+          }]),
+          limit: None,
+          offset: None,
+        },
+      )
+      .unwrap();
+    let ids: Vec<u64> = by_id_desc.iter().map(|e| e.id).collect();
+    assert_eq!(ids, [2, 1]);
 
     // find with sort and pagination
     let opts = crate::ports::repository::FindOptions {

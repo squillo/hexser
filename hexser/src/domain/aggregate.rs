@@ -6,6 +6,7 @@
 //! External objects can only reference the aggregate root, ensuring consistency.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: drop the test order's unread `id` field; the invariant reads only `item_count`.
 //! - 2025-10-09T09:43:00Z @AI: Update to use HexEntity trait.
 //! - 2025-10-01T00:00:00Z @AI: Initial Aggregate trait definition extending Entity.
 
@@ -58,7 +59,6 @@ mod tests {
   use super::*;
 
   struct TestOrder {
-    id: u64,
     item_count: usize,
   }
 
@@ -82,19 +82,13 @@ mod tests {
 
   #[test]
   fn test_aggregate_invariants_valid() {
-    let order = TestOrder {
-      id: 1,
-      item_count: 5,
-    };
+    let order = TestOrder { item_count: 5 };
     assert!(order.check_invariants().is_ok());
   }
 
   #[test]
   fn test_aggregate_invariants_invalid() {
-    let order = TestOrder {
-      id: 1,
-      item_count: 0,
-    };
+    let order = TestOrder { item_count: 0 };
     assert!(order.check_invariants().is_err());
   }
 }

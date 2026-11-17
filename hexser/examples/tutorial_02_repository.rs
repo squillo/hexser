@@ -4,11 +4,19 @@
 //! Time: 10 minutes
 //!
 //! Run with: `cargo run --example tutorial_02_repository`
+//!
+//! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example); `#[allow(dead_code)]` on the defined-not-used `User` and `UserRepository`.
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 fn main() -> hexser::HexResult<()> {
   println!("=== Tutorial 02: Repository Port ===\n");
 
   // From Tutorial 01: Our domain entity
+  // why: the lesson is the port's shape; this tutorial defines the entity, it does not build one.
+  #[allow(dead_code)]
   #[derive(Clone, Debug)]
   struct User {
     id: String,
@@ -22,6 +30,8 @@ fn main() -> hexser::HexResult<()> {
 
   // NEW: Define a Port (interface) for persistence
   // Ports define WHAT we need, not HOW to do it
+  // why: the port is the lesson; Tutorial 03 implements it, so nothing here calls it.
+  #[allow(dead_code)]
   trait UserRepository: hexser::ports::Repository<User> {
     fn find_by_email(&self, email: &str) -> hexser::HexResult<Option<User>>;
     fn count(&self) -> hexser::HexResult<usize>;

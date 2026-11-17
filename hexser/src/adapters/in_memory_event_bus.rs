@@ -6,6 +6,7 @@
 //! and delivered synchronously without persistence.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: the poll test asserts the polled envelope carries the published payload (`TestEvent.value`).
 //! - 2026-07-20T00:00:00Z @AI: Route by envelope type to all handlers for that topic (fix last-subscription-wins misrouting); VecDeque queue with O(1) poll; enqueue only undelivered events to bound push-mode growth.
 //! - 2025-10-09T15:08:00Z @AI: Fix doc test to use trait imports for subscribe/publish methods.
 //! - 2025-10-09T14:51:00Z @AI: Initial InMemoryEventBus adapter implementation.
@@ -369,7 +370,10 @@ mod tests {
     std::assert_eq!(bus.queue_size(), 1);
 
     let polled = bus.poll().unwrap();
-    std::assert!(polled.is_some());
+    std::assert_eq!(
+      polled.and_then(|env| env.data).map(|event| event.value),
+      std::option::Option::Some(std::string::String::from("test value"))
+    );
     std::assert_eq!(bus.queue_size(), 0);
   }
 

@@ -6,6 +6,7 @@
 //! configuration concerns and business logic.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: the test config is a unit struct; its `value` field was never read.
 //! - 2025-10-01T00:00:00Z @AI: Initial Config marker trait definition.
 
 /// Marker trait for infrastructure configuration components.
@@ -40,16 +41,12 @@ pub trait Config {}
 mod tests {
   use super::*;
 
-  struct TestConfig {
-    value: String,
-  }
+  struct TestConfig;
 
   impl Config for TestConfig {}
 
   #[test]
   fn test_config_marker_compiles() {
-    let _config = TestConfig {
-      value: String::from("test"),
-    };
+    let _config = TestConfig;
   }
 }

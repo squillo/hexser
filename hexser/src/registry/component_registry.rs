@@ -4,6 +4,7 @@
 //! methods to build the architecture graph.
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 (SB 15/203) — call the canonical `with_node`/`with_edge`/`NodeId::from_name`; their aliases are deprecated.
 //! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D5 — `build_graph` adds one `Implements` edge per submitted `ImplementsEntry`.
 //! - 2025-10-02T12:00:00Z @AI: Fix HexNode construction to use with_metadata method.
 //! - 2025-10-02T00:00:00Z @AI: Initial ComponentRegistry implementation.
@@ -18,7 +19,7 @@ impl ComponentRegistry {
 
     for entry in inventory::iter::<crate::registry::component_entry::ComponentEntry> {
       let info = entry.node_info();
-      let node_id = crate::graph::node_id::NodeId::from_type_name(info.type_name);
+      let node_id = crate::graph::node_id::NodeId::from_name(info.type_name);
 
       let metadata = std::collections::HashMap::new();
 
@@ -31,7 +32,7 @@ impl ComponentRegistry {
         metadata,
       );
 
-      builder = builder.add_node(node);
+      builder = builder.with_node(node);
 
       for dep_id in entry.dependencies() {
         let edge = crate::graph::hex_edge::HexEdge::new(
@@ -39,14 +40,14 @@ impl ComponentRegistry {
           dep_id,
           crate::graph::relationship::Relationship::Depends,
         );
-        builder = builder.add_edge(edge);
+        builder = builder.with_edge(edge);
       }
     }
 
     // Proved claims (HEXSER-0.7 D5): each `implements(..)` the compiler checked is one
     // `Implements` edge, so `Implements` is never a declaration (SB 15/380).
     for claim in inventory::iter::<crate::registry::implements_entry::ImplementsEntry> {
-      builder = builder.add_edge(crate::graph::hex_edge::HexEdge::new(
+      builder = builder.with_edge(crate::graph::hex_edge::HexEdge::new(
         claim.adapter(),
         claim.port(),
         crate::graph::relationship::Relationship::Implements,

@@ -14,6 +14,7 @@
 # Usage: scripts/wasm-e2e.sh
 #
 # Revision History
+# - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 — wasm32-unknown-unknown invokes the binary's exported `main` (no `#[unsafe(no_mangle)]` export); the non-empty-graph guard is the probe's own assertion.
 # - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D10 — execute the probe twice per target (surface, macros-only); add the macros-only set (`--no-default-features --features macros`), the pin every editor core takes; the probe now also executes the 0.7 doors (wasm-e2e/src/lib.rs).
 # - 2026-09-11T00:00:00Z @AI: Initial harness — compile matrix plus wasmtime execution on wasm32-unknown-unknown and wasm32-wasip1.
 
@@ -86,20 +87,20 @@ for set in "${PROBE_SETS[@]}"; do
   grep -q "surface=$want_surface" <<<"$wasip1_out" \
     || fail "probe [$set] ran with the wrong feature set: $wasip1_out"
 
-  # wasm32-unknown-unknown is a reactor module: no _start and no stdout, so the probe is a
-  # cdylib export invoked directly. It returns the graph node count; a failed check panics,
-  # which wasm lowers to an `unreachable` trap and wasmtime surfaces as a non-zero exit.
-  ( cd "$E2E" && cargo build --quiet --target wasm32-unknown-unknown --lib $extra ) \
+  # wasm32-unknown-unknown has no _start and no stdout. The same binary is built, and the
+  # linker exports its `main` as the module's `main(argc, argv)`, invoked directly with no
+  # `unsafe` export. A failed check panics, which wasm lowers to an `unreachable` trap and
+  # wasmtime surfaces as a non-zero exit. An empty graph is one of those checks:
+  # `check_graph_registration` asserts at least one node and the derived ProbeEntity, so
+  # link-time `inventory` registration that silently produced nothing traps here.
+  ( cd "$E2E" && cargo build --quiet --target wasm32-unknown-unknown --bin hexser_wasm_e2e $extra ) \
     || fail "probe [$set] does not build for wasm32-unknown-unknown"
-  unknown_out="$(wasmtime run --invoke probe \
-    "$E2E/target/wasm32-unknown-unknown/debug/hexser_wasm_e2e.wasm" 2>/dev/null)" \
+  unknown_out="$(wasmtime run --invoke main \
+    "$E2E/target/wasm32-unknown-unknown/debug/hexser_wasm_e2e.wasm" 0 0 2>/dev/null)" \
     || fail "probe [$set] TRAPPED under wasm32-unknown-unknown — rerun without 2>/dev/null for the backtrace"
-  printf '  %-12s wasm32-unknown-unknown  probe() -> %s node(s)\n' "$set" "$unknown_out"
-
-  # A trap is not the only failure mode: link-time `inventory` registration relying on
-  # life-before-main could silently produce an empty graph, which would exit 0 with 0 nodes.
-  [ "$unknown_out" -ge 1 ] 2>/dev/null \
-    || fail "inventory registration produced no graph nodes under wasm32-unknown-unknown [$set] (got '$unknown_out')"
+  [ "$unknown_out" = "0" ] \
+    || fail "probe [$set] main() returned '$unknown_out' under wasm32-unknown-unknown, not 0"
+  printf '  %-12s wasm32-unknown-unknown  main() -> 0, every check passed\n' "$set"
 done
 
 printf '\n\033[32mPASS\033[0m  hexser builds AND runs on wasm32-unknown-unknown and wasm32-wasip1.\n'

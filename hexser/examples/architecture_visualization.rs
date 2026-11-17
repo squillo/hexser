@@ -3,10 +3,18 @@
 //! Demonstrates how hex automatically tracks and visualizes your architecture.
 //!
 //! Run with: cargo run --example architecture_visualization
+//!
+//! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example); `#[allow(dead_code)]` on the eight registered-only types.
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 use hexser::prelude::*;
 
 // Domain Layer - Core business logic
+// why: illustrative fields in a teaching example; the type is only registered, never built.
+#[allow(dead_code)]
 #[derive(HexDomain, HexEntity)]
 struct Customer {
   id: String,
@@ -14,6 +22,8 @@ struct Customer {
   email: String,
 }
 
+// why: illustrative fields in a teaching example; the type is only registered, never built.
+#[allow(dead_code)]
 #[derive(HexDomain, HexEntity)]
 struct Order {
   id: String,
@@ -21,6 +31,8 @@ struct Order {
   total: f64,
 }
 
+// why: illustrative fields in a teaching example; the type is only registered, never built.
+#[allow(dead_code)]
 #[derive(HexDomain, HexEntity)]
 struct Product {
   id: String,
@@ -39,28 +51,38 @@ struct OrderRepository;
 struct ProductRepository;
 
 // Adapter Layer - Implementations
+// why: illustrative fields in a teaching example; the type is only registered, never built.
+#[allow(dead_code)]
 #[derive(HexAdapter)]
 struct PostgresCustomerRepository {
   connection_string: String,
 }
 
+// why: illustrative fields in a teaching example; the type is only registered, never built.
+#[allow(dead_code)]
 #[derive(HexAdapter)]
 struct PostgresOrderRepository {
   connection_string: String,
 }
 
+// why: illustrative fields in a teaching example; the type is only registered, never built.
+#[allow(dead_code)]
 #[derive(HexAdapter)]
 struct RedisProductCache {
   redis_url: String,
 }
 
 // Application Layer - Use cases
+// why: illustrative fields in a teaching example; the type is only registered, never built.
+#[allow(dead_code)]
 #[derive(HexDirective)]
 struct CreateOrderDirective {
   customer_id: String,
   products: Vec<String>,
 }
 
+// why: illustrative fields in a teaching example; the type is only registered, never built.
+#[allow(dead_code)]
 #[derive(HexQuery)]
 struct GetCustomerOrdersQuery {
   customer_id: String,

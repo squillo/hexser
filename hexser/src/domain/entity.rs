@@ -7,6 +7,7 @@
 //! The identity type is defined via an associated type for maximum flexibility.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: drop the test user's unread `name` field.
 //! - 2025-10-09T09:43:00Z @AI: Rename Entity to HexEntity for consistency.
 //! - 2025-10-01T00:00:00Z @AI: Initial Entity trait definition with associated type Id.
 
@@ -40,7 +41,6 @@ mod tests {
 
   struct TestUser {
     id: u64,
-    name: String,
   }
 
   impl HexEntity for TestUser {
@@ -49,10 +49,7 @@ mod tests {
 
   #[test]
   fn test_entity_trait_compiles() {
-    let user = TestUser {
-      id: 1,
-      name: String::from("Test"),
-    };
+    let user = TestUser { id: 1 };
     let _id_type: <TestUser as HexEntity>::Id = user.id;
   }
 }

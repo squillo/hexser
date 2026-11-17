@@ -4,6 +4,7 @@
 //! Components can describe their purpose, name, and category.
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 (SB 15/203) — call the canonical `with_node`/`with_edge`/`NodeId::from_name`; their aliases are deprecated.
 //! - 2025-10-02T19:00:00Z @AI: Complete rewrite to fix merge conflicts.
 
 /// Trait for self-describing components
@@ -144,7 +145,7 @@ mod tests {
   fn test_arc_graph_ext() {
     let graph = std::sync::Arc::new(
       crate::graph::builder::GraphBuilder::new()
-        .add_node(crate::graph::hex_node::HexNode::new(
+        .with_node(crate::graph::hex_node::HexNode::new(
           crate::graph::node_id::NodeId::from_name("Test"),
           crate::graph::layer::Layer::Domain,
           crate::graph::role::Role::Entity,

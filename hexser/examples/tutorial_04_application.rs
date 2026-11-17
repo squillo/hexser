@@ -6,8 +6,12 @@
 //! Run with: cargo run --example tutorial_04_application
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example); list the active todos the query returns.
 //! - 2026-11-17T16:59:59Z @AI: HEXSER-0.7 — the write side is an `Actor` (`&mut self`, so the handler really assigns ids) with a `HexRefusal` outcome, in place of the deprecated `DirectiveHandler`.
 //! - 2025-10-07T11:55:00Z @AI: Align with v0.4 Repository by removing id-centric methods; no behavior change otherwise.
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 use hexser::prelude::*;
 
@@ -137,6 +141,9 @@ fn main() {
   println!("\nExecuting query:");
   let active = query_handler.handle(ListActiveTodosQuery).unwrap();
   println!("  Found {} active todos", active.len());
+  for todo in &active {
+    println!("    {}: {}", todo.id, todo.title);
+  }
 
   let graph = HexGraph::current();
 

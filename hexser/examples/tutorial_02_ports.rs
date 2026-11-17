@@ -4,10 +4,18 @@
 //! domain logic from infrastructure concerns.
 //!
 //! Run with: cargo run --example tutorial_02_ports
+//!
+//! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example); `#[allow(dead_code)]` on the registered-only entity.
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 use hexser::prelude::*;
 
 // Domain Layer - from Tutorial 01
+// why: illustrative fields in a teaching example; the type is only registered, never built.
+#[allow(dead_code)]
 #[derive(HexDomain, HexEntity)]
 struct Todo {
   id: String,

@@ -3,6 +3,9 @@
 //! Tests the complete container workflow including registration,
 //! resolution, scoping behavior, and error scenarios. Validates
 //! thread safety and service lifecycle management.
+//!
+//! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: drop the unused `UserService`/`UserProvider` fixtures; no test registers them.
 
 #[cfg(feature = "container")]
 mod container_tests {
@@ -23,22 +26,6 @@ mod container_tests {
     fn provide(&self) -> HexResult<EmailService> {
       Ok(EmailService {
         host: self.host.clone(),
-      })
-    }
-  }
-
-  struct UserService {
-    email: std::sync::Arc<EmailService>,
-  }
-
-  struct UserProvider {
-    email: std::sync::Arc<EmailService>,
-  }
-
-  impl Provider<UserService> for UserProvider {
-    fn provide(&self) -> HexResult<UserService> {
-      Ok(UserService {
-        email: std::sync::Arc::clone(&self.email),
       })
     }
   }

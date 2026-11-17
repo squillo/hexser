@@ -57,6 +57,7 @@
 //! These helpers are intended as templates: copy, adapt, and extend as needed.
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 (SB 15/203) — call the canonical `with_node`/`with_edge`/`NodeId::from_name`; their aliases are deprecated.
 //! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D4/D5 — `implements: [PortNode]` on `hex_register_component!` and `hex_register_adapter!` (a compile-time proof that the adapter implements the port node's trait, then one `Implements` edge); `port_trait: Trait` on `hex_register_port!`; `implements_edge_exists::<A, P>`, which shares one private `edge_exists` with `dependency_edge_exists` (behaviour unchanged).
 //! - 2026-11-03T18:00:00Z @AI: `dependency_edge_exists::<A, P>(&HexGraph)`: the one reading door for a wiring cell. True only for a `Depends` edge from `A`'s node onto `P`'s node when `P`'s node is itself in the graph, so a dangling edge never reads as wired. Downstream crates no longer each carry a private `wired` fn. Cells pin the registered edge, its direction, and the refusal of a dangling or non-`Depends` edge.
 //! - 2026-11-03T00:00:00Z @AI: `depends_on: [...]` on `hex_register_component!` and its five layer shorthands, plus `dependency_id::<D>()`: a registration can now carry its edges (adapter -> port node). The dependency id is derived from `D::node_info().type_name`, exactly as `ComponentRegistry::build_graph` keys nodes, because `NodeId::of` hashes the full path while template nodes are keyed by the short name, so an edge built with it dangles silently. The three-argument forms are unchanged. Graph-reading cells pin the edge and its absence.
@@ -96,7 +97,7 @@ pub fn split_type_name(full: &'static str) -> (&'static str, &'static str) {
 /// adapter. Requiring `D: Registrable` also makes an edge to an unregistered port a compile
 /// error instead of a dangling id.
 pub fn dependency_id<D: crate::registry::Registrable>() -> crate::graph::NodeId {
-  crate::graph::NodeId::from_type_name(D::node_info().type_name)
+  crate::graph::NodeId::from_name(D::node_info().type_name)
 }
 
 /// True when `graph` carries a `Depends` edge from registered `A`'s node onto registered `P`'s

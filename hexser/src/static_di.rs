@@ -27,6 +27,9 @@
 //!
 //! The `hex_static!` macro builds your object graph once and stores it inside
 //! a `StaticContainer<T>`. It uses zero dynamic dispatch and no async runtime.
+//!
+//! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow `redundant_closure_call` on the one test that expands `hex_static!`; the public macro is unchanged.
 
 /// A minimal, zero-cost container that owns a fully built object graph.
 #[derive(Debug, Clone)]
@@ -115,6 +118,9 @@ mod tests {
     a: A,
   }
 
+  // why: `hex_static!` is public API; its `(|| $block)()` keeps a caller's `return` inside the
+  // block, so it is not rewritten. The lint fires here only because this test expands the macro.
+  #[allow(clippy::redundant_closure_call)]
   #[test]
   fn builds_static_graph() {
     let app = crate::hex_static!({

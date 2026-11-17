@@ -6,6 +6,7 @@
 //! or denormalized views for better read performance.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: the found test asserts the returned `data`, not only that a result came back.
 //! - 2025-10-01T00:00:00Z @AI: Initial QueryHandler trait definition for query execution.
 
 /// Trait for handlers that execute queries.
@@ -80,7 +81,7 @@ mod tests {
     let handler = TestQueryHandler;
     let query = TestQuery { id: 1 };
     let result = handler.handle(query).unwrap();
-    assert!(result.is_some());
+    assert_eq!(result.map(|r| r.data), Some(String::from("Found")));
   }
 
   #[test]

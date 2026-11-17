@@ -6,6 +6,7 @@
 //! invalid relationships are detected.
 //!
 //! Revision History
+//! - 2026-11-17T18:04:19Z @AI: HEXSER-0.7 (SB 15/203, Q4) — `add_node`/`add_edge` deprecated: two public names for one job; routed to `with_node`/`with_edge`, removal scheduled for 0.8.0.
 //! - 2026-11-17T16:31:10Z @AI: HEXSER-0.7 D6 (F-A) — a collision is two registrations that differ in type name OR module path, so two template nodes with one short name in two modules are no longer merged in silence; each is recorded as a typed `GraphFinding::ShortNameCollision`, and the 0.6 string warning is rendered from it with both module paths.
 //! - 2026-07-21T00:00:00Z @AI: PRD-272 §3.H — adjacency indices use IndexMap for deterministic iteration.
 //! - 2026-07-20T00:00:00Z @AI: build() now uses BTreeMap, precomputes adjacency indices, and records NodeId collisions in metadata instead of silently dropping a node.
@@ -62,6 +63,10 @@ impl GraphBuilder {
   }
 
   /// Add a node to the graph (alias for with_node).
+  #[deprecated(
+    since = "0.7.0",
+    note = "use `GraphBuilder::with_node`, the same call. Scheduled for removal in 0.8.0."
+  )]
   pub fn add_node(self, node: crate::graph::hex_node::HexNode) -> Self {
     self.with_node(node)
   }
@@ -79,6 +84,10 @@ impl GraphBuilder {
   }
 
   /// Add an edge to the graph (alias for with_edge).
+  #[deprecated(
+    since = "0.7.0",
+    note = "use `GraphBuilder::with_edge`, the same call. Scheduled for removal in 0.8.0."
+  )]
   pub fn add_edge(self, edge: crate::graph::hex_edge::HexEdge) -> Self {
     self.with_edge(edge)
   }

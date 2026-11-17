@@ -7,6 +7,7 @@
 //! and support for extension attributes.
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: the mapping test asserts the envelope carries the event's payload (`TestEvent.data`).
 //! - 2025-10-09T14:51:00Z @AI: Initial CloudEventsEnvelope implementation for CloudEvents v1.0 compliance.
 //! - 2026-07-21T00:00:00Z @AI: PRD-272 §3.H — HashMap→IndexMap for deterministic iteration.
 
@@ -520,7 +521,10 @@ mod tests {
       envelope.datacontenttype,
       std::option::Option::Some(std::string::String::from("application/json"))
     );
-    std::assert!(envelope.data.is_some());
+    std::assert_eq!(
+      envelope.data.as_ref().map(|event| event.data.as_str()),
+      std::option::Option::Some("test data")
+    );
   }
 
   #[test]

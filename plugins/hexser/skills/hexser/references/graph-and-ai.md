@@ -126,7 +126,7 @@ let graph = HexGraph::builder()
 
 `GraphBuilder` methods: `with_node` / `add_node` / `with_nodes` / `with_edge` / `add_edge` / `with_description` / `build`.
 
-`NodeId` constructors: `NodeId::of::<T>()`, `NodeId::from_name(&str)`, `NodeId::from_type_name(...)`, and `as_u64()` to read the underlying id.
+`NodeId` constructors: `NodeId::of::<T>()` and `NodeId::from_name(&str)` (`from_type_name` is a deprecated alias of it, removed in 0.8.0), and `as_u64()` to read the underlying id.
 
 ## The layer / role / relationship enums
 

@@ -1,0 +1,5 @@
+error: `#[derive(HexAggregate)]` does not read `#[hex(code)]` (it reads no `#[hex(...)]` key here); `code` is read by HexVocabulary and HexRefusal, on an enum variant
+ --> tests/ui/fail/aggregate_hex_key.rs:6:7
+  |
+6 | #[hex(code = "ORDER")]
+  |       ^^^^

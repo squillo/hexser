@@ -11,7 +11,11 @@
 //! Run with: cargo run --example transactional_order
 //!
 //! Revision History
+//! - 2026-11-17T18:11:31Z @AI: HEXSER-0.7 — clippy --all-targets clean: allow print at the top (a CLI example); keep each mapped error as the source; print the stored order and the published event; drop the unused `is_committed` and `event_count` helpers.
 //! - 2025-10-08T22:43:00Z @AI: Extract transactional order example from README to standalone file per user request.
+
+// why: an example is a CLI program that reports to stdout; clippy.toml allows print in CLI code.
+#![allow(clippy::disallowed_macros)]
 
 /// Order item representing a product and quantity
 #[derive(Clone, std::fmt::Debug)]
@@ -73,10 +77,6 @@ impl Transaction {
   fn commit(&self) -> hexser::result::hex_result::HexResult<()> {
     *self.committed.borrow_mut() = true;
     std::result::Result::Ok(())
-  }
-
-  fn is_committed(&self) -> bool {
-    *self.committed.borrow()
   }
 }
 
@@ -185,10 +185,6 @@ impl InMemoryEventBus {
       events: std::sync::Arc::new(std::sync::Mutex::new(std::vec::Vec::new())),
     }
   }
-
-  fn event_count(&self) -> usize {
-    self.events.lock().unwrap().len()
-  }
 }
 
 impl hexser::adapters::adapter::Adapter for InMemoryEventBus {}
@@ -244,6 +240,7 @@ impl ProcessOrderHandler {
             "Failed to decrement stock",
           )
           .with_next_step("Verify product availability")
+          .with_source(e)
         })?;
     }
 
@@ -275,6 +272,7 @@ impl ProcessOrderHandler {
           "Failed to create order",
         )
         .with_next_step("Check database connectivity")
+        .with_source(e)
       })?;
 
     // Commit transaction (all-or-nothing)
@@ -284,6 +282,7 @@ impl ProcessOrderHandler {
         "Transaction commit failed",
       )
       .with_next_step("Review database logs")
+      .with_source(e)
     })?;
 
     // 3) Dispatch event (after commit)
@@ -326,6 +325,9 @@ fn main() -> hexser::result::hex_result::HexResult<()> {
   let product_repo = std::boxed::Box::new(InMemoryProductRepository::new());
   let order_repo = std::boxed::Box::new(InMemoryOrderRepository::new());
   let event_bus = std::boxed::Box::new(InMemoryEventBus::new());
+  // Keep read handles on the in-memory stores so the demo can show what was written.
+  let stored_orders = order_repo.orders.clone();
+  let published_events = event_bus.events.clone();
 
   let handler = ProcessOrderHandler {
     product_repo,
@@ -352,8 +354,23 @@ fn main() -> hexser::result::hex_result::HexResult<()> {
   handler.handle(directive)?;
   std::println!("   ✓ Order processed successfully");
   std::println!("   ✓ Stock decremented for 2 products");
-  std::println!("   ✓ Order record created");
-  std::println!("   ✓ OrderCreated event published");
+  for order in stored_orders.lock().unwrap().iter() {
+    std::println!(
+      "   ✓ Order record created: {} for {} ({} items, total {:.2})",
+      order.id,
+      order.customer_id,
+      order.items.len(),
+      order.total
+    );
+  }
+  for event in published_events.lock().unwrap().iter() {
+    std::println!(
+      "   ✓ OrderCreated event published: order {} for {} at {}",
+      event.order_id,
+      event.customer_id,
+      event.timestamp
+    );
+  }
 
   std::println!("\n5. Atomicity Guarantees:");
   std::println!("   - If stock decrement fails → rollback, no order created");
