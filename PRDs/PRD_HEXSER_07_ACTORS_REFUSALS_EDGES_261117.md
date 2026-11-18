@@ -310,7 +310,7 @@ pub enum GraphFinding {
   - The unit tests test the pure function.
   - The serde integration tests that need the switch on re-run their own test binary with the variable set. They use `std::process::Command::new(std::env::current_exe())` with `.env(..)`, so the environment is fixed at process start, with no `unsafe` and no `serial_test` lock.
 - **The gate.** `#![forbid(unsafe_code)]` goes in hexser, hexser_macros and hexser_potions.
-  - The wasm-e2e probe keeps its one `#[unsafe(no_mangle)]` export (§3). It is a test harness and is never published. That is said plainly in §11.
+  - The wasm-e2e probe's one `#[unsafe(no_mangle)]` export (§3) was kept in the first build and removed in the follow-up. A `wasm32-unknown-unknown` binary already exports `main`, so the probe is `#![forbid(unsafe_code)]` too (§11).
 - **The release gates** gain `cargo audit` and `cargo deny check` (deny.toml exists). Their results go into the landing's gate record.
 
 ### D10. wasm32
@@ -378,8 +378,8 @@ Red first, then green. Each `stc run -- cargo` takes a BUILD-LOCK-TURNS turn, on
 
 | Row | Name | Mutant that must turn it red |
 |---|---|---|
-| R01 | [U] `the_location_switch_is_on_only_for_1_or_true_in_any_case`, on the pure reader | accept any non-empty value |
-| R02 | [U] `a_serialized_error_carries_its_location_only_when_the_process_starts_with_the_switch_on` (re-exec with `.env`) | ignore the switch |
+| R01 | [U] `the_switch_is_on_only_for_1_or_true_in_any_case` and its off arm `the_switch_is_off_when_unset_or_for_any_other_value`, on the pure reader `includes_location` (src/error/env_control.rs) | accept any non-empty value |
+| R02 | [U] tests/env_controlled_serde_test.rs: `every_error_carries_its_location_when_the_switch_is_1` / `_true` / `_upper_case_true` and `every_error_omits_its_location_when_the_switch_is_unset` / `_false`. Each re-runs the test binary with `.env(..)`, so the switch is fixed at process start | ignore the switch |
 | R03 | [U] `this_crate_forbids_unsafe_code`, one per crate: each reads its own lib.rs with `include_str!` and asserts the attribute (a published crate cannot `include_str!` a sibling's source). Also, the 28 blocks fail to compile under it at 3c2f628 | remove a forbid line |
 | R04 | [U] `two_template_nodes_with_one_short_name_in_two_modules_are_a_typed_finding` | revert the module-path compare. Red at 3c2f628 |
 | R05 | [U] `one_type_registered_twice_is_not_a_collision` (the control) | report every duplicate id |
@@ -409,6 +409,9 @@ Red first, then green. Each `stc run -- cargo` takes a BUILD-LOCK-TURNS turn, on
 | R29 | [E] wasm-e2e executes R09, R13, R19, R21's pass case, R25 and R06 on both wasm targets, macros only | revert any one door |
 | R30 | [U] `the_migration_guide_names_every_new_public_item` (a doc walk, per section, with each named item checked against its source), plus its must-fail arm `a_guide_missing_a_section_or_its_body_fails_the_walk`. The guide's 13 examples run as doctests | delete a section |
 | R31 | [UI] `hex_unknown_key` and `hex_key_on_wrong_derive`: an unknown `#[hex]` key, and a key the derive does not read, are compile errors naming the keys and the reader (A14) | swallow the parse error again |
+| R32 | [UI] `aggregate_hex_key` (follow-up): `HexAggregate` refuses a key no derive on the type reads. Written red: it compiled before the fix | skip the strict reader in `HexAggregate` |
+| R33 | [U] `the_deprecated_aliases_still_answer_as_their_canonical_names` (follow-up, tests/deprecated_doors_test.rs): `add_node`/`add_edge`/`from_type_name` give what `with_node`/`with_edge`/`from_name` give | delete an alias before 0.8.0 |
+| R34 | [U] `current_is_cached_and_install_is_wait_free_under_sixteen_readers` (follow-up, tests/arch_install_test.rs, a process of its own). It replaces the two `hexser_arch` unit cells, which raced the readers of `HexGraph::current()` (37 of 300 runs) | read `current()` through a lock; move the cell back beside the readers (the race returns) |
 
 The gates for green:
 1. `stc run -- cargo test --workspace --all-features`;
@@ -419,7 +422,7 @@ The gates for green:
 6. `cargo deny check`;
 7. as built, CI's own gates too: `cargo fmt --check`, `cargo test --workspace` (default features), the `cargo check` feature matrix, `--examples`, `cargo doc` with `RUSTDOCFLAGS=-D warnings`, and the realworld_api crate's `cargo test`.
 
-Gate 3 as built: CI's clippy gate is `--lib --bins -D warnings` (pr-test.yml:44), and that is the binding one. `--all-targets` carries 559 errors that predate 0.7 (examples, old test files, src test modules; 463 of them `disallowed_macros`). It is 559 after 0.7 as well. No new 0.7 file carries a hit. The touched files that do (two migrated examples, `directive_handler.rs`, `ports/query.rs`, `integration_test.rs`) carry only the older kinds: dead fields in old tests and examples, and `println!` in examples.
+Gate 3 as built: at the first build, CI's clippy gate was `--lib --bins -D warnings`, and `--all-targets` carried 559 older warnings (538 when re-measured in the follow-up). The follow-up cleared them all, so gate 3 is now CI's own: pr-test.yml runs `cargo clippy --workspace --all-features --all-targets -- -D warnings`, and it was green on #17, #18, #19 and main.
 
 The 280 existing unit tests and every integration test stay green, except the env tests R01 and R02 replace.
 
@@ -491,6 +494,7 @@ Still Scott's, each a card when it comes:
   - gates: `fmt --check`, clippy `--all-targets -D warnings`, `cargo doc -D warnings`, all 17 examples run: exit 0; tests 346 default, 457 all-features, 337 macros-only, 0 failed; trybuild green with the new case; `scripts/wasm-e2e.sh` PASS on both targets, surface and macros-only, with no `unsafe` export.
 - **A flake found after #17 merged (2026-11-17T19:16:44Z):** main's push CI failed twice (after #2 and after #5) on the same two `templates` cells: "the port node the edge targets is a node in the graph". Cause: `test_arcswap_16_thread_read_during_install` installs 64 synthetic graphs into the process-wide `ArcSwap`. Its `serial(hexser_arch)` lock covered only the other `current()` identity cell, never the unit tests that read the registered graph, so they could load a synthetic graph mid-run. It is latent since 0.6.1 and was not caused by any Dependabot bump. Red first: 37 of 300 local runs of the lib binary failed at 32 threads. Fix: both arch cells move to `tests/arch_install_test.rs`, a process of their own, and become one cell, so `serial_test` leaves the dev-dependencies. After: 0 of 300 full lib runs failed. Re-gated: fmt, clippy `--all-targets -D warnings`, audit, deny exit 0; tests 345 / 456 / 336, 0 failed (one fewer: two cells became one).
 - **Landing record (2026-11-17T20:46:41Z):** #18 (the flake fix, plus `std::hint::black_box` in the benches, which criterion 0.7 needs) merged as c4e26a5. Dependabot recreated #7 (criterion 0.7) only after three asks. Its head failed the same race and the deprecated `criterion::black_box`, so main was merged into its branch (`gh pr update-branch`). Its updated head 5181a5c was green on all 10 checks, and it merged as b5c16f5. Main's push CI is green at c4e26a5 and b5c16f5. Dependabot closed #16 itself once main carried its versions, so no PR is open. v0.7.0 is an annotated tag signed by Scott at b5c16f5, made in his own terminal because signing here timed out at the passphrase prompt. Published in order, each after the previous one was on the index: hexser_macros, hexser, hexser_potions, all 0.7.0, MSRV 1.85, confirmed live on the sparse index. Ledger: the §13 rows went to Tirith ORCH f5693f2e as a `[SYSTEM-MAP]` note on BUILD-LOCK-TURNS (seq 245262), and the pin-move notice went to the lanes on HEXSER-0.7 (seq 245264).
+- **End to end on the published artifacts (recorded 2026-11-18T00:16:29Z):** the wasm-e2e probe was copied to a scratch crate pinned to `hexser = "=0.7.0"` from crates.io (the lockfile shows hexser and hexser_macros sourced from the crates.io index, no path). It ran green in all six cells: native, `wasm32-wasip1` and `wasm32-unknown-unknown` (exported `main`, exit 0), each with the documented surface and macros-only. So what was published is what was gated.
 - **Census for the 0.8.0 removal (Q4), textual, 2026-11-17:** across family files that mention hexser (snapshot `_*` copies excluded), `DirectiveHandler` 63 uses in 30 files, `UseCase` 164/84, `InputPort` 127/58, `ports::Query` 1/1, `.add_node(` 104/38, `.add_edge(` 7/3, `from_type_name(` 708/659 (most in squillo_os's generated `hex_arch.rs` copies). It is an upper bound: the words also match other crates' items. The census of record is the deprecation-warning count each lane's build prints once it moves to 0.7. A crate built with `-D warnings` sees each as an error, so its owner either moves to the route or allows `deprecated` at the use.
 - **plugins/hexser (D11):** every command and reference moved to 0.7, the manifests to 0.7.0. The scaffold (`/hexser:new`) now emits a `port_trait` node, an `implements` proof and a `findings()` cell, so a fresh slice has no finding. The plugin docs' complete examples (SKILL.md's minimal shape, add-usecase's actor, patterns.md's end-to-end program and actor, the new.md scaffold) were compiled and run verbatim in a throwaway test target, then deleted; the rest are marked sketches. The 0.4 → 0.5 reference keeps its `0.6` landing pin by design.
 
@@ -560,6 +564,8 @@ The system map is /Users/scott/@squillo/squillo-system-map/src/map/table.n.md, w
 | E3 | SOC2-TSC-2017, CC8.1 | an architecture graph reports, as closed typed findings, an adapter with no proved port, an edge to an unregistered node, and two registrations sharing one short name | R04-R08, R25-R27; each lane's graph cell that asserts `findings()` | intersects ISO27001-2022+A1-2024:A.8.28; HECVAT-4:documentation and assurance theme |
 
 ## Revision History
+
+- 2026-11-18T00:16:29Z @AI (the hexser lane, claude_code:2423a90f): a completeness pass against the code. All 31 rows have their cell. R01/R02 now carry their real names. D9 and gate 3 now say what was built after the follow-up. R32-R34 record the follow-up's three cells. The published artifacts were run end to end from crates.io (§11).
 
 - 2026-11-17T20:46:41Z @AI (the hexser lane, claude_code:2423a90f): landed and published. #18, then #7, merged. v0.7.0 tagged (signed by Scott). The three crates are on crates.io at 0.7.0. The §13 rows went to Tirith and the pin-move notice to the lanes (§11 landing record).
 
